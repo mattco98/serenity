@@ -24,32 +24,29 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
+#include <LibWeb/Layout/LayoutSVGGraphics.h>
 
-#include <LibGfx/Bitmap.h>
-#include <LibWeb/SVG/SVGGraphicsElement.h>
+namespace Web {
 
-namespace Web::SVG {
-
-class SVGSVGElement final : public SVGGraphicsElement {
-public:
-    using WrapperType = Bindings::SVGSVGElementWrapper;
-
-    SVGSVGElement(DOM::Document&, const FlyString& tag_name);
-
-    void paint(PaintContext&) override {};
-
-    virtual RefPtr<LayoutNode> create_layout_node(const CSS::StyleProperties* parent_style) override;
-
-    unsigned width() const;
-    unsigned height() const;
-
-private:
-    RefPtr<Gfx::Bitmap> m_bitmap;
-};
-
+LayoutSVGGraphics::LayoutSVGGraphics(DOM::Document& document, SVG::SVGGraphicsElement& element, NonnullRefPtr<CSS::StyleProperties> properties)
+    : LayoutSVG(document, element, properties)
+{
 }
 
-AK_BEGIN_TYPE_TRAITS(Web::SVG::SVGSVGElement)
-static bool is_type(const Web::DOM::Node& node) { return node.is_svg_element() && downcast<Web::SVG::SVGElement>(node).local_name() == Web::SVG::TagNames::svg; }
-AK_END_TYPE_TRAITS()
+void LayoutSVGGraphics::before_children_paint(PaintContext& context, LayoutNode::PaintPhase phase)
+{
+    LayoutSVG::before_children_paint(context, phase);
+    if (phase != LayoutNode::PaintPhase::Foreground)
+        return;
+
+    auto& graphics_element = downcast<SVG::SVGGraphicsElement>(node());
+
+    if (graphics_element.fill_color().has_value())
+        context.svg_context().set_fill_color(graphics_element.fill_color().value());
+    if (graphics_element.stroke_color().has_value())
+        context.svg_context().set_stroke_color(graphics_element.stroke_color().value());
+    if (graphics_element.stroke_width().has_value())
+        context.svg_context().set_stroke_width(graphics_element.stroke_width().value());
+}
+
+}

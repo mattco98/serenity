@@ -109,8 +109,10 @@ public:
     SVGPathElement(DOM::Document&, const FlyString& tag_name);
     virtual ~SVGPathElement() override = default;
 
+    virtual RefPtr<LayoutNode> create_layout_node(const CSS::StyleProperties* parent_style) override;
+
     virtual void parse_attribute(const FlyString& name, const String& value) override;
-    virtual void paint(Gfx::Painter& painter, const SVGPaintingContext& context) override;
+    virtual void paint(PaintContext& context) override;
 
 private:
     Vector<PathInstruction> m_instructions;

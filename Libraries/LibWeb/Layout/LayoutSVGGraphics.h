@@ -26,30 +26,21 @@
 
 #pragma once
 
-#include <LibGfx/Bitmap.h>
+#include <LibWeb/Layout/LayoutSVG.h>
+#include <LibWeb/SVG/SVGElement.h>
 #include <LibWeb/SVG/SVGGraphicsElement.h>
 
-namespace Web::SVG {
+namespace Web {
 
-class SVGSVGElement final : public SVGGraphicsElement {
+class LayoutSVGGraphics : public LayoutSVG {
 public:
-    using WrapperType = Bindings::SVGSVGElementWrapper;
+    LayoutSVGGraphics(DOM::Document&, SVG::SVGGraphicsElement&, NonnullRefPtr<CSS::StyleProperties>);
+    virtual ~LayoutSVGGraphics() override = default;
 
-    SVGSVGElement(DOM::Document&, const FlyString& tag_name);
-
-    void paint(PaintContext&) override {};
-
-    virtual RefPtr<LayoutNode> create_layout_node(const CSS::StyleProperties* parent_style) override;
-
-    unsigned width() const;
-    unsigned height() const;
+    virtual void before_children_paint(PaintContext& context, LayoutNode::PaintPhase phase) override;
 
 private:
-    RefPtr<Gfx::Bitmap> m_bitmap;
+    virtual const char* class_name() const override { return "LayoutSVGGraphics"; }
 };
 
 }
-
-AK_BEGIN_TYPE_TRAITS(Web::SVG::SVGSVGElement)
-static bool is_type(const Web::DOM::Node& node) { return node.is_svg_element() && downcast<Web::SVG::SVGElement>(node).local_name() == Web::SVG::TagNames::svg; }
-AK_END_TYPE_TRAITS()

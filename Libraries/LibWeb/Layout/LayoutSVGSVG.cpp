@@ -24,32 +24,48 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
+#include <LibWeb/Layout/LayoutSVGSVG.h>
 
-#include <LibGfx/Bitmap.h>
-#include <LibWeb/SVG/SVGGraphicsElement.h>
+namespace Web {
 
-namespace Web::SVG {
-
-class SVGSVGElement final : public SVGGraphicsElement {
-public:
-    using WrapperType = Bindings::SVGSVGElementWrapper;
-
-    SVGSVGElement(DOM::Document&, const FlyString& tag_name);
-
-    void paint(PaintContext&) override {};
-
-    virtual RefPtr<LayoutNode> create_layout_node(const CSS::StyleProperties* parent_style) override;
-
-    unsigned width() const;
-    unsigned height() const;
-
-private:
-    RefPtr<Gfx::Bitmap> m_bitmap;
-};
-
+LayoutSVGSVG::LayoutSVGSVG(DOM::Document& document, SVG::SVGSVGElement& element, NonnullRefPtr<CSS::StyleProperties> properties)
+    : LayoutSVGGraphics(document, element, properties)
+{
 }
 
-AK_BEGIN_TYPE_TRAITS(Web::SVG::SVGSVGElement)
-static bool is_type(const Web::DOM::Node& node) { return node.is_svg_element() && downcast<Web::SVG::SVGElement>(node).local_name() == Web::SVG::TagNames::svg; }
-AK_END_TYPE_TRAITS()
+void LayoutSVGSVG::layout(LayoutMode layout_mode)
+{
+    auto& svg_element = downcast<SVG::SVGSVGElement>(node());
+    set_has_intrinsic_width(true);
+    set_has_intrinsic_height(true);
+    set_intrinsic_width(svg_element.width());
+    set_intrinsic_height(svg_element.height());
+    LayoutReplaced::layout(layout_mode);
+}
+
+void LayoutSVGSVG::before_children_paint(PaintContext& context, LayoutNode::PaintPhase phase)
+{
+    if (phase != LayoutNode::PaintPhase::Foreground)
+        return;
+
+    if (!context.has_svg_context()) {
+        context.set_svg_context(SVGContext());
+    } else {
+        // Nested SVG tags are allowed, but let's deal with that later
+        TODO();
+    }
+
+    LayoutSVGGraphics::before_children_paint(context, phase);
+}
+
+void LayoutSVGSVG::after_children_paint(PaintContext& context, LayoutNode::PaintPhase phase)
+{
+    LayoutSVG::after_children_paint(context, phase);
+    if (phase != LayoutNode::PaintPhase::Foreground)
+        return;
+
+    // TODO: This will not work when we allow nested SVG tags
+    context.set_svg_context({});
+}
+
+}

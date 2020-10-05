@@ -29,6 +29,7 @@
 #include <LibGfx/Path.h>
 #include <LibWeb/DOM/Document.h>
 #include <LibWeb/DOM/Event.h>
+#include <LibWeb/Layout/LayoutSVGPath.h>
 #include <LibWeb/SVG/SVGPathElement.h>
 #include <ctype.h>
 
@@ -429,6 +430,14 @@ SVGPathElement::SVGPathElement(DOM::Document& document, const FlyString& tag_nam
 {
 }
 
+RefPtr<LayoutNode> SVGPathElement::create_layout_node(const CSS::StyleProperties* parent_style)
+{
+    auto style = document().style_resolver().resolve_style(*this, parent_style);
+    if (style->display() == CSS::Display::None)
+        return nullptr;
+    return adopt(*new LayoutSVGPath(document(), *this, move(style)));
+}
+
 void SVGPathElement::parse_attribute(const FlyString& name, const String& value)
 {
     SVGGeometryElement::parse_attribute(name, value);
@@ -437,7 +446,7 @@ void SVGPathElement::parse_attribute(const FlyString& name, const String& value)
         m_instructions = PathDataParser(value).parse();
 }
 
-void SVGPathElement::paint(Gfx::Painter& painter, const SVGPaintingContext& context)
+void SVGPathElement::paint(PaintContext& context)
 {
     Gfx::Path path;
 
@@ -647,8 +656,11 @@ void SVGPathElement::paint(Gfx::Painter& painter, const SVGPaintingContext& cont
     closed_path.close();
 
     // Fills are computed as though all paths are closed (https://svgwg.org/svg2-draft/painting.html#FillProperties)
-    painter.fill_path(closed_path, m_fill_color.value_or(context.fill_color), Gfx::Painter::WindingRule::EvenOdd);
-    painter.stroke_path(path, m_stroke_color.value_or(context.stroke_color), m_stroke_width.value_or(context.stroke_width));
+    auto& painter = context.painter();
+    auto& svg_context = context.svg_context();
+
+    painter.fill_path(closed_path, m_fill_color.value_or(svg_context.fill_color()), Gfx::Painter::WindingRule::EvenOdd);
+    painter.stroke_path(path, m_stroke_color.value_or(svg_context.stroke_color()), m_stroke_width.value_or(svg_context.stroke_width()));
 }
 
 }
