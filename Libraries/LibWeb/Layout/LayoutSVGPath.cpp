@@ -34,6 +34,17 @@ LayoutSVGPath::LayoutSVGPath(DOM::Document& document, SVG::SVGPathElement& eleme
 {
 }
 
+void LayoutSVGPath::layout(LayoutNode::LayoutMode mode)
+{
+    auto& bounding_box = downcast<SVG::SVGPathElement>(node()).get_path().bounding_box();
+    set_has_intrinsic_width(true);
+    set_has_intrinsic_height(true);
+    set_intrinsic_width(bounding_box.width());
+    set_intrinsic_height(bounding_box.height());
+    set_offset(bounding_box.top_left());
+    LayoutSVGGraphics::layout(mode);
+}
+
 void LayoutSVGPath::paint(PaintContext& context, LayoutNode::PaintPhase phase)
 {
     LayoutSVGGraphics::paint(context, phase);

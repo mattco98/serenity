@@ -35,6 +35,7 @@ public:
     LayoutSVGPath(DOM::Document&, SVG::SVGPathElement&, NonnullRefPtr<CSS::StyleProperties>);
     virtual ~LayoutSVGPath() override = default;
 
+    void layout(LayoutMode mode) override;
     void paint(PaintContext& context, PaintPhase phase) override;
 
 private:

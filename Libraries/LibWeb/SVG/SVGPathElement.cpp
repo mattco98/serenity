@@ -446,8 +446,11 @@ void SVGPathElement::parse_attribute(const FlyString& name, const String& value)
         m_instructions = PathDataParser(value).parse();
 }
 
-void SVGPathElement::paint(PaintContext& context)
+Gfx::Path& SVGPathElement::get_path()
 {
+    if (m_path.has_value())
+        return m_path.value();
+
     Gfx::Path path;
 
     for (auto& instruction : m_instructions) {
@@ -648,6 +651,14 @@ void SVGPathElement::paint(PaintContext& context)
             m_previous_control_point = Gfx::FloatPoint {};
         }
     }
+
+    m_path = path;
+    return m_path.value();
+}
+
+void SVGPathElement::paint(PaintContext& context)
+{
+    auto& path = get_path();
 
     // We need to fill the path before applying the stroke, however the filled
     // path must be closed, whereas the stroke path may not necessary be closed.

@@ -40,7 +40,7 @@ void LayoutSVGSVG::layout(LayoutMode layout_mode)
     set_has_intrinsic_height(true);
     set_intrinsic_width(svg_element.width());
     set_intrinsic_height(svg_element.height());
-    LayoutReplaced::layout(layout_mode);
+    LayoutSVGGraphics::layout(layout_mode);
 }
 
 void LayoutSVGSVG::before_children_paint(PaintContext& context, LayoutNode::PaintPhase phase)

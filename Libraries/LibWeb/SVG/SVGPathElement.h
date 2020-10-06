@@ -114,9 +114,13 @@ public:
     virtual void parse_attribute(const FlyString& name, const String& value) override;
     virtual void paint(PaintContext& context) override;
 
+    Gfx::Path& get_path();
+
 private:
+
     Vector<PathInstruction> m_instructions;
     Gfx::FloatPoint m_previous_control_point = {};
+    Optional<Gfx::Path> m_path;
 };
 
 }
