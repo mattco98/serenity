@@ -41,8 +41,6 @@ public:
 
     virtual void parse_attribute(const FlyString& name, const String& value) override;
 
-    virtual void paint(PaintContext& context) = 0;
-
     const Optional<Gfx::Color>& fill_color() const { return m_fill_color; }
     const Optional<Gfx::Color>& stroke_color() const { return m_stroke_color; }
     const Optional<float>& stroke_width() const { return m_stroke_width; }

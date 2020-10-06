@@ -37,8 +37,6 @@ public:
 
     SVGSVGElement(DOM::Document&, const FlyString& tag_name);
 
-    void paint(PaintContext&) override {};
-
     virtual RefPtr<LayoutNode> create_layout_node(const CSS::StyleProperties* parent_style) override;
 
     unsigned width() const;

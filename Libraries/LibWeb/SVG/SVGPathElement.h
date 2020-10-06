@@ -112,7 +112,6 @@ public:
     virtual RefPtr<LayoutNode> create_layout_node(const CSS::StyleProperties* parent_style) override;
 
     virtual void parse_attribute(const FlyString& name, const String& value) override;
-    virtual void paint(PaintContext& context) override;
 
     Gfx::Path& get_path();
 

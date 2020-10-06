@@ -26,6 +26,7 @@
 
 #include <LibWeb/Layout/LayoutSVGPath.h>
 #include <LibWeb/SVG/SVGPathElement.h>
+#include <LibGfx/Painter.h>
 
 namespace Web {
 
@@ -47,10 +48,37 @@ void LayoutSVGPath::layout(LayoutNode::LayoutMode mode)
 
 void LayoutSVGPath::paint(PaintContext& context, LayoutNode::PaintPhase phase)
 {
+    if (!is_visible())
+        return;
+
     LayoutSVGGraphics::paint(context, phase);
+
     if (phase != LayoutNode::PaintPhase::Foreground)
         return;
-    downcast<SVG::SVGPathElement>(node()).paint(context);
+
+    auto& path_element = downcast<SVG::SVGPathElement>(node());
+    auto& path = path_element.get_path();
+
+    // We need to fill the path before applying the stroke, however the filled
+    // path must be closed, whereas the stroke path may not necessary be closed.
+    // Copy the path and close it for filling, but use the previous path for stroke
+    auto closed_path = path;
+    closed_path.close();
+
+    // Fills are computed as though all paths are closed (https://svgwg.org/svg2-draft/painting.html#FillProperties)
+    auto& painter = context.painter();
+    auto& svg_context = context.svg_context();
+
+    painter.fill_path(
+        closed_path,
+        path_element.fill_color().value_or(svg_context.fill_color()),
+        Gfx::Painter::WindingRule::EvenOdd
+    );
+    painter.stroke_path(
+        path,
+        path_element.stroke_color().value_or(svg_context.stroke_color()),
+        path_element.stroke_width().value_or(svg_context.stroke_width())
+    );
 }
 
 }

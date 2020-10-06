@@ -656,22 +656,4 @@ Gfx::Path& SVGPathElement::get_path()
     return m_path.value();
 }
 
-void SVGPathElement::paint(PaintContext& context)
-{
-    auto& path = get_path();
-
-    // We need to fill the path before applying the stroke, however the filled
-    // path must be closed, whereas the stroke path may not necessary be closed.
-    // Copy the path and close it for filling, but use the previous path for stroke
-    auto closed_path = path;
-    closed_path.close();
-
-    // Fills are computed as though all paths are closed (https://svgwg.org/svg2-draft/painting.html#FillProperties)
-    auto& painter = context.painter();
-    auto& svg_context = context.svg_context();
-
-    painter.fill_path(closed_path, m_fill_color.value_or(svg_context.fill_color()), Gfx::Painter::WindingRule::EvenOdd);
-    painter.stroke_path(path, m_stroke_color.value_or(svg_context.stroke_color()), m_stroke_width.value_or(svg_context.stroke_width()));
-}
-
 }
