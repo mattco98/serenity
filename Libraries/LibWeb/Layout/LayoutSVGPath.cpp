@@ -69,6 +69,10 @@ void LayoutSVGPath::paint(PaintContext& context, LayoutNode::PaintPhase phase)
     auto& painter = context.painter();
     auto& svg_context = context.svg_context();
 
+    auto offset = (absolute_position() - effective_offset()).to_type<int>();
+
+    painter.translate(offset);
+
     painter.fill_path(
         closed_path,
         path_element.fill_color().value_or(svg_context.fill_color()),
@@ -79,6 +83,8 @@ void LayoutSVGPath::paint(PaintContext& context, LayoutNode::PaintPhase phase)
         path_element.stroke_color().value_or(svg_context.stroke_color()),
         path_element.stroke_width().value_or(svg_context.stroke_width())
     );
+
+    painter.translate(-offset);
 }
 
 }
