@@ -24,13 +24,15 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <LibGfx/AffineTransform.h>
+
 namespace Web {
 
 class SVGContext {
 public:
     SVGContext()
     {
-        push_state();
+        m_states.append(State());
     }
 
     const Gfx::Color& fill_color() const { return state().fill_color; }
@@ -41,15 +43,18 @@ public:
     void set_stroke_color(Gfx::Color color) { state().stroke_color = color; }
     void set_stroke_width(float width) { state().stroke_width = width; }
 
-    void push_state() { m_states.append(State()); }
+    void transform(const Gfx::AffineTransform& transform) { state().transform.multiply(transform); }
+    const Gfx::AffineTransform& transformation() { return state().transform; }
 
-    void pop_state() { m_states.take_last(); }
+    void save() { m_states.append(m_states.last()); }
+    void restore() { m_states.take_last(); }
 
 private:
     struct State {
         Gfx::Color fill_color { Gfx::Color::Black };
         Gfx::Color stroke_color { Gfx::Color::Transparent };
         float stroke_width { 1.0 };
+        Gfx::AffineTransform transform;
     };
 
     const State& state() const { return m_states.last(); }

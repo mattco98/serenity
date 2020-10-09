@@ -41,7 +41,7 @@ void LayoutSVG::before_children_paint(PaintContext& context, LayoutNode::PaintPh
     LayoutNode::before_children_paint(context, phase);
     if (phase != LayoutNode::PaintPhase::Foreground)
         return;
-    context.svg_context().push_state();
+    context.svg_context().save();
 }
 
 void LayoutSVG::after_children_paint(PaintContext& context, LayoutNode::PaintPhase phase)
@@ -49,7 +49,7 @@ void LayoutSVG::after_children_paint(PaintContext& context, LayoutNode::PaintPha
     LayoutNode::after_children_paint(context, phase);
     if (phase != LayoutNode::PaintPhase::Foreground)
         return;
-    context.svg_context().pop_state();
+    context.svg_context().restore();
 }
 
 }

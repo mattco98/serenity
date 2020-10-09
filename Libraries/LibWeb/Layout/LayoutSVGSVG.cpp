@@ -24,6 +24,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <LibGfx/Painter.h>
 #include <LibWeb/Layout/LayoutSVGSVG.h>
 
 namespace Web {
@@ -48,14 +49,17 @@ void LayoutSVGSVG::before_children_paint(PaintContext& context, LayoutNode::Pain
     if (phase != LayoutNode::PaintPhase::Foreground)
         return;
 
-    if (!context.has_svg_context()) {
+    // TODO: Handle nested SVG tags
+    if (!context.has_svg_context())
         context.set_svg_context(SVGContext());
-    } else {
-        // Nested SVG tags are allowed, but let's deal with that later
-        TODO();
-    }
 
     LayoutSVGGraphics::before_children_paint(context, phase);
+
+    context.painter().save();
+
+    auto transformation = downcast<SVG::SVGSVGElement>(node()).calculate_transformations(absolute_rect());
+    if (!transformation.is_identity())
+        context.painter().transform(transformation);
 }
 
 void LayoutSVGSVG::after_children_paint(PaintContext& context, LayoutNode::PaintPhase phase)
@@ -64,8 +68,7 @@ void LayoutSVGSVG::after_children_paint(PaintContext& context, LayoutNode::Paint
     if (phase != LayoutNode::PaintPhase::Foreground)
         return;
 
-    // TODO: This will not work when we allow nested SVG tags
-    context.set_svg_context({});
+    context.painter().restore();
 }
 
 }

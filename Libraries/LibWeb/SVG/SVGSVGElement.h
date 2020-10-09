@@ -26,6 +26,7 @@
 
 #pragma once
 
+#include <LibGfx/AffineTransform.h>
 #include <LibGfx/Bitmap.h>
 #include <LibWeb/SVG/SVGGraphicsElement.h>
 
@@ -35,15 +36,51 @@ class SVGSVGElement final : public SVGGraphicsElement {
 public:
     using WrapperType = Bindings::SVGSVGElementWrapper;
 
+    enum class AlignMode {
+        None,
+        XMinYMin,
+        XMidYMin,
+        XMaxYMin,
+        XMinYMid,
+        XMidYMid,
+        XMaxYMid,
+        XMinYMax,
+        XMidYMax,
+        XMaxYMax,
+    };
+
+    enum class AspectRatioMode {
+        Meet,
+        Slice,
+    };
+
+    struct ViewBox {
+        Optional<float> min_x;
+        Optional<float> min_y;
+        Optional<float> width;
+        Optional<float> height;
+    };
+
     SVGSVGElement(DOM::Document&, const FlyString& tag_name);
 
-    virtual RefPtr<LayoutNode> create_layout_node(const CSS::StyleProperties* parent_style) override;
+    RefPtr<LayoutNode> create_layout_node(const CSS::StyleProperties* parent_style) override;
+    void parse_attribute(const FlyString& name, const String& value) override;
 
     unsigned width() const;
     unsigned height() const;
+    const Gfx::AffineTransform& calculate_transformations(Gfx::FloatRect bounding_box);
+
+    AlignMode align_mode() const { return m_align_mode; }
+    AspectRatioMode aspect_ratio_mode() const { return m_aspect_ratio_mode; }
+    ViewBox viewbox() const { return m_viewbox; }
 
 private:
     RefPtr<Gfx::Bitmap> m_bitmap;
+
+    AlignMode m_align_mode { AlignMode::XMidYMid };
+    AspectRatioMode m_aspect_ratio_mode { AspectRatioMode::Meet };
+    ViewBox m_viewbox;
+    Optional<Gfx::AffineTransform> m_transformations;
 };
 
 }

@@ -120,6 +120,8 @@ public:
     void scale(float sx, float sy) { state().transformation.scale(sx, sy); }
     ALWAYS_INLINE void scale(const FloatPoint& delta) { scale(delta.x(), delta.y()); }
 
+    void transform(const AffineTransform& transform) { state().transformation.multiply(transform); }
+
     IntPoint translation() const { return state().transformation.translation().to_type<int>(); }
     const AffineTransform& transformation() const { return state().transformation; }
 
