@@ -78,13 +78,6 @@ public:
         move_by(delta.x(), delta.y());
     }
 
-    Point<T> translated(const Point<T>& delta) const
-    {
-        Point<T> point = *this;
-        point.move_by(delta);
-        return point;
-    }
-
     Point<T> translated(T dx, T dy) const
     {
         Point<T> point = *this;
@@ -92,11 +85,14 @@ public:
         return point;
     }
 
-    Point<T> translated(T dboth) const
+    ALWAYS_INLINE Point<T> translated(T dboth) const
     {
-        Point<T> point = *this;
-        point.move_by(dboth, dboth);
-        return point;
+        return translated(dboth, dboth);
+    }
+
+    ALWAYS_INLINE Point<T> translated(const Point<T>& delta) const
+    {
+        return translated(delta.x(), delta.y());
     }
 
     void constrain(const Rect<T>&);

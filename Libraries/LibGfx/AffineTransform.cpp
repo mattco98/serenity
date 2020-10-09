@@ -33,7 +33,7 @@ namespace Gfx {
 
 bool AffineTransform::is_identity() const
 {
-    return m_values[0] == 1 && m_values[1] == 0 && m_values[2] == 0 && m_values[3] == 1 && m_values[4] == 0 && m_values[5] == 0;
+    return a() == 1.0 && b() == 0.0 && c() == 0.0 && d() == 1.0 && tx() == 0.0 && ty() == 0.0;
 }
 
 static float hypotenuse(float x, float y)
@@ -52,15 +52,15 @@ float AffineTransform::y_scale() const
     return hypotenuse(m_values[2], m_values[3]);
 }
 
-AffineTransform& AffineTransform::scale(float sx, float sy)
+template<>
+AffineTransform& AffineTransform::translate(int tx, int ty)
 {
-    m_values[0] *= sx;
-    m_values[1] *= sx;
-    m_values[2] *= sy;
-    m_values[3] *= sy;
+    m_values[4] += tx * m_values[0] + ty * m_values[2];
+    m_values[5] += tx * m_values[1] + ty * m_values[3];
     return *this;
 }
 
+template<>
 AffineTransform& AffineTransform::translate(float tx, float ty)
 {
     m_values[4] += tx * m_values[0] + ty * m_values[2];
@@ -68,32 +68,176 @@ AffineTransform& AffineTransform::translate(float tx, float ty)
     return *this;
 }
 
-AffineTransform& AffineTransform::multiply(const AffineTransform& other)
+template<>
+AffineTransform& AffineTransform::translate(const IntPoint& translation)
 {
-    AffineTransform result;
-    result.m_values[0] = other.a() * a() + other.b() * c();
-    result.m_values[1] = other.a() * b() + other.b() * d();
-    result.m_values[2] = other.c() * a() + other.d() * c();
-    result.m_values[3] = other.c() * b() + other.d() * d();
-    result.m_values[4] = other.e() * a() + other.f() * c() + e();
-    result.m_values[5] = other.e() * b() + other.f() * d() + f();
-    *this = result;
-    return *this;
+    return translate(translation.x(), translation.y());
 }
 
-AffineTransform& AffineTransform::rotate_radians(float radians)
+template<>
+AffineTransform& AffineTransform::translate(const FloatPoint& translation)
 {
-    float sin_angle = sinf(radians);
-    float cos_angle = cosf(radians);
+    return translate(translation.x(), translation.y());
+}
+
+template<>
+AffineTransform& AffineTransform::rotate_radians(int radians)
+{
+    float sin_angle = sinf(static_cast<float>(radians));
+    float cos_angle = cosf(static_cast<float>(radians));
     AffineTransform rotation(cos_angle, sin_angle, -sin_angle, cos_angle, 0, 0);
     multiply(rotation);
     return *this;
 }
 
+template<>
+AffineTransform& AffineTransform::rotate_radians(float radians)
+{
+    float cos_angle = cosf(radians);
+    float sin_angle = sinf(radians);
+
+    AffineTransform result;
+    result.m_values[0] = a() * cos_angle + b() * sin_angle;
+    result.m_values[1] = b() * cos_angle - a() * sin_angle;
+    result.m_values[2] = c() * cos_angle + d() * sin_angle;
+    result.m_values[3] = d() * cos_angle - c() * sin_angle;
+    result.m_values[4] = tx();
+    result.m_values[5] = ty();
+    *this = result;
+    return *this;
+}
+
+template<>
+AffineTransform& AffineTransform::rotate_radians(double radians)
+{
+    double cos_angle = cos(radians);
+    double sin_angle = sin(radians);
+
+    AffineTransform result;
+    result.m_values[0] = a() * cos_angle + b() * sin_angle;
+    result.m_values[1] = b() * cos_angle - a() * sin_angle;
+    result.m_values[2] = c() * cos_angle + d() * sin_angle;
+    result.m_values[3] = d() * cos_angle - c() * sin_angle;
+    result.m_values[4] = tx();
+    result.m_values[5] = ty();
+    *this = result;
+    return *this;
+}
+
+template<>
+AffineTransform& AffineTransform::rotate_degrees(int degrees)
+{
+    return rotate_radians(degrees * 0.017453292519943);
+}
+
+template<>
+AffineTransform& AffineTransform::rotate_degrees(float degrees)
+{
+    return rotate_radians(degrees * 0.017453292519943);
+}
+
+template<>
+AffineTransform& AffineTransform::scale(int sx, int sy)
+{
+    m_values[0] *= sx;
+    m_values[1] *= sy;
+    m_values[2] *= sx;
+    m_values[3] *= sy;
+    return *this;
+}
+
+template<>
+AffineTransform& AffineTransform::scale(float sx, float sy)
+{
+    m_values[0] *= sx;
+    m_values[1] *= sy;
+    m_values[2] *= sx;
+    m_values[3] *= sy;
+    return *this;
+}
+
+template<>
+AffineTransform& AffineTransform::scale(const IntPoint& scaling)
+{
+    return scale(scaling.x(), scaling.y());
+}
+
+template<>
+AffineTransform& AffineTransform::scale(const FloatPoint& scaling)
+{
+    return scale(scaling.x(), scaling.y());
+}
+
+AffineTransform& AffineTransform::multiply(const AffineTransform& other)
+{
+    AffineTransform result;
+    result.m_values[0] = a() * other.a() + b() * other.c();
+    result.m_values[1] = a() * other.b() + b() * other.d();
+    result.m_values[2] = c() * other.a() + d() * other.c();
+    result.m_values[3] = c() * other.b() + d() * other.d();
+    result.m_values[4] = a() * other.tx() + b() * other.ty() + tx();
+    result.m_values[5] = c() * other.tx() + d() * other.ty() + ty();
+    *this = result;
+    return *this;
+}
+
+AffineTransform& AffineTransform::invert()
+{
+    AffineTransform result;
+    float det = a() * d() - b() * c();
+    float minus_det = -det;
+
+    result.m_values[0] = d() / det;
+    result.m_values[1] = b() / minus_det;
+    result.m_values[2] = c() / minus_det;
+    result.m_values[3] = a() / det;
+    result.m_values[4] = (d() * tx() - b() * ty()) / minus_det;
+    result.m_values[5] = (c() * tx() - a() * ty()) / det;
+    *this = result;
+    return *this;
+}
+
+template<>
+IntPoint AffineTransform::translation() const
+{
+    return { tx(), ty() };
+}
+
+template<>
+FloatPoint AffineTransform::translation() const
+{
+    return { tx(), ty() };
+}
+
+float AffineTransform::rotation_radians() const
+{
+    return static_cast<float>(atan2(c(), d()));
+}
+
+template<>
+int AffineTransform::rotation_degrees() const
+{
+    return static_cast<int>(rotation_radians() * 57.29577951308232);
+}
+
+template<>
+float AffineTransform::rotation_degrees() const
+{
+    return rotation_radians() * 57.29577951308232;
+}
+
+FloatPoint AffineTransform::scaling() const
+{
+    return {
+        sqrtf(pow(a(), 2.0) + pow(c(), 2.0)),
+        sqrtf(pow(b(), 2.0) + pow(d(), 2.0))
+    };
+}
+
 void AffineTransform::map(float unmapped_x, float unmapped_y, float& mapped_x, float& mapped_y) const
 {
-    mapped_x = (m_values[0] * unmapped_x + m_values[2] * unmapped_y + m_values[4]);
-    mapped_y = (m_values[1] * unmapped_x + m_values[3] * unmapped_y + m_values[5]);
+    mapped_x = a() * unmapped_x + b() * unmapped_y + tx();
+    mapped_y = c() * unmapped_x + d() * unmapped_y + ty();
 }
 
 template<>
@@ -168,8 +312,8 @@ const LogStream& operator<<(const LogStream& stream, const AffineTransform& valu
                   << value.b() << ", "
                   << value.c() << ", "
                   << value.d() << ", "
-                  << value.e() << ", "
-                  << value.f() << " }";
+                  << value.tx() << ", "
+                  << value.ty() << " }";
 }
 
 }

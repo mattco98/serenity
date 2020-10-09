@@ -61,16 +61,50 @@ public:
     float b() const { return m_values[1]; }
     float c() const { return m_values[2]; }
     float d() const { return m_values[3]; }
-    float e() const { return m_values[4]; }
-    float f() const { return m_values[5]; }
+    float tx() const { return m_values[4]; }
+    float ty() const { return m_values[5]; }
 
     float x_scale() const;
     float y_scale() const;
 
-    AffineTransform& scale(float sx, float sy);
-    AffineTransform& translate(float tx, float ty);
-    AffineTransform& rotate_radians(float);
+    template<typename T>
+    AffineTransform& translate(T tx, T ty);
+
+    template<typename T>
+    AffineTransform& translate(const Point<T>& translation);
+
+    template<typename T>
+    AffineTransform& rotate_radians(T radians);
+
+    template<typename T>
+    AffineTransform& rotate_degrees(T degrees);
+
+    template<typename T>
+    AffineTransform& scale(T sx, T sy);
+
+    template<typename T>
+    AffineTransform& scale(const Point<T>& scaling);
+
     AffineTransform& multiply(const AffineTransform&);
+
+    AffineTransform& invert();
+
+    AffineTransform inverted() const
+    {
+        AffineTransform transform = *this;
+        transform.invert();
+        return transform;
+    }
+
+    template<typename T = float>
+    Point<T> translation() const;
+
+    float rotation_radians() const;
+
+    template<typename T = float>
+    T rotation_degrees() const;
+
+    FloatPoint scaling() const;
 
 private:
     float m_values[6] { 0 };
