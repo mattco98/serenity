@@ -29,6 +29,7 @@
 #include <AK/Forward.h>
 #include <AK/NonnullRefPtr.h>
 #include <AK/Vector.h>
+#include <LibGfx/AffineTransform.h>
 #include <LibGfx/Color.h>
 #include <LibGfx/Forward.h>
 #include <LibGfx/Point.h>
@@ -113,10 +114,14 @@ public:
     void clear_clip_rect();
     IntRect clip_rect() const { return state().clip_rect; }
 
-    void translate(int dx, int dy) { state().translation.move_by(dx, dy); }
-    void translate(const IntPoint& delta) { state().translation.move_by(delta); }
+    void translate(int dx, int dy) { state().transformation.translate(dx, dy); }
+    ALWAYS_INLINE void translate(const IntPoint& delta) { translate(delta.x(), delta.y()); }
 
-    IntPoint translation() const { return state().translation; }
+    void scale(float sx, float sy) { state().transformation.scale(sx, sy); }
+    ALWAYS_INLINE void scale(const FloatPoint& delta) { scale(delta.x(), delta.y()); }
+
+    IntPoint translation() const { return state().transformation.translation().to_type<int>(); }
+    const AffineTransform& transformation() const { return state().transformation; }
 
     Gfx::Bitmap* target() { return m_target.ptr(); }
 
@@ -140,7 +145,7 @@ protected:
 
     struct State {
         const Font* font;
-        IntPoint translation;
+        AffineTransform transformation;
         IntRect clip_rect;
         DrawOp draw_op;
     };

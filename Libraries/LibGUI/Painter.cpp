@@ -40,7 +40,7 @@ Painter::Painter(Widget& widget)
 {
     state().font = &widget.font();
     auto origin_rect = widget.window_relative_rect();
-    state().translation = origin_rect.location();
+    translate(origin_rect.location());
     state().clip_rect = origin_rect;
     m_clip_origin = origin_rect;
     state().clip_rect.intersect(m_target->rect());
