@@ -150,6 +150,8 @@ void SVGSVGElement::parse_attribute(const FlyString& name, const String& value)
             m_align_mode = AlignMode::XMidYMax;
         } else if (align == "xMaxYMax") {
             m_align_mode = AlignMode::XMaxYMax;
+        } else {
+            m_align_mode = AlignMode::None;
         }
 
         if (align != "none" && parts.size() > 1) {

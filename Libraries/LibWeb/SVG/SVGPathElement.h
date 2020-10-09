@@ -116,7 +116,6 @@ public:
     Gfx::Path& get_path();
 
 private:
-
     Vector<PathInstruction> m_instructions;
     Gfx::FloatPoint m_previous_control_point = {};
     Optional<Gfx::Path> m_path;
