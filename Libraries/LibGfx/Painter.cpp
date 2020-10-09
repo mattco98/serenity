@@ -1174,7 +1174,11 @@ void Painter::draw_pixel(const IntPoint& position, Color color, int thickness)
     ASSERT(draw_op() == DrawOp::Copy);
     if (thickness == 1)
         return set_pixel_with_draw_op(m_target->scanline(position.y())[position.x()], color);
-    IntRect rect { position.translated(-(thickness / 2), -(thickness / 2)), { thickness, thickness } };
+
+    int horizontal_thickness = max(static_cast<int>(thickness * transformation().scaling().x()), 1);
+    int vertical_thickness = max(static_cast<int>(thickness * transformation().scaling().y()), 1);
+
+    IntRect rect { position.translated(-(horizontal_thickness / 2), -(vertical_thickness / 2)), { horizontal_thickness, vertical_thickness } };
     fill_rect(transformation().inverted().map(rect), color);
 }
 
