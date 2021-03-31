@@ -33,7 +33,7 @@ namespace JS {
 
 Uint8ClampedArray* Uint8ClampedArray::create(GlobalObject& global_object, u32 length)
 {
-    return global_object.heap().allocate<Uint8ClampedArray>(global_object, length, *global_object.array_prototype());
+    return global_object.heap().allocate<Uint8ClampedArray>(global_object, length, *global_object.builtin_array_prototype());
 }
 
 Uint8ClampedArray::Uint8ClampedArray(u32 length, Object& prototype)

@@ -44,7 +44,7 @@ namespace JS {
 static HashTable<Object*> s_array_join_seen_objects;
 
 ArrayPrototype::ArrayPrototype(GlobalObject& global_object)
-    : Array(*global_object.object_prototype())
+    : Array(*global_object.builtin_object_prototype())
 {
 }
 

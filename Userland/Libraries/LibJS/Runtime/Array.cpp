@@ -33,7 +33,7 @@ namespace JS {
 
 Array* Array::create(GlobalObject& global_object)
 {
-    return global_object.heap().allocate<Array>(global_object, *global_object.array_prototype());
+    return global_object.heap().allocate<Array>(global_object, *global_object.builtin_array_prototype());
 }
 
 Array::Array(Object& prototype)

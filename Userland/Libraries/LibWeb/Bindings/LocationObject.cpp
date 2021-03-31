@@ -35,7 +35,7 @@ namespace Web {
 namespace Bindings {
 
 LocationObject::LocationObject(JS::GlobalObject& global_object)
-    : Object(*global_object.object_prototype())
+    : Object(*global_object.builtin_object_prototype())
 {
 }
 

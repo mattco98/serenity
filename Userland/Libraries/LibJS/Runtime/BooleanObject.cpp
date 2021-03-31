@@ -31,7 +31,7 @@ namespace JS {
 
 BooleanObject* BooleanObject::create(GlobalObject& global_object, bool value)
 {
-    return global_object.heap().allocate<BooleanObject>(global_object, value, *global_object.boolean_prototype());
+    return global_object.heap().allocate<BooleanObject>(global_object, value, *global_object.builtin_boolean_prototype());
 }
 
 BooleanObject::BooleanObject(bool value, Object& prototype)

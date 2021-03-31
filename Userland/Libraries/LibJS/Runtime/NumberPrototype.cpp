@@ -44,7 +44,7 @@ static const u8 max_precision_for_radix[37] = {
 static char digits[] = "0123456789abcdefghijklmnopqrstuvwxyz";
 
 NumberPrototype::NumberPrototype(GlobalObject& global_object)
-    : NumberObject(0, *global_object.object_prototype())
+    : NumberObject(0, *global_object.builtin_object_prototype())
 {
 }
 

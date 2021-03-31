@@ -75,7 +75,7 @@ static void prepare_arguments_list(GlobalObject& global_object, Value value, Mar
 }
 
 ReflectObject::ReflectObject(GlobalObject& global_object)
-    : Object(*global_object.object_prototype())
+    : Object(*global_object.builtin_object_prototype())
 {
 }
 

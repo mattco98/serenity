@@ -33,7 +33,7 @@
 namespace JS {
 
 ProxyConstructor::ProxyConstructor(GlobalObject& global_object)
-    : NativeFunction(vm().names.Proxy, *global_object.function_prototype())
+    : NativeFunction(vm().names.Proxy, *global_object.builtin_function_prototype())
 {
 }
 

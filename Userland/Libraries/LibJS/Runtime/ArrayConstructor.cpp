@@ -37,7 +37,7 @@
 namespace JS {
 
 ArrayConstructor::ArrayConstructor(GlobalObject& global_object)
-    : NativeFunction(vm().names.Array, *global_object.function_prototype())
+    : NativeFunction(vm().names.Array, *global_object.builtin_function_prototype())
 {
 }
 
@@ -50,7 +50,7 @@ void ArrayConstructor::initialize(GlobalObject& global_object)
     auto& vm = this->vm();
     NativeFunction::initialize(global_object);
 
-    define_property(vm.names.prototype, global_object.array_prototype(), 0);
+    define_property(vm.names.prototype, global_object.builtin_array_prototype(), 0);
     define_property(vm.names.length, Value(1), Attribute::Configurable);
 
     u8 attr = Attribute::Writable | Attribute::Configurable;

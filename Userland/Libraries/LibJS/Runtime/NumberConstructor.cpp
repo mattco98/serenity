@@ -43,7 +43,7 @@ constexpr const double MIN_SAFE_INTEGER_VALUE { -(__builtin_pow(2, 53) - 1) };
 namespace JS {
 
 NumberConstructor::NumberConstructor(GlobalObject& global_object)
-    : NativeFunction(vm().names.Number, *global_object.function_prototype())
+    : NativeFunction(vm().names.Number, *global_object.builtin_function_prototype())
 {
 }
 
@@ -57,7 +57,7 @@ void NumberConstructor::initialize(GlobalObject& global_object)
     define_native_function(vm.names.isNaN, is_nan, 1, attr);
     define_native_function(vm.names.isSafeInteger, is_safe_integer, 1, attr);
     define_property(vm.names.parseFloat, global_object.get(vm.names.parseFloat));
-    define_property(vm.names.prototype, global_object.number_prototype(), 0);
+    define_property(vm.names.prototype, global_object.builtin_number_prototype(), 0);
     define_property(vm.names.length, Value(1), Attribute::Configurable);
     define_property(vm.names.EPSILON, Value(EPSILON_VALUE), 0);
     define_property(vm.names.MAX_SAFE_INTEGER, Value(MAX_SAFE_INTEGER_VALUE), 0);

@@ -35,7 +35,7 @@
 namespace Web::Bindings {
 
 ImageConstructor::ImageConstructor(JS::GlobalObject& global_object)
-    : NativeFunction(*global_object.function_prototype())
+    : NativeFunction(*global_object.builtin_function_prototype())
 {
 }
 

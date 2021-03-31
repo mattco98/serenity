@@ -927,7 +927,7 @@ using namespace Web::HTML;
 namespace Web::Bindings {
 
 @constructor_class@::@constructor_class@(JS::GlobalObject& global_object)
-    : NativeFunction(*global_object.function_prototype())
+    : NativeFunction(*global_object.builtin_function_prototype())
 {
 }
 
@@ -1162,7 +1162,7 @@ using namespace Web::XHR;
 namespace Web::Bindings {
 
 @prototype_class@::@prototype_class@(JS::GlobalObject& global_object)
-    : Object(*global_object.object_prototype())
+    : Object(*global_object.builtin_object_prototype())
 {
 )~~~");
 
@@ -1170,7 +1170,7 @@ namespace Web::Bindings {
         // https://heycam.github.io/webidl/#es-DOMException-specialness
         // Object.getPrototypeOf(DOMException.prototype) === Error.prototype
         generator.append(R"~~~(
-    set_prototype(global_object.error_prototype());
+    set_prototype(global_object.builtin_error_prototype());
 )~~~");
     } else if (!interface.parent_name.is_empty()) {
         generator.append(R"~~~(

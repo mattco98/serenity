@@ -54,16 +54,16 @@ public:
     Shape* new_script_function_prototype_object_shape() { return m_new_script_function_prototype_object_shape; }
 
     // Not included in JS_ENUMERATE_NATIVE_OBJECTS due to missing distinct prototype
-    ProxyConstructor* proxy_constructor() { return m_proxy_constructor; }
+    ProxyConstructor* proxy_constructor() { return m_builtin_proxy_constructor; }
 
 #define __JS_ENUMERATE(ClassName, snake_name, PrototypeName, ConstructorName, ArrayType) \
-    ConstructorName* snake_name##_constructor() { return m_##snake_name##_constructor; } \
-    Object* snake_name##_prototype() { return m_##snake_name##_prototype; }
+    ConstructorName* builtin_##snake_name##_constructor() { return m_builtin_##snake_name##_constructor; } \
+    Object* builtin_##snake_name##_prototype() { return m_builtin_##snake_name##_prototype; }
     JS_ENUMERATE_BUILTIN_TYPES
 #undef __JS_ENUMERATE
 
 #define __JS_ENUMERATE(ClassName, snake_name) \
-    Object* snake_name##_prototype() { return m_##snake_name##_prototype; }
+    Object* builtin_##snake_name##_prototype() { return m_builtin_##snake_name##_prototype; }
     JS_ENUMERATE_ITERATOR_PROTOTYPES
 #undef __JS_ENUMERATE
 
@@ -92,16 +92,16 @@ private:
     Shape* m_new_script_function_prototype_object_shape { nullptr };
 
     // Not included in JS_ENUMERATE_NATIVE_OBJECTS due to missing distinct prototype
-    ProxyConstructor* m_proxy_constructor { nullptr };
+    ProxyConstructor* m_builtin_proxy_constructor { nullptr };
 
 #define __JS_ENUMERATE(ClassName, snake_name, PrototypeName, ConstructorName, ArrayType) \
-    ConstructorName* m_##snake_name##_constructor { nullptr };                           \
-    Object* m_##snake_name##_prototype { nullptr };
+    ConstructorName* m_builtin_##snake_name##_constructor { nullptr };                   \
+    Object* m_builtin_##snake_name##_prototype { nullptr };
     JS_ENUMERATE_BUILTIN_TYPES
 #undef __JS_ENUMERATE
 
 #define __JS_ENUMERATE(ClassName, snake_name) \
-    Object* m_##snake_name##_prototype { nullptr };
+    Object* m_builtin_##snake_name##_prototype { nullptr };
     JS_ENUMERATE_ITERATOR_PROTOTYPES
 #undef __JS_ENUMERATE
 };

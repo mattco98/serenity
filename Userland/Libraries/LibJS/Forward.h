@@ -44,7 +44,7 @@
 #define JS_DEFINE_NATIVE_SETTER(name) \
     void name([[maybe_unused]] JS::VM& vm, [[maybe_unused]] JS::GlobalObject& global_object, [[maybe_unused]] JS::Value value)
 
-// NOTE: Proxy is not included here as it doesn't have a prototype - m_proxy_constructor is initialized separately.
+// NOTE: Proxy is not included here as it doesn't have a prototype - m_builtin_proxy_constructor is initialized separately.
 #define JS_ENUMERATE_NATIVE_OBJECTS_EXCLUDING_TEMPLATES                                           \
     __JS_ENUMERATE(Array, array, ArrayPrototype, ArrayConstructor, void)                          \
     __JS_ENUMERATE(ArrayBuffer, array_buffer, ArrayBufferPrototype, ArrayBufferConstructor, void) \

@@ -31,7 +31,7 @@
 namespace JS {
 
 ErrorConstructor::ErrorConstructor(GlobalObject& global_object)
-    : NativeFunction(vm().names.Error, *global_object.function_prototype())
+    : NativeFunction(vm().names.Error, *global_object.builtin_function_prototype())
 {
 }
 
@@ -39,7 +39,7 @@ void ErrorConstructor::initialize(GlobalObject& global_object)
 {
     auto& vm = this->vm();
     NativeFunction::initialize(global_object);
-    define_property(vm.names.prototype, global_object.error_prototype(), 0);
+    define_property(vm.names.prototype, global_object.builtin_error_prototype(), 0);
     define_property(vm.names.length, Value(1), Attribute::Configurable);
 }
 
@@ -66,14 +66,14 @@ Value ErrorConstructor::construct(Function&)
 
 #define __JS_ENUMERATE(ClassName, snake_name, PrototypeName, ConstructorName, ArrayType)                 \
     ConstructorName::ConstructorName(GlobalObject& global_object)                                        \
-        : NativeFunction(*global_object.function_prototype())                                            \
+        : NativeFunction(*global_object.builtin_function_prototype())                                    \
     {                                                                                                    \
     }                                                                                                    \
     void ConstructorName::initialize(GlobalObject& global_object)                                        \
     {                                                                                                    \
         auto& vm = this->vm();                                                                           \
         NativeFunction::initialize(global_object);                                                       \
-        define_property(vm.names.prototype, global_object.snake_name##_prototype(), 0);                  \
+        define_property(vm.names.prototype, global_object.builtin_##snake_name##_prototype(), 0);        \
         define_property(vm.names.length, Value(1), Attribute::Configurable);                             \
     }                                                                                                    \
     ConstructorName::~ConstructorName() { }                                                              \

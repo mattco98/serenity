@@ -103,7 +103,7 @@ void TypedArrayBase::visit_edges(Visitor& visitor)
 #define JS_DEFINE_TYPED_ARRAY(ClassName, snake_name, PrototypeName, ConstructorName, Type)                                             \
     ClassName* ClassName::create(GlobalObject& global_object, u32 length)                                                              \
     {                                                                                                                                  \
-        return global_object.heap().allocate<ClassName>(global_object, length, *global_object.snake_name##_prototype());               \
+        return global_object.heap().allocate<ClassName>(global_object, length, *global_object.builtin_##snake_name##_prototype());     \
     }                                                                                                                                  \
                                                                                                                                        \
     ClassName::ClassName(u32 length, Object& prototype)                                                                                \
@@ -113,13 +113,13 @@ void TypedArrayBase::visit_edges(Visitor& visitor)
     ClassName::~ClassName() { }                                                                                                        \
                                                                                                                                        \
     PrototypeName::PrototypeName(GlobalObject& global_object)                                                                          \
-        : Object(*global_object.typed_array_prototype())                                                                               \
+        : Object(*global_object.builtin_typed_array_prototype())                                                                       \
     {                                                                                                                                  \
     }                                                                                                                                  \
     PrototypeName::~PrototypeName() { }                                                                                                \
                                                                                                                                        \
     ConstructorName::ConstructorName(GlobalObject& global_object)                                                                      \
-        : TypedArrayConstructor(vm().names.ClassName, *global_object.typed_array_constructor())                                        \
+        : TypedArrayConstructor(vm().names.ClassName, *global_object.builtin_typed_array_constructor())                                \
     {                                                                                                                                  \
     }                                                                                                                                  \
     ConstructorName::~ConstructorName() { }                                                                                            \
@@ -127,7 +127,7 @@ void TypedArrayBase::visit_edges(Visitor& visitor)
     {                                                                                                                                  \
         auto& vm = this->vm();                                                                                                         \
         NativeFunction::initialize(global_object);                                                                                     \
-        define_property(vm.names.prototype, global_object.snake_name##_prototype(), 0);                                                \
+        define_property(vm.names.prototype, global_object.builtin_##snake_name##_prototype(), 0);                                      \
         define_property(vm.names.length, Value(3), Attribute::Configurable);                                                           \
         define_property(vm.names.BYTES_PER_ELEMENT, Value((i32)sizeof(Type)), 0);                                                      \
     }                                                                                                                                  \

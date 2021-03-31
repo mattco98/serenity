@@ -35,7 +35,7 @@
 namespace JS {
 
 ErrorPrototype::ErrorPrototype(GlobalObject& global_object)
-    : Object(*global_object.object_prototype())
+    : Object(*global_object.builtin_object_prototype())
 {
 }
 
@@ -129,7 +129,7 @@ JS_DEFINE_NATIVE_FUNCTION(ErrorPrototype::to_string)
 
 #define __JS_ENUMERATE(ClassName, snake_name, PrototypeName, ConstructorName, ArrayType) \
     PrototypeName::PrototypeName(GlobalObject& global_object)                            \
-        : Object(*global_object.error_prototype())                                       \
+        : Object(*global_object.builtin_error_prototype())                               \
     {                                                                                    \
     }                                                                                    \
     PrototypeName::~PrototypeName() { }

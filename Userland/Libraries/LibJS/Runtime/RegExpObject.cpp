@@ -104,7 +104,7 @@ static Flags options_from(const String& flags, VM& vm, GlobalObject& global_obje
 
 RegExpObject* RegExpObject::create(GlobalObject& global_object, String pattern, String flags)
 {
-    return global_object.heap().allocate<RegExpObject>(global_object, pattern, flags, *global_object.regexp_prototype());
+    return global_object.heap().allocate<RegExpObject>(global_object, pattern, flags, *global_object.builtin_regexp_prototype());
 }
 
 RegExpObject::RegExpObject(String pattern, String flags, Object& prototype)

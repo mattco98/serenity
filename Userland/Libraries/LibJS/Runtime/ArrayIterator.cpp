@@ -31,7 +31,7 @@ namespace JS {
 
 ArrayIterator* ArrayIterator::create(GlobalObject& global_object, Value array, Object::PropertyKind iteration_kind)
 {
-    return global_object.heap().allocate<ArrayIterator>(global_object, *global_object.array_iterator_prototype(), array, iteration_kind);
+    return global_object.heap().allocate<ArrayIterator>(global_object, *global_object.builtin_array_iterator_prototype(), array, iteration_kind);
 }
 
 ArrayIterator::ArrayIterator(Object& prototype, Value array, Object::PropertyKind iteration_kind)

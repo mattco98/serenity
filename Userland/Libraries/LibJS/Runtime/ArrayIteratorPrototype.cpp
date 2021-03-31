@@ -34,7 +34,7 @@
 namespace JS {
 
 ArrayIteratorPrototype::ArrayIteratorPrototype(GlobalObject& global_object)
-    : Object(*global_object.iterator_prototype())
+    : Object(*global_object.builtin_iterator_prototype())
 {
 }
 

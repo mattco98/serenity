@@ -30,7 +30,7 @@
 namespace JS {
 
 BoundFunction::BoundFunction(GlobalObject& global_object, Function& target_function, Value bound_this, Vector<Value> arguments, i32 length, Object* constructor_prototype)
-    : Function::Function(*global_object.function_prototype(), bound_this, move(arguments))
+    : Function::Function(*global_object.builtin_function_prototype(), bound_this, move(arguments))
     , m_target_function(&target_function)
     , m_constructor_prototype(constructor_prototype)
     , m_name(String::formatted("bound {}", target_function.name()))

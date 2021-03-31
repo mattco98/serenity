@@ -33,7 +33,7 @@
 namespace JS {
 
 ArrayBufferConstructor::ArrayBufferConstructor(GlobalObject& global_object)
-    : NativeFunction(vm().names.ArrayBuffer, *global_object.function_prototype())
+    : NativeFunction(vm().names.ArrayBuffer, *global_object.builtin_function_prototype())
 {
 }
 
@@ -42,7 +42,7 @@ void ArrayBufferConstructor::initialize(GlobalObject& global_object)
     auto& vm = this->vm();
     NativeFunction::initialize(global_object);
     u8 attr = Attribute::Writable | Attribute::Configurable;
-    define_property(vm.names.prototype, global_object.array_buffer_prototype(), 0);
+    define_property(vm.names.prototype, global_object.builtin_array_buffer_prototype(), 0);
     define_property(vm.names.length, Value(1), Attribute::Configurable);
     define_native_function(vm.names.isView, is_view, 1, attr);
 }

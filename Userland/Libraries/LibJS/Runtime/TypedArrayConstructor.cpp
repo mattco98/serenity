@@ -35,7 +35,7 @@ TypedArrayConstructor::TypedArrayConstructor(const FlyString& name, Object& prot
 }
 
 TypedArrayConstructor::TypedArrayConstructor(GlobalObject& global_object)
-    : NativeFunction(vm().names.TypedArray, *global_object.function_prototype())
+    : NativeFunction(vm().names.TypedArray, *global_object.builtin_function_prototype())
 {
 }
 
@@ -43,7 +43,7 @@ void TypedArrayConstructor::initialize(GlobalObject& global_object)
 {
     auto& vm = this->vm();
     NativeFunction::initialize(global_object);
-    define_property(vm.names.prototype, global_object.typed_array_prototype(), 0);
+    define_property(vm.names.prototype, global_object.builtin_typed_array_prototype(), 0);
     define_property(vm.names.length, Value(0), Attribute::Configurable);
 }
 

@@ -90,30 +90,30 @@ void GlobalObject::initialize_global_object()
 
     // These are done first since other prototypes depend on their presence.
     m_empty_object_shape = heap().allocate_without_global_object<Shape>(*this);
-    m_object_prototype = heap().allocate_without_global_object<ObjectPrototype>(*this);
-    m_function_prototype = heap().allocate_without_global_object<FunctionPrototype>(*this);
+    m_builtin_object_prototype = heap().allocate_without_global_object<ObjectPrototype>(*this);
+    m_builtin_function_prototype = heap().allocate_without_global_object<FunctionPrototype>(*this);
 
     m_new_object_shape = vm.heap().allocate_without_global_object<Shape>(*this);
-    m_new_object_shape->set_prototype_without_transition(m_object_prototype);
+    m_new_object_shape->set_prototype_without_transition(m_builtin_object_prototype);
 
     m_new_script_function_prototype_object_shape = vm.heap().allocate_without_global_object<Shape>(*this);
-    m_new_script_function_prototype_object_shape->set_prototype_without_transition(m_object_prototype);
+    m_new_script_function_prototype_object_shape->set_prototype_without_transition(m_builtin_object_prototype);
     m_new_script_function_prototype_object_shape->add_property_without_transition(vm.names.constructor, Attribute::Writable | Attribute::Configurable);
 
-    static_cast<FunctionPrototype*>(m_function_prototype)->initialize(*this);
-    static_cast<ObjectPrototype*>(m_object_prototype)->initialize(*this);
+    static_cast<FunctionPrototype*>(m_builtin_function_prototype)->initialize(*this);
+    static_cast<ObjectPrototype*>(m_builtin_object_prototype)->initialize(*this);
 
-    set_prototype(m_object_prototype);
+    set_prototype(m_builtin_object_prototype);
 
 #define __JS_ENUMERATE(ClassName, snake_name, PrototypeName, ConstructorName, ArrayType) \
-    if (!m_##snake_name##_prototype)                                                     \
-        m_##snake_name##_prototype = heap().allocate<PrototypeName>(*this, *this);
+    if (!m_builtin_##snake_name##_prototype)                                             \
+        m_builtin_##snake_name##_prototype = heap().allocate<PrototypeName>(*this, *this);
     JS_ENUMERATE_BUILTIN_TYPES
 #undef __JS_ENUMERATE
 
 #define __JS_ENUMERATE(ClassName, snake_name) \
-    if (!m_##snake_name##_prototype)          \
-        m_##snake_name##_prototype = heap().allocate<ClassName##Prototype>(*this, *this);
+    if (!m_builtin_##snake_name##_prototype)  \
+        m_builtin_##snake_name##_prototype = heap().allocate<ClassName##Prototype>(*this, *this);
     JS_ENUMERATE_ITERATOR_PROTOTYPES
 #undef __JS_ENUMERATE
 
@@ -135,24 +135,24 @@ void GlobalObject::initialize_global_object()
     define_property(vm.names.JSON, heap().allocate<JSONObject>(*this, *this), attr);
     define_property(vm.names.Reflect, heap().allocate<ReflectObject>(*this, *this), attr);
 
-    add_constructor(vm.names.Array, m_array_constructor, m_array_prototype);
-    add_constructor(vm.names.ArrayBuffer, m_array_buffer_constructor, m_array_buffer_prototype);
-    add_constructor(vm.names.BigInt, m_bigint_constructor, m_bigint_prototype);
-    add_constructor(vm.names.Boolean, m_boolean_constructor, m_boolean_prototype);
-    add_constructor(vm.names.Date, m_date_constructor, m_date_prototype);
-    add_constructor(vm.names.Error, m_error_constructor, m_error_prototype);
-    add_constructor(vm.names.Function, m_function_constructor, m_function_prototype);
-    add_constructor(vm.names.Number, m_number_constructor, m_number_prototype);
-    add_constructor(vm.names.Object, m_object_constructor, m_object_prototype);
-    add_constructor(vm.names.Proxy, m_proxy_constructor, nullptr);
-    add_constructor(vm.names.RegExp, m_regexp_constructor, m_regexp_prototype);
-    add_constructor(vm.names.String, m_string_constructor, m_string_prototype);
-    add_constructor(vm.names.Symbol, m_symbol_constructor, m_symbol_prototype);
+    add_constructor(vm.names.Array, m_builtin_array_constructor, m_builtin_array_prototype);
+    add_constructor(vm.names.ArrayBuffer, m_builtin_array_buffer_constructor, m_builtin_array_buffer_prototype);
+    add_constructor(vm.names.BigInt, m_builtin_bigint_constructor, m_builtin_bigint_prototype);
+    add_constructor(vm.names.Boolean, m_builtin_boolean_constructor, m_builtin_boolean_prototype);
+    add_constructor(vm.names.Date, m_builtin_date_constructor, m_builtin_date_prototype);
+    add_constructor(vm.names.Error, m_builtin_error_constructor, m_builtin_error_prototype);
+    add_constructor(vm.names.Function, m_builtin_function_constructor, m_builtin_function_prototype);
+    add_constructor(vm.names.Number, m_builtin_number_constructor, m_builtin_number_prototype);
+    add_constructor(vm.names.Object, m_builtin_object_constructor, m_builtin_object_prototype);
+    add_constructor(vm.names.Proxy, m_builtin_proxy_constructor, nullptr);
+    add_constructor(vm.names.RegExp, m_builtin_regexp_constructor, m_builtin_regexp_prototype);
+    add_constructor(vm.names.String, m_builtin_string_constructor, m_builtin_string_prototype);
+    add_constructor(vm.names.Symbol, m_builtin_symbol_constructor, m_builtin_symbol_prototype);
 
-    initialize_constructor(vm.names.TypedArray, m_typed_array_constructor, m_typed_array_prototype);
+    initialize_constructor(vm.names.TypedArray, m_builtin_typed_array_constructor, m_builtin_typed_array_prototype);
 
 #define __JS_ENUMERATE(ClassName, snake_name, PrototypeName, ConstructorName, ArrayType) \
-    add_constructor(vm.names.ClassName, m_##snake_name##_constructor, m_##snake_name##_prototype);
+    add_constructor(vm.names.ClassName, m_builtin_##snake_name##_constructor, m_builtin_##snake_name##_prototype);
     JS_ENUMERATE_ERROR_SUBCLASSES
     JS_ENUMERATE_TYPED_ARRAYS
 #undef __JS_ENUMERATE
@@ -169,17 +169,17 @@ void GlobalObject::visit_edges(Visitor& visitor)
     visitor.visit(m_empty_object_shape);
     visitor.visit(m_new_object_shape);
     visitor.visit(m_new_script_function_prototype_object_shape);
-    visitor.visit(m_proxy_constructor);
+    visitor.visit(m_builtin_proxy_constructor);
 
 #define __JS_ENUMERATE(ClassName, snake_name, PrototypeName, ConstructorName, ArrayType) \
-    visitor.visit(m_##snake_name##_constructor);                                         \
-    visitor.visit(m_##snake_name##_prototype);
+    visitor.visit(m_builtin_##snake_name##_constructor);                                 \
+    visitor.visit(m_builtin_##snake_name##_prototype);
     JS_ENUMERATE_ERROR_SUBCLASSES
     JS_ENUMERATE_BUILTIN_TYPES
 #undef __JS_ENUMERATE
 
 #define __JS_ENUMERATE(ClassName, snake_name) \
-    visitor.visit(m_##snake_name##_prototype);
+    visitor.visit(m_builtin_##snake_name##_prototype);
     JS_ENUMERATE_ITERATOR_PROTOTYPES
 #undef __JS_ENUMERATE
 }

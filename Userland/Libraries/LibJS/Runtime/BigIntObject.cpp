@@ -31,7 +31,7 @@ namespace JS {
 
 BigIntObject* BigIntObject::create(GlobalObject& global_object, BigInt& bigint)
 {
-    return global_object.heap().allocate<BigIntObject>(global_object, bigint, *global_object.bigint_prototype());
+    return global_object.heap().allocate<BigIntObject>(global_object, bigint, *global_object.builtin_bigint_prototype());
 }
 
 BigIntObject::BigIntObject(BigInt& bigint, Object& prototype)

@@ -36,7 +36,7 @@
 namespace JS {
 
 RegExpPrototype::RegExpPrototype(GlobalObject& global_object)
-    : Object(*global_object.object_prototype())
+    : Object(*global_object.builtin_object_prototype())
 {
 }
 
@@ -139,7 +139,7 @@ JS_DEFINE_NATIVE_GETTER(RegExpPrototype::source)
     if (!this_object)
         return {};
 
-    auto* regexp_prototype = global_object.regexp_prototype();
+    auto* regexp_prototype = global_object.builtin_regexp_prototype();
     if (this_object == regexp_prototype)
         return js_string(vm, "(?:)");
 

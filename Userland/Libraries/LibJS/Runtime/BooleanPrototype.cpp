@@ -32,7 +32,7 @@
 namespace JS {
 
 BooleanPrototype::BooleanPrototype(GlobalObject& global_object)
-    : BooleanObject(false, *global_object.object_prototype())
+    : BooleanObject(false, *global_object.builtin_object_prototype())
 {
 }
 

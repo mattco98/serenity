@@ -816,7 +816,7 @@ Value ClassExpression::execute(Interpreter& interpreter, GlobalObject& global_ob
         class_constructor->define_property(vm.names.prototype, prototype, Attribute::Writable);
         if (interpreter.exception())
             return {};
-        class_constructor->set_prototype(super_constructor.is_null() ? global_object.function_prototype() : &super_constructor.as_object());
+        class_constructor->set_prototype(super_constructor.is_null() ? global_object.builtin_function_prototype() : &super_constructor.as_object());
     }
 
     auto class_prototype = class_constructor->get(vm.names.prototype);

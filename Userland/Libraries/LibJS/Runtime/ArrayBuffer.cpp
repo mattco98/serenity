@@ -31,7 +31,7 @@ namespace JS {
 
 ArrayBuffer* ArrayBuffer::create(GlobalObject& global_object, size_t byte_size)
 {
-    return global_object.heap().allocate<ArrayBuffer>(global_object, byte_size, *global_object.array_buffer_prototype());
+    return global_object.heap().allocate<ArrayBuffer>(global_object, byte_size, *global_object.builtin_array_buffer_prototype());
 }
 
 ArrayBuffer::ArrayBuffer(size_t byte_size, Object& prototype)

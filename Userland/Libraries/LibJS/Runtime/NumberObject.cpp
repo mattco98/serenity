@@ -31,7 +31,7 @@ namespace JS {
 
 NumberObject* NumberObject::create(GlobalObject& global_object, double value)
 {
-    return global_object.heap().allocate<NumberObject>(global_object, value, *global_object.number_prototype());
+    return global_object.heap().allocate<NumberObject>(global_object, value, *global_object.builtin_number_prototype());
 }
 
 NumberObject::NumberObject(double value, Object& prototype)

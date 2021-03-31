@@ -31,7 +31,7 @@
 namespace JS {
 
 SymbolConstructor::SymbolConstructor(GlobalObject& global_object)
-    : NativeFunction(vm().names.Symbol, *global_object.function_prototype())
+    : NativeFunction(vm().names.Symbol, *global_object.builtin_function_prototype())
 {
 }
 
@@ -39,7 +39,7 @@ void SymbolConstructor::initialize(GlobalObject& global_object)
 {
     auto& vm = this->vm();
     NativeFunction::initialize(global_object);
-    define_property(vm.names.prototype, global_object.symbol_prototype(), 0);
+    define_property(vm.names.prototype, global_object.builtin_symbol_prototype(), 0);
     define_property(vm.names.length, Value(0), Attribute::Configurable);
 
     define_native_function(vm.names.for_, for_, 1, Attribute::Writable | Attribute::Configurable);

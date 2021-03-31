@@ -74,7 +74,7 @@ static Optional<size_t> split_match(const String& haystack, size_t start, const 
 }
 
 StringPrototype::StringPrototype(GlobalObject& global_object)
-    : StringObject(*js_string(global_object.heap(), String::empty()), *global_object.object_prototype())
+    : StringObject(*js_string(global_object.heap(), String::empty()), *global_object.builtin_object_prototype())
 {
 }
 

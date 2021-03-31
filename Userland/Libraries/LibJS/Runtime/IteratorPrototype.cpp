@@ -31,7 +31,7 @@
 namespace JS {
 
 IteratorPrototype::IteratorPrototype(GlobalObject& global_object)
-    : Object(*global_object.object_prototype())
+    : Object(*global_object.builtin_object_prototype())
 {
 }
 
