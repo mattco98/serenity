@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Matthew Olsson <matthewcolsson@gmail.com>
+ * Copyright (c) 2021, Matthew Olsson <matthewcolsson@gmail.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -24,24 +24,52 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
-
-#include <AK/Function.h>
-#include <LibJS/Runtime/Object.h>
+#include <LibJS/Runtime/GlobalObject.h>
+#include <LibJS/Runtime/SetConstructor.h>
+#include <LibJS/Runtime/SetObject.h>
+#include <LibJS/Runtime/IteratorOperations.h>
 
 namespace JS {
 
-// Common iterator operations defined in ECMA262 7.4
-// https://tc39.es/ecma262/#sec-operations-on-iterator-objects
+SetConstructor::SetConstructor(GlobalObject& global_object)
+    : NativeFunction(vm().names.Set, *global_object.builtin_function_prototype())
+{
+}
 
-Object* get_iterator(GlobalObject&, Value value, const String& hint = "sync", Value method = {});
-bool is_iterator_complete(Object& iterator_result);
-Value create_iterator_result_object(GlobalObject&, Value value, bool done);
+void SetConstructor::initialize(GlobalObject& global_object)
+{
+    auto& vm = this->vm();
+    NativeFunction::initialize(global_object);
+    define_property(vm.names.prototype, global_object.builtin_set_prototype(), 0);
+    define_property(vm.names.length, Value(1), Attribute::Configurable);
+}
 
-Value iterator_step(Object& iterator_record);
-Object* iterator_next(Object& iterator, Value value = {});
-void iterator_close(Object& iterator);
+SetConstructor::~SetConstructor()
+{
+}
 
-void get_iterator_values(GlobalObject&, Value value, AK::Function<IterationDecision(Value)> callback);
+Value SetConstructor::call()
+{
+    auto& vm = this->vm();
+    vm.throw_exception<TypeError>(global_object(), ErrorType::ConstructorWithoutNew, vm.names.Set);
+    return {};
+}
+
+Value SetConstructor::construct(Function&)
+{
+    auto* set_object = SetObject::create(global_object());
+    if (vm().argument_count() == 0)
+        return set_object;
+
+    auto iterable = vm().argument(0);
+
+    get_iterator_values(global_object(), iterable, [&](Value value) {
+        if (!set_object->contains(value))
+            set_object->set(value);
+        return IterationDecision::Continue;
+    });
+
+    return set_object;
+}
 
 }

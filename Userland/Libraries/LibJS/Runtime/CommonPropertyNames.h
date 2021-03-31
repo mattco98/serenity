@@ -56,12 +56,14 @@ namespace JS {
     P(RegExp)                                \
     P(SQRT1_2)                               \
     P(SQRT2)                                 \
+    P(Set)                                   \
     P(String)                                \
     P(Symbol)                                \
     P(UTC)                                   \
     P(abs)                                   \
     P(acos)                                  \
     P(acosh)                                 \
+    P(add)                                   \
     P(apply)                                 \
     P(arguments)                             \
     P(asIntN)                                \
@@ -210,6 +212,7 @@ namespace JS {
     P(sign)                                  \
     P(sin)                                   \
     P(sinh)                                  \
+    P(size)                                  \
     P(slice)                                 \
     P(some)                                  \
     P(sort)                                  \
@@ -251,7 +254,8 @@ namespace JS {
     P(writable)
 
 struct CommonPropertyNames {
-    FlyString for_ { "for" };
+    FlyString for_{ "for" };
+    FlyString delete_{ "delete" };
 #define __ENUMERATE(x) FlyString x { #x };
     ENUMERATE_STANDARD_PROPERTY_NAMES(__ENUMERATE)
 #undef __ENUMERATE

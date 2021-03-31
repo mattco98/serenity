@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Matthew Olsson <matthewcolsson@gmail.com>
+ * Copyright (c) 2021, Matthew Olsson <matthewcolsson@gmail.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,22 +26,23 @@
 
 #pragma once
 
-#include <AK/Function.h>
-#include <LibJS/Runtime/Object.h>
+#include <LibJS/Runtime/NativeFunction.h>
 
 namespace JS {
 
-// Common iterator operations defined in ECMA262 7.4
-// https://tc39.es/ecma262/#sec-operations-on-iterator-objects
+class SetConstructor final : public NativeFunction {
+    JS_OBJECT(SetConstructor, NativeFunction);
 
-Object* get_iterator(GlobalObject&, Value value, const String& hint = "sync", Value method = {});
-bool is_iterator_complete(Object& iterator_result);
-Value create_iterator_result_object(GlobalObject&, Value value, bool done);
+public:
+    explicit SetConstructor(GlobalObject&);
+    virtual void initialize(GlobalObject&) override;
+    virtual ~SetConstructor() override;
 
-Value iterator_step(Object& iterator_record);
-Object* iterator_next(Object& iterator, Value value = {});
-void iterator_close(Object& iterator);
+    virtual Value call() override;
+    virtual Value construct(Function& new_target) override;
 
-void get_iterator_values(GlobalObject&, Value value, AK::Function<IterationDecision(Value)> callback);
+private:
+    virtual bool has_constructor() const override { return true; }
+};
 
 }

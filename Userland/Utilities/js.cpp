@@ -50,6 +50,7 @@
 #include <LibJS/Runtime/ProxyObject.h>
 #include <LibJS/Runtime/RegExpObject.h>
 #include <LibJS/Runtime/ScriptFunction.h>
+#include <LibJS/Runtime/SetObject.h>
 #include <LibJS/Runtime/Shape.h>
 #include <LibJS/Runtime/StringObject.h>
 #include <LibJS/Runtime/TypedArray.h>
@@ -293,6 +294,23 @@ static void print_array_buffer(const JS::Object& object, HashTable<JS::Object*>&
     }
 }
 
+static void print_set_object(const JS::Object& object, HashTable<JS::Object*>& seen_objects)
+{
+    auto& set = static_cast<const JS::SetObject&>(object);
+    print_type("Set");
+    out(" {{");
+    bool first = true;
+    set.for_each_value([&](JS::Value value) {
+        print_separator(first);
+        print_value(value, seen_objects);
+        return IterationDecision::Continue;
+    });
+    if (!first)
+        out(" ");
+    out("}}");
+
+}
+
 static void print_typed_array(const JS::Object& object, HashTable<JS::Object*>& seen_objects)
 {
     auto& typed_array_base = static_cast<const JS::TypedArrayBase&>(object);
@@ -369,6 +387,8 @@ static void print_value(JS::Value value, HashTable<JS::Object*>& seen_objects)
             return print_proxy_object(object, seen_objects);
         if (is<JS::ArrayBuffer>(object))
             return print_array_buffer(object, seen_objects);
+        if (is<JS::SetObject>(object))
+            return print_set_object(object, seen_objects);
         if (object.is_typed_array())
             return print_typed_array(object, seen_objects);
         if (is<JS::StringObject>(object))

@@ -64,6 +64,9 @@ set(SOURCES
     Runtime/RegExpPrototype.cpp
     Runtime/ScopeObject.cpp
     Runtime/ScriptFunction.cpp
+    Runtime/SetConstructor.cpp
+    Runtime/SetPrototype.cpp
+    Runtime/SetObject.cpp
     Runtime/Shape.cpp
     Runtime/StringConstructor.cpp
     Runtime/StringIterator.cpp

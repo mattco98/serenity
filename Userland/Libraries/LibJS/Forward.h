@@ -56,6 +56,7 @@
     __JS_ENUMERATE(NumberObject, number, NumberPrototype, NumberConstructor, void)                \
     __JS_ENUMERATE(Object, object, ObjectPrototype, ObjectConstructor, void)                      \
     __JS_ENUMERATE(RegExpObject, regexp, RegExpPrototype, RegExpConstructor, void)                \
+    __JS_ENUMERATE(SetObject, set, SetPrototype, SetConstructor, void)                            \
     __JS_ENUMERATE(StringObject, string, StringPrototype, StringConstructor, void)                \
     __JS_ENUMERATE(SymbolObject, symbol, SymbolPrototype, SymbolConstructor, void)
 

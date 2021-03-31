@@ -27,6 +27,7 @@
 #pragma once
 
 #include <AK/Assertions.h>
+#include <AK/Traits.h>
 #include <AK/BitCast.h>
 #include <AK/Format.h>
 #include <AK/Forward.h>
@@ -243,6 +244,18 @@ public:
         return *m_value.as_symbol;
     }
 
+    BigInt& as_bigint()
+    {
+            VERIFY(is_bigint());
+        return *m_value.as_bigint;
+    }
+
+    const BigInt& as_bigint() const
+    {
+        VERIFY(is_bigint());
+        return *m_value.as_bigint;
+    }
+
     Cell* as_cell()
     {
         VERIFY(is_cell());
@@ -253,12 +266,6 @@ public:
     {
         VERIFY(is_accessor());
         return *m_value.as_accessor;
-    }
-
-    BigInt& as_bigint()
-    {
-        VERIFY(is_bigint());
-        return *m_value.as_bigint;
     }
 
     NativeProperty& as_native_property()
@@ -301,6 +308,9 @@ public:
             return fallback;
         return *this;
     }
+
+    bool operator==(const Value& other) const;
+    unsigned hash() const;
 
 private:
     Type m_type { Type::Empty };
@@ -388,6 +398,11 @@ struct Formatter<JS::Value> : Formatter<StringView> {
     {
         Formatter<StringView>::format(builder, value.is_empty() ? "<empty>" : value.to_string_without_side_effects());
     }
+};
+
+template<>
+struct Traits<JS::Value> : public GenericTraits<JS::Value> {
+    static unsigned hash(const JS::Value& value) { return value.hash(); }
 };
 
 }

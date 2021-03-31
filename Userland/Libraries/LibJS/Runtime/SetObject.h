@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Matthew Olsson <matthewcolsson@gmail.com>
+ * Copyright (c) 2021, Matthew Olsson <matthewcolsson@gmail.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,21 +27,53 @@
 #pragma once
 
 #include <AK/Function.h>
+#include <AK/IterationDecision.h>
+#include <AK/Traits.h>
+#include <AK/HashTable.h>
 #include <LibJS/Runtime/Object.h>
 
 namespace JS {
 
-// Common iterator operations defined in ECMA262 7.4
-// https://tc39.es/ecma262/#sec-operations-on-iterator-objects
+struct OrderedEntry {
+    Value value;
+    size_t index { 0 };
+};
 
-Object* get_iterator(GlobalObject&, Value value, const String& hint = "sync", Value method = {});
-bool is_iterator_complete(Object& iterator_result);
-Value create_iterator_result_object(GlobalObject&, Value value, bool done);
+class SetObject : public Object {
+    JS_OBJECT(SetObject, Object);
 
-Value iterator_step(Object& iterator_record);
-Object* iterator_next(Object& iterator, Value value = {});
-void iterator_close(Object& iterator);
+public:
+    static SetObject* create(GlobalObject&);
 
-void get_iterator_values(GlobalObject&, Value value, AK::Function<IterationDecision(Value)> callback);
+    SetObject(Object& prototype);
+    virtual void initialize(GlobalObject&) override;
+    virtual ~SetObject() override;
+
+    const HashTable<OrderedEntry>& data() const { return m_data; }
+
+    void set(Value value);
+    bool contains(Value value);
+    bool remove(Value value);
+    void clear();
+
+    void for_each_value(AK::Function<IterationDecision(Value)> func) const;
+
+private:
+    HashTable<OrderedEntry> m_data;
+    size_t m_current_index;
+};
 
 }
+
+template<>
+struct AK::Traits<JS::OrderedEntry> : public AK::GenericTraits<StringImpl*> {
+    static constexpr bool equals(const JS::OrderedEntry& a, const JS::OrderedEntry& b)
+    {
+        return AK::Traits<JS::Value>::equals(a.value, b.value);
+    }
+
+    static unsigned hash(const JS::OrderedEntry& entry)
+    {
+        return Traits<JS::Value>::hash(entry.value);
+    }
+};

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Matthew Olsson <matthewcolsson@gmail.com>
+ * Copyright (c) 2021, Matthew Olsson <matthewcolsson@gmail.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -24,24 +24,67 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
-
-#include <AK/Function.h>
-#include <LibJS/Runtime/Object.h>
+#include <AK/QuickSort.h>
+#include <LibJS/Runtime/GlobalObject.h>
+#include <LibJS/Runtime/SetObject.h>
 
 namespace JS {
 
-// Common iterator operations defined in ECMA262 7.4
-// https://tc39.es/ecma262/#sec-operations-on-iterator-objects
+SetObject* SetObject::create(GlobalObject& global_object)
+{
+    return global_object.heap().allocate<SetObject>(global_object, *global_object.builtin_set_prototype());
+}
 
-Object* get_iterator(GlobalObject&, Value value, const String& hint = "sync", Value method = {});
-bool is_iterator_complete(Object& iterator_result);
-Value create_iterator_result_object(GlobalObject&, Value value, bool done);
+SetObject::SetObject(Object& prototype)
+    : Object(prototype)
+{
+}
 
-Value iterator_step(Object& iterator_record);
-Object* iterator_next(Object& iterator, Value value = {});
-void iterator_close(Object& iterator);
+void SetObject::initialize(GlobalObject& global_object)
+{
+    Object::initialize(global_object);
+}
 
-void get_iterator_values(GlobalObject&, Value value, AK::Function<IterationDecision(Value)> callback);
+SetObject::~SetObject()
+{
+}
+
+void SetObject::set(Value value)
+{
+    m_data.set({ value, m_current_index++ });
+}
+
+bool SetObject::contains(Value value)
+{
+    return m_data.contains({ value });
+}
+
+bool SetObject::remove(Value value)
+{
+    return m_data.remove({ value });
+}
+
+void SetObject::clear()
+{
+    m_data.clear();
+}
+
+void SetObject::for_each_value(AK::Function<IterationDecision(Value)> func) const
+{
+    // Sort values
+    Vector<OrderedEntry> ordered_entry_list;
+
+    for (auto& entry : m_data)
+        ordered_entry_list.append(entry);
+
+    quick_sort(ordered_entry_list, [&](OrderedEntry& a, OrderedEntry& b) {
+        return a.index < b.index;
+    });
+
+    for (auto& entry : ordered_entry_list) {
+        if (func(entry.value) == IterationDecision::Break)
+            break;
+    }
+}
 
 }

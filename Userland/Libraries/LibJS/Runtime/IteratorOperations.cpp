@@ -30,7 +30,7 @@
 
 namespace JS {
 
-Object* get_iterator(GlobalObject& global_object, Value value, String hint, Value method)
+Object* get_iterator(GlobalObject& global_object, Value value, const String& hint, Value method)
 {
     auto& vm = global_object.vm();
     VERIFY(hint == "sync" || hint == "async");
@@ -56,6 +56,30 @@ Object* get_iterator(GlobalObject& global_object, Value value, String hint, Valu
         return nullptr;
     }
     return &iterator.as_object();
+}
+
+bool is_iterator_complete(Object& iterator_result)
+{
+    return iterator_result.get(iterator_result.vm().names.done).to_boolean();
+}
+
+Value create_iterator_result_object(GlobalObject& global_object, Value value, bool done)
+{
+    auto& vm = global_object.vm();
+    auto* object = Object::create_empty(global_object);
+    object->define_property(vm.names.value, value);
+    object->define_property(vm.names.done, Value(done));
+    return object;
+}
+
+Value iterator_step(Object& iterator_record)
+{
+    auto* result = iterator_next(iterator_record);
+    if (!result)
+        return {};
+    if (is_iterator_complete(*result))
+        return Value(true);
+    return result;
 }
 
 Object* iterator_next(Object& iterator, Value value)
@@ -89,17 +113,9 @@ Object* iterator_next(Object& iterator, Value value)
 
 void iterator_close([[maybe_unused]] Object& iterator)
 {
-    TODO();
+        TODO();
 }
 
-Value create_iterator_result_object(GlobalObject& global_object, Value value, bool done)
-{
-    auto& vm = global_object.vm();
-    auto* object = Object::create_empty(global_object);
-    object->define_property(vm.names.value, value);
-    object->define_property(vm.names.done, Value(done));
-    return object;
-}
 
 void get_iterator_values(GlobalObject& global_object, Value value, AK::Function<IterationDecision(Value)> callback)
 {

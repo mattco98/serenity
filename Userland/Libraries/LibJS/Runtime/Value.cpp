@@ -283,6 +283,42 @@ String Value::to_string_without_side_effects() const
     }
 }
 
+bool Value::operator==(const Value& other) const
+{
+    return same_value_zero(*this, other);
+}
+
+unsigned int Value::hash() const
+{
+    switch (m_type) {
+    case Type::Undefined:
+        return 871346523;
+    case Type::Null:
+        return -687234255;
+    case Type::Boolean:
+        return as_bool() ? 368768281 : -458465834;
+    case Type::Int32:
+        return int_hash(as_i32());
+    case Type::Double:
+        return double_hash(as_double());
+    case Type::String: {
+        auto& string = as_string();
+        return string_hash(string.string().characters(), string.string().length());
+    }
+    case Type::BigInt: {
+        auto string = as_bigint().big_integer().to_base10();
+        return string_hash(string.characters(), string.length());
+    }
+    case Type::Object:
+    case Type::Symbol:
+    case Type::Accessor:
+    case Type::NativeProperty:
+        return ptr_hash(this);
+    default:
+        VERIFY_NOT_REACHED();
+    }
+}
+
 PrimitiveString* Value::to_primitive_string(GlobalObject& global_object)
 {
     if (is_string())

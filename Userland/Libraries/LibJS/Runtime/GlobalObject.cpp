@@ -62,6 +62,8 @@
 #include <LibJS/Runtime/ReflectObject.h>
 #include <LibJS/Runtime/RegExpConstructor.h>
 #include <LibJS/Runtime/RegExpPrototype.h>
+#include <LibJS/Runtime/SetConstructor.h>
+#include <LibJS/Runtime/SetPrototype.h>
 #include <LibJS/Runtime/Shape.h>
 #include <LibJS/Runtime/StringConstructor.h>
 #include <LibJS/Runtime/StringIteratorPrototype.h>
@@ -147,6 +149,7 @@ void GlobalObject::initialize_global_object()
     add_constructor(vm.names.Proxy, m_builtin_proxy_constructor, nullptr);
     add_constructor(vm.names.RegExp, m_builtin_regexp_constructor, m_builtin_regexp_prototype);
     add_constructor(vm.names.String, m_builtin_string_constructor, m_builtin_string_prototype);
+    add_constructor(vm.names.Set, m_builtin_set_constructor, m_builtin_set_prototype);
     add_constructor(vm.names.Symbol, m_builtin_symbol_constructor, m_builtin_symbol_prototype);
 
     initialize_constructor(vm.names.TypedArray, m_builtin_typed_array_constructor, m_builtin_typed_array_prototype);
