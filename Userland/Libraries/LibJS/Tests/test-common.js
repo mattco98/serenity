@@ -384,6 +384,31 @@ class ExpectationError extends Error {
             });
         }
 
+        toNextIterateTo(isDone, value) {
+            // Disallow inverted tests here since we are comparing two values
+            if (this.inverted)
+                throw ExpectationError("toNextIterateTo: .not is not supported");
+
+            this.__expect(
+                typeof this.target.next !== undefined,
+                () => "toNextIterateTo: target is not an iterator",
+            );
+
+            let next = this.target.next();
+            this.__expect(
+                deepEquals(next.value, value),
+                () => `toNextIterateTo: expected value ${value} did not match actual value ${next.value}`,
+            );
+            this.__expect(
+                next.done === isDone,
+                () => {
+                    if (isDone)
+                        return `toNextIterateTo: expected iterator to be done, but it was not.`;
+                    return `toNextIterateTo: expected iterator to not be done, but it was.`;
+                },
+            );
+        }
+
         __doMatcher(matcher) {
             if (!this.inverted) {
                 matcher();
