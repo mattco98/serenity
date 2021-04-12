@@ -25,64 +25,47 @@
  */
 
 #include <LibJS/Runtime/GlobalObject.h>
-#include <LibJS/Runtime/SetObject.h>
+#include <LibJS/Runtime/IteratorOperations.h>
 #include <LibJS/Runtime/SetIterator.h>
+#include <LibJS/Runtime/SetIteratorPrototype.h>
+#include <LibJS/Runtime/SetObject.h>
 
 namespace JS {
 
-SetObject* SetObject::create(GlobalObject& global_object)
-{
-    return global_object.heap().allocate<SetObject>(global_object, *global_object.builtin_set_prototype());
-}
-
-SetObject::SetObject(Object& prototype)
-    : Object(prototype)
+SetIteratorPrototype::SetIteratorPrototype(GlobalObject& global_object)
+    : Object(*global_object.builtin_iterator_prototype())
 {
 }
 
-void SetObject::initialize(GlobalObject& global_object)
+void SetIteratorPrototype::initialize(GlobalObject& global_object)
 {
+    auto& vm = this->vm();
     Object::initialize(global_object);
+
+    define_native_function(vm.names.next, next, 0, Attribute::Configurable | Attribute::Writable);
+    define_property(global_object.vm().well_known_symbol_to_string_tag(), js_string(global_object.heap(), "Set Iterator"), Attribute::Configurable);
 }
 
-SetObject::~SetObject()
+SetIteratorPrototype::~SetIteratorPrototype()
 {
 }
 
-void SetObject::set(Value value)
+JS_DEFINE_NATIVE_FUNCTION(SetIteratorPrototype::next)
 {
-    OrderedEntry entry = { value, m_current_index++ };
-    for (auto& iterator : m_iterators)
-        iterator->on_value_set(entry);
-    m_data.set(entry);
-}
+    auto this_value = vm.this_value(global_object);
+    if (!this_value.is_object() || !is<SetIterator>(this_value.as_object())) {
+        vm.throw_exception<TypeError>(global_object, ErrorType::NotA, "Set Iterator");
+        return {};
+    }
 
-bool SetObject::contains(Value value)
-{
-    return m_data.contains({ value });
-}
+    auto& this_object = this_value.as_object();
+    auto& iterator = static_cast<SetIterator&>(this_object);
+    auto target_set = iterator.set();
+    if (target_set.is_undefined())
+        return create_iterator_result_object(global_object, js_undefined(), true);
 
-bool SetObject::remove(Value value)
-{
-
-    return m_data.remove({ value });
-}
-
-void SetObject::clear()
-{
-    m_data.clear();
-}
-
-SetIterator& SetObject::create_iterator(Object::PropertyKind kind)
-{
-    auto* iterator = SetIterator::create(global_object(), this, kind);
-    m_iterators.set(iterator);
-    return *iterator;
-}
-
-void SetObject::remove_iterator(SetIterator* iterator)
-{
-    m_iterators.remove(iterator);
+    VERIFY(target_set.is_object());
+    auto& set = target_set.as_object();
 }
 
 }

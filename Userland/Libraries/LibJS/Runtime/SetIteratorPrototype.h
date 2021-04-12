@@ -24,65 +24,22 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <LibJS/Runtime/GlobalObject.h>
-#include <LibJS/Runtime/SetObject.h>
-#include <LibJS/Runtime/SetIterator.h>
+#pragma once
+
+#include <LibJS/Runtime/Object.h>
 
 namespace JS {
 
-SetObject* SetObject::create(GlobalObject& global_object)
-{
-    return global_object.heap().allocate<SetObject>(global_object, *global_object.builtin_set_prototype());
-}
+class SetIteratorPrototype final : public Object {
+    JS_OBJECT(SetIterator, Object);
 
-SetObject::SetObject(Object& prototype)
-    : Object(prototype)
-{
-}
+public:
+    SetIteratorPrototype(GlobalObject&);
+    virtual void initialize(GlobalObject&) override;
+    virtual ~SetIteratorPrototype() override;
 
-void SetObject::initialize(GlobalObject& global_object)
-{
-    Object::initialize(global_object);
-}
-
-SetObject::~SetObject()
-{
-}
-
-void SetObject::set(Value value)
-{
-    OrderedEntry entry = { value, m_current_index++ };
-    for (auto& iterator : m_iterators)
-        iterator->on_value_set(entry);
-    m_data.set(entry);
-}
-
-bool SetObject::contains(Value value)
-{
-    return m_data.contains({ value });
-}
-
-bool SetObject::remove(Value value)
-{
-
-    return m_data.remove({ value });
-}
-
-void SetObject::clear()
-{
-    m_data.clear();
-}
-
-SetIterator& SetObject::create_iterator(Object::PropertyKind kind)
-{
-    auto* iterator = SetIterator::create(global_object(), this, kind);
-    m_iterators.set(iterator);
-    return *iterator;
-}
-
-void SetObject::remove_iterator(SetIterator* iterator)
-{
-    m_iterators.remove(iterator);
-}
+private:
+    JS_DECLARE_NATIVE_FUNCTION(next);
+};
 
 }

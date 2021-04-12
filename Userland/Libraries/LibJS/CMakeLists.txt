@@ -65,6 +65,8 @@ set(SOURCES
     Runtime/ScopeObject.cpp
     Runtime/ScriptFunction.cpp
     Runtime/SetConstructor.cpp
+    Runtime/SetIterator.cpp
+    Runtime/SetIteratorPrototype.cpp
     Runtime/SetPrototype.cpp
     Runtime/SetObject.cpp
     Runtime/Shape.cpp

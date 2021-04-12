@@ -24,65 +24,48 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <LibJS/Runtime/GlobalObject.h>
+#pragma once
+
+#include <LibJS/Runtime/Object.h>
 #include <LibJS/Runtime/SetObject.h>
-#include <LibJS/Runtime/SetIterator.h>
 
 namespace JS {
 
-SetObject* SetObject::create(GlobalObject& global_object)
-{
-    return global_object.heap().allocate<SetObject>(global_object, *global_object.builtin_set_prototype());
-}
+class SetIterator final : public Object {
+    JS_OBJECT(SetIterator, Object);
 
-SetObject::SetObject(Object& prototype)
-    : Object(prototype)
-{
-}
+public:
+    virtual ~SetIterator() override;
 
-void SetObject::initialize(GlobalObject& global_object)
-{
-    Object::initialize(global_object);
-}
+    SetObject* set() const { return m_set; }
+    Object::PropertyKind iteration_kind() const { return m_iteration_kind; }
+    size_t index() const { return m_index; }
 
-SetObject::~SetObject()
-{
-}
+    bool done() const { return !m_set; }
+    Value next();
 
-void SetObject::set(Value value)
-{
-    OrderedEntry entry = { value, m_current_index++ };
-    for (auto& iterator : m_iterators)
-        iterator->on_value_set(entry);
-    m_data.set(entry);
-}
+    void for_each_value(AK::Function<IterationDecision(Value)> func);
 
-bool SetObject::contains(Value value)
-{
-    return m_data.contains({ value });
-}
+private:
+    friend class SetIteratorPrototype;
+    friend class SetObject;
+    friend class Heap;
 
-bool SetObject::remove(Value value)
-{
+    // SetIterator creation methods are private to force the use of SetObject::create_iterator
+    static SetIterator* create(GlobalObject&, SetObject* set, Object::PropertyKind iteration_kind);
 
-    return m_data.remove({ value });
-}
+    explicit SetIterator(Object& prototype, SetObject* set, Object::PropertyKind iteration_kind);
 
-void SetObject::clear()
-{
-    m_data.clear();
-}
+    virtual void visit_edges(Cell::Visitor&) override;
 
-SetIterator& SetObject::create_iterator(Object::PropertyKind kind)
-{
-    auto* iterator = SetIterator::create(global_object(), this, kind);
-    m_iterators.set(iterator);
-    return *iterator;
-}
+    void on_value_set(OrderedEntry entry);
+    void on_value_delete(OrderedEntry entry);
+    void on_cleared();
 
-void SetObject::remove_iterator(SetIterator* iterator)
-{
-    m_iterators.remove(iterator);
-}
+    SetObject* m_set;
+    Object::PropertyKind m_iteration_kind;
+    size_t m_index { 0 };
+    Vector<OrderedEntry> m_ordered_values;
+};
 
 }

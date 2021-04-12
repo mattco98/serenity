@@ -34,6 +34,8 @@
 
 namespace JS {
 
+class SetIterator;
+
 struct OrderedEntry {
     Value value;
     size_t index { 0 };
@@ -56,10 +58,12 @@ public:
     bool remove(Value value);
     void clear();
 
-    void for_each_value(AK::Function<IterationDecision(Value)> func) const;
+    SetIterator& create_iterator(Object::PropertyKind kind);
+    void remove_iterator(SetIterator*);
 
 private:
     HashTable<OrderedEntry> m_data;
+    HashTable<SetIterator*> m_iterators;
     size_t m_current_index;
 };
 
