@@ -51,6 +51,26 @@ float AffineTransform::y_scale() const
     return hypotenuse(m_values[2], m_values[3]);
 }
 
+FloatPoint AffineTransform::scale() const
+{
+    return { x_scale(), y_scale() };
+}
+
+float AffineTransform::x_translation() const
+{
+    return e();
+}
+
+float AffineTransform::y_translation() const
+{
+    return f();
+}
+
+FloatPoint AffineTransform::translation() const
+{
+    return { x_translation(), y_translation() };
+}
+
 AffineTransform& AffineTransform::scale(float sx, float sy)
 {
     m_values[0] *= sx;
@@ -60,11 +80,21 @@ AffineTransform& AffineTransform::scale(float sx, float sy)
     return *this;
 }
 
+AffineTransform& AffineTransform::scale(const FloatPoint& s)
+{
+    return scale(s.x(), s.y());
+}
+
 AffineTransform& AffineTransform::translate(float tx, float ty)
 {
     m_values[4] += tx * m_values[0] + ty * m_values[2];
     m_values[5] += tx * m_values[1] + ty * m_values[3];
     return *this;
+}
+
+AffineTransform& AffineTransform::translate(const FloatPoint& t)
+{
+    return translate(t.x(), t.y());
 }
 
 AffineTransform& AffineTransform::multiply(const AffineTransform& other)
