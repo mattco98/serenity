@@ -56,7 +56,7 @@ Gfx::IntRect ClassicWindowTheme::title_bar_icon_rect(WindowType window_type, con
         16,
     };
     icon_rect.center_vertically_within(titlebar_rect);
-    icon_rect.move_by(0, 1);
+    icon_rect.translate_by(0, 1);
     return icon_rect;
 }
 

@@ -76,7 +76,7 @@ void DisjointRectSet::shatter()
 void DisjointRectSet::move_by(int dx, int dy)
 {
     for (auto& r : m_rects)
-        r.move_by(dx, dy);
+        r.translate_by(dx, dy);
 }
 
 bool DisjointRectSet::contains(const IntRect& rect) const

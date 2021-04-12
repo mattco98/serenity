@@ -143,7 +143,7 @@ void Screen::on_receive_mouse_data(const MousePacket& packet)
 {
     auto prev_location = m_physical_cursor_location / m_scale_factor;
     if (packet.is_relative) {
-        m_physical_cursor_location.move_by(packet.x * m_acceleration_factor, packet.y * m_acceleration_factor);
+        m_physical_cursor_location.translate_by(packet.x * m_acceleration_factor, packet.y * m_acceleration_factor);
 #if WSSCREEN_DEBUG
         dbgln("Screen: New Relative mouse point @ {}", m_physical_cursor_location);
 #endif

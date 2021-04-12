@@ -28,6 +28,7 @@
 
 #include <AK/Format.h>
 #include <LibGfx/Orientation.h>
+#include <LibGfx/Point.h>
 #include <LibIPC/Forward.h>
 
 namespace Gfx {
@@ -35,7 +36,7 @@ namespace Gfx {
 template<typename T>
 class Size {
 public:
-    Size() { }
+    Size() = default;
 
     Size(T w, T h)
         : m_width(w)
@@ -57,16 +58,24 @@ public:
     {
     }
 
-    bool is_null() const { return !m_width && !m_height; }
-    bool is_empty() const { return m_width <= 0 || m_height <= 0; }
+    [[nodiscard]] ALWAYS_INLINE T width() const { return m_width; }
+    [[nodiscard]] ALWAYS_INLINE T height() const { return m_height; }
+    [[nodiscard]] ALWAYS_INLINE T area() const { return width() * height(); }
 
-    T width() const { return m_width; }
-    T height() const { return m_height; }
+    ALWAYS_INLINE void set_width(T w) { m_width = w; }
+    ALWAYS_INLINE void set_height(T h) { m_height = h; }
 
-    T area() const { return width() * height(); }
+    [[nodiscard]] ALWAYS_INLINE bool is_null() const { return !m_width && !m_height; }
+    [[nodiscard]] ALWAYS_INLINE bool is_empty() const { return m_width <= 0 || m_height <= 0; }
 
-    void set_width(T w) { m_width = w; }
-    void set_height(T h) { m_height = h; }
+    void scale_by(T dx, T dy)
+    {
+        m_width *= dx;
+        m_height *= dy;
+    }
+
+    ALWAYS_INLINE void scale_by(T dboth) { scale_by(dboth, dboth); }
+    ALWAYS_INLINE void scale_by(const Point<T>& s) { scale_by(s.x(), s.y());}
 
     template<typename U>
     bool contains(const Size<U>& other) const
@@ -138,7 +147,7 @@ public:
     }
 
     template<typename U>
-    Size<U> to_type() const
+    ALWAYS_INLINE Size<U> to_type() const
     {
         return Size<U>(*this);
     }
