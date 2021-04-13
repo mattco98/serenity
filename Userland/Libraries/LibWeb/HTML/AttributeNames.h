@@ -187,6 +187,7 @@ namespace AttributeNames {
     __ENUMERATE_HTML_ATTRIBUTE(placeholder)                \
     __ENUMERATE_HTML_ATTRIBUTE(playsinline)                \
     __ENUMERATE_HTML_ATTRIBUTE(poster)                     \
+    __ENUMERATE_HTML_ATTRIBUTE(preserveAspectRatio)        \
     __ENUMERATE_HTML_ATTRIBUTE(readonly)                   \
     __ENUMERATE_HTML_ATTRIBUTE(rel)                        \
     __ENUMERATE_HTML_ATTRIBUTE(required)                   \
@@ -217,6 +218,7 @@ namespace AttributeNames {
     __ENUMERATE_HTML_ATTRIBUTE(value)                      \
     __ENUMERATE_HTML_ATTRIBUTE(valuetype)                  \
     __ENUMERATE_HTML_ATTRIBUTE(version)                    \
+    __ENUMERATE_HTML_ATTRIBUTE(viewBox)                    \
     __ENUMERATE_HTML_ATTRIBUTE(vlink)                      \
     __ENUMERATE_HTML_ATTRIBUTE(width)                      \
     __ENUMERATE_HTML_ATTRIBUTE(wrap)
