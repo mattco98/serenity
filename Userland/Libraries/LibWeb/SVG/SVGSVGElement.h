@@ -13,6 +13,36 @@ namespace Web::SVG {
 
 class SVGSVGElement final : public SVGGraphicsElement {
 public:
+    enum class Align {
+        None,
+        XMinYMin,
+        XMidYMin,
+        XMaxYMin,
+        XMinYMid,
+        XMidYMid,
+        XMaxYMid,
+        XMinYMax,
+        XMidYMax,
+        XMaxYMax,
+    };
+
+    enum MeetOrSlice {
+        Meet,
+        Slice,
+    };
+
+    struct PreserveAspectRatio {
+        Align align;
+        MeetOrSlice meet_or_slice;
+    };
+
+    struct ViewBox {
+        int min_x;
+        int min_y;
+        int width;
+        int height;
+    };
+
     using WrapperType = Bindings::SVGSVGElementWrapper;
 
     SVGSVGElement(DOM::Document&, QualifiedName);
@@ -21,6 +51,8 @@ public:
 
     unsigned width() const;
     unsigned height() const;
+    Optional<ViewBox> view_box() const;
+    PreserveAspectRatio preserve_aspect_ratio() const;
 
 private:
     RefPtr<Gfx::Bitmap> m_bitmap;
