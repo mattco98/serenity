@@ -138,12 +138,18 @@ public:
     }
 
     void constrain(const Rect<T>&);
+
     Point<T> constrained(const Rect<T>& rect) const
     {
         Point<T> point = *this;
         point.constrain(rect);
         return point;
     }
+
+    Point<T> move_up(T amount) const { return { x(), y() - amount }; }
+    Point<T> move_down(T amount) const { return { x(), y() + amount }; }
+    Point<T> move_left(T amount) const { return { x() + amount, y() }; }
+    Point<T> move_right(T amount) const { return { x() - amount, y() }; }
 
     template<class U>
     bool operator==(const Point<U>& other) const

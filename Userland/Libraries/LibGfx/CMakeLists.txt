@@ -16,6 +16,7 @@ set(SOURCES
     ImageDecoder.cpp
     JPGLoader.cpp
     Painter.cpp
+    AAPainter.cpp
     Palette.cpp
     Path.cpp
     PBMLoader.cpp
