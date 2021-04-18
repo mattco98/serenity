@@ -24,6 +24,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <LibGfx/AAPainter.h>
 #include <LibGfx/Painter.h>
 #include <LibWeb/Layout/SVGPathBox.h>
 #include <LibWeb/SVG/SVGPathElement.h>
@@ -57,33 +58,39 @@ void SVGPathBox::paint(PaintContext& context, PaintPhase phase)
     if (phase != PaintPhase::Foreground)
         return;
 
-    auto& path_element = dom_node();
-    auto& path = path_element.get_path();
+    Gfx::AAPainter painter(context.painter().target());
 
-    // We need to fill the path before applying the stroke, however the filled
-    // path must be closed, whereas the stroke path may not necessary be closed.
-    // Copy the path and close it for filling, but use the previous path for stroke
-    auto closed_path = path;
-    closed_path.close();
+    painter.draw_line({ 100, 20 }, { 451, 120 }, Color::NamedColor::Black, 10);
+    painter.draw_line({ 100, 150 }, { 451, 151 }, Color::NamedColor::Black, 10);
+    painter.draw_line({ 100, 200 }, { 200, 298 }, Color::NamedColor::Black, 10);
 
-    // Fills are computed as though all paths are closed (https://svgwg.org/svg2-draft/painting.html#FillProperties)
-    auto& painter = context.painter();
-    auto& svg_context = context.svg_context();
-
-    auto offset = (absolute_position() - effective_offset()).to_type<int>();
-
-    painter.translate(offset);
-
-    painter.fill_path(
-        closed_path,
-        path_element.fill_color().value_or(svg_context.fill_color()),
-        Gfx::Painter::WindingRule::EvenOdd);
-    painter.stroke_path(
-        path,
-        path_element.stroke_color().value_or(svg_context.stroke_color()),
-        path_element.stroke_width().value_or(svg_context.stroke_width()));
-
-    painter.translate(-offset);
+    // auto& path_element = dom_node();
+    // auto& path = path_element.get_path();
+    //
+    // // We need to fill the path before applying the stroke, however the filled
+    // // path must be closed, whereas the stroke path may not necessary be closed.
+    // // Copy the path and close it for filling, but use the previous path for stroke
+    // auto closed_path = path;
+    // closed_path.close();
+    //
+    // // Fills are computed as though all paths are closed (https://svgwg.org/svg2-draft/painting.html#FillProperties)
+    // auto& painter = context.painter();
+    // auto& svg_context = context.svg_context();
+    //
+    // auto offset = (absolute_position() - effective_offset()).to_type<int>();
+    //
+    // painter.translate(offset);
+    //
+    // painter.fill_path(
+    //     closed_path,
+    //     path_element.fill_color().value_or(svg_context.fill_color()),
+    //     Gfx::Painter::WindingRule::EvenOdd);
+    // painter.stroke_path(
+    //     path,
+    //     path_element.stroke_color().value_or(svg_context.stroke_color()),
+    //     path_element.stroke_width().value_or(svg_context.stroke_width()));
+    //
+    // painter.translate(-offset);
 }
 
 }

@@ -38,6 +38,12 @@ enum class LineStyle {
     Dashed
 };
 
+enum class LineCap {
+    None,
+    Round,
+    Square,
+};
+
 class AAPainter {
 public:
     // These types help add context to function parameters. Painter types are types
@@ -52,8 +58,10 @@ public:
     explicit AAPainter(Gfx::Bitmap*);
     ~AAPainter();
 
-    void draw_path(const Gfx::Path& path, Color color);
-    void draw_line(PainterPoint p0, PainterPoint p1, Color color, float thickness = 1);
+    void debug_point(PainterPoint, Color);
+
+    void draw_line(PainterPoint p0, PainterPoint p1, Color, float thickness = 1);
+    void draw_path(const Gfx::Path&, Color);
 
     [[nodiscard]] ALWAYS_INLINE FloatPoint translation() { return transform().translation(); }
     ALWAYS_INLINE void translate(const FloatPoint& delta) { transform().translate(delta); }
@@ -69,6 +77,9 @@ public:
     [[nodiscard]] ALWAYS_INLINE LineStyle line_style() const { return state().line_style; }
     ALWAYS_INLINE void set_line_style(LineStyle line_style) { state().line_style = line_style; }
 
+    [[nodiscard]] ALWAYS_INLINE LineCap line_cap() const { return state().line_cap; }
+    ALWAYS_INLINE void set_line_cap(LineCap line_cap) { state().line_cap = line_cap; }
+
     ALWAYS_INLINE void push_state() { m_state_stack.append(m_state_stack.last()); }
     ALWAYS_INLINE void pop_state() { m_state_stack.take_last(); }
 
@@ -77,9 +88,8 @@ private:
         AffineTransform transform;
         PhysicalRect clip_rect;
         LineStyle line_style { LineStyle::Solid };
+        LineCap line_cap { LineCap::None };
     };
-
-    // void draw_wu_line(const PhysicalPoint& p0, const PhysicalPoint& p1, Color color, bool steep);
 
     ALWAYS_INLINE State& state() { return m_state_stack.last(); }
     ALWAYS_INLINE const State& state() const { return m_state_stack.last(); }
