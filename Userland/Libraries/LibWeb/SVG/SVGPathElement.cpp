@@ -46,13 +46,13 @@ static void print_instruction(const PathInstruction& instruction)
         for (size_t i = 0; i < data.size(); ++i)
             dbgln("    y={}", data[i]);
         break;
-    case PathInstructionType::Curve:
+    case PathInstructionType::CubicBezierCurve:
         dbgln("Curve (absolute={})", instruction.absolute);
         for (size_t i = 0; i < data.size(); i += 6)
             dbgln("    (x1={}, y1={}, x2={}, y2={}), (x={}, y={})", data[i], data[i + 1], data[i + 2], data[i + 3], data[i + 4], data[i + 5]);
         break;
-    case PathInstructionType::SmoothCurve:
-        dbgln("SmoothCurve (absolute={})", instruction.absolute);
+    case PathInstructionType::SmoothCubicBezierCurve:
+        dbgln("SmoothCubicBezierCurve (absolute={})", instruction.absolute);
         for (size_t i = 0; i < data.size(); i += 4)
             dbgln("    (x2={}, y2={}), (x={}, y={})", data[i], data[i + 1], data[i + 2], data[i + 3]);
         break;
@@ -170,7 +170,7 @@ void PathDataParser::parse_curveto()
     parse_whitespace();
 
     while (true) {
-        m_instructions.append({ PathInstructionType::Curve, absolute, parse_coordinate_pair_triplet() });
+        m_instructions.append({ PathInstructionType::CubicBezierCurve, absolute, parse_coordinate_pair_triplet() });
         if (match_comma_whitespace())
             parse_comma_whitespace();
         if (!match_coordinate())
@@ -184,7 +184,7 @@ void PathDataParser::parse_smooth_curveto()
     parse_whitespace();
 
     while (true) {
-        m_instructions.append({ PathInstructionType::SmoothCurve, absolute, parse_coordinate_pair_double() });
+        m_instructions.append({ PathInstructionType::SmoothCubicBezierCurve, absolute, parse_coordinate_pair_double() });
         if (match_comma_whitespace())
             parse_comma_whitespace();
         if (!match_coordinate())
@@ -520,11 +520,11 @@ Gfx::Path& SVGPathElement::get_path()
             break;
         }
         case PathInstructionType::EllipticalArc: {
-            double rx = data[0];
-            double ry = data[1];
-            double x_axis_rotation = double { data[2] } * M_DEG2RAD;
-            double large_arc_flag = data[3];
-            double sweep_flag = data[4];
+            auto rx = static_cast<double>(data[0]);
+            auto ry = static_cast<double>(data[1]);
+            auto x_axis_rotation = static_cast<double>(data[2]) * M_DEG2RAD;
+            auto large_arc_flag = static_cast<double>(data[3]);
+            auto sweep_flag = static_cast<double>(data[4]);
             auto& last_point = path.segments().last().point();
 
             Gfx::FloatPoint next_point;
@@ -542,8 +542,8 @@ Gfx::Path& SVGPathElement::get_path()
         case PathInstructionType::QuadraticBezierCurve: {
             clear_last_control_point = false;
 
-            Gfx::FloatPoint through = { data[0], data[1] };
-            Gfx::FloatPoint point = { data[2], data[3] };
+            Gfx::FloatPoint through { data[0], data[1] };
+            Gfx::FloatPoint point { data[2], data[3] };
 
             if (absolute) {
                 path.quadratic_bezier_curve_to(through, point);
@@ -563,15 +563,14 @@ Gfx::Path& SVGPathElement::get_path()
             VERIFY(!path.segments().is_empty());
             auto last_point = path.segments().last().point();
 
-            if (m_previous_control_point.is_null()) {
+            if (m_previous_control_point.is_null())
                 m_previous_control_point = last_point;
-            }
 
             auto dx_end_control = last_point.dx_relative_to(m_previous_control_point);
             auto dy_end_control = last_point.dy_relative_to(m_previous_control_point);
-            auto control_point = Gfx::FloatPoint { last_point.x() + dx_end_control, last_point.y() + dy_end_control };
 
-            Gfx::FloatPoint end_point = { data[0], data[1] };
+            Gfx::FloatPoint control_point { last_point.x() + dx_end_control, last_point.y() + dy_end_control };
+            Gfx::FloatPoint end_point { data[0], data[1] };
 
             if (absolute) {
                 path.quadratic_bezier_curve_to(control_point, end_point);
@@ -583,11 +582,51 @@ Gfx::Path& SVGPathElement::get_path()
             break;
         }
 
-        case PathInstructionType::Curve:
-        case PathInstructionType::SmoothCurve:
-            // Instead of crashing the browser every time we come across an SVG
-            // with these path instructions, let's just skip them
-            continue;
+        case PathInstructionType::CubicBezierCurve: {
+            clear_last_control_point = false;
+
+            Gfx::FloatPoint control1 = { data[0], data[1] };
+            Gfx::FloatPoint control2 = { data[2], data[3] };
+            Gfx::FloatPoint point = { data[4], data[5] };
+
+            if (absolute) {
+                path.cubic_bezier_curve_to(control1, control2, point);
+                m_previous_control_point = control2;
+            } else {
+                VERIFY(!path.segments().is_empty());
+                auto last_point = path.segments().last().point();
+                auto last_control = control2 + last_point;
+                path.cubic_bezier_curve_to(control1 + last_point, last_control, point + last_point);
+                m_previous_control_point = last_control;
+            }
+            break;
+        }
+        case PathInstructionType::SmoothCubicBezierCurve: {
+            clear_last_control_point = false;
+
+            VERIFY(!path.segments().is_empty());
+            auto last_point = path.segments().last().point();
+
+            if (m_previous_control_point.is_null())
+                m_previous_control_point = last_point;
+
+            auto dx_end_control = last_point.dx_relative_to(m_previous_control_point);
+            auto dy_end_control = last_point.dy_relative_to(m_previous_control_point);
+
+            Gfx::FloatPoint control1 { last_point.x() + dx_end_control, last_point.y() + dy_end_control };
+            Gfx::FloatPoint control2 { data[0], data[1] };
+            Gfx::FloatPoint end_point { data[2], data[3] };
+
+            if (absolute) {
+                path.cubic_bezier_curve_to(control1, control2, end_point);
+                m_previous_control_point = control2;
+            } else {
+                auto last_control = control2 + last_point;
+                path.cubic_bezier_curve_to(control1, last_control, end_point);
+                m_previous_control_point = last_control;
+            }
+            break;
+        }
         case PathInstructionType::Invalid:
             VERIFY_NOT_REACHED();
         }

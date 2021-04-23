@@ -48,7 +48,8 @@ public:
     void set_pixel(const IntPoint&, Color);
     void set_pixel(int x, int y, Color color) { set_pixel({ x, y }, color); }
     void draw_line(const IntPoint&, const IntPoint&, Color, int thickness = 1, LineStyle style = LineStyle::Solid);
-    void draw_quadratic_bezier_curve(const IntPoint& control_point, const IntPoint&, const IntPoint&, Color, int thickness = 1, LineStyle style = LineStyle::Solid);
+    void draw_quadratic_bezier_curve(const IntPoint& control_point, const IntPoint& p1, const IntPoint& p2, Color, int thickness = 1, LineStyle style = LineStyle::Solid);
+    void draw_cubic_bezier_curve(const IntPoint& control1, const IntPoint& control2, const IntPoint& p1, const IntPoint& p2, Color, int thickness = 1, LineStyle style = LineStyle::Solid);
     void draw_elliptical_arc(const IntPoint& p1, const IntPoint& p2, const IntPoint& center, const FloatPoint& radii, float x_axis_rotation, float theta_1, float theta_delta, Color, int thickness = 1, LineStyle style = LineStyle::Solid);
     void blit(const IntPoint&, const Gfx::Bitmap&, const IntRect& src_rect, float opacity = 1.0f, bool apply_alpha = true);
     void blit_dimmed(const IntPoint&, const Gfx::Bitmap&, const IntRect& src_rect);
@@ -71,8 +72,11 @@ public:
     void draw_emoji(const IntPoint&, const Gfx::Bitmap&, const Font&);
     void draw_glyph_or_emoji(const IntPoint&, u32 code_point, const Font&, Color);
 
-    static void for_each_line_segment_on_bezier_curve(const FloatPoint& control_point, const FloatPoint& p1, const FloatPoint& p2, Function<void(const FloatPoint&, const FloatPoint&)>&);
-    static void for_each_line_segment_on_bezier_curve(const FloatPoint& control_point, const FloatPoint& p1, const FloatPoint& p2, Function<void(const FloatPoint&, const FloatPoint&)>&&);
+    static void for_each_line_segment_on_quadratic_bezier_curve(const FloatPoint& control_point, const FloatPoint& p1, const FloatPoint& p2, Function<void(const FloatPoint&, const FloatPoint&)>& callback);
+    static void for_each_line_segment_on_quadratic_bezier_curve(const FloatPoint& control_point, const FloatPoint& p1, const FloatPoint& p2, Function<void(const FloatPoint&, const FloatPoint&)>&& callback);
+
+    static void for_each_line_segment_on_cubic_bezier_curve(const FloatPoint& control1, const FloatPoint& control2, const FloatPoint& p1, const FloatPoint& p2, Function<void(const FloatPoint&, const FloatPoint&)>& callback);
+    static void for_each_line_segment_on_cubic_bezier_curve(const FloatPoint& control1, const FloatPoint& control2, const FloatPoint& p1, const FloatPoint& p2, Function<void(const FloatPoint&, const FloatPoint&)>&& callback);
 
     static void for_each_line_segment_on_elliptical_arc(const FloatPoint& p1, const FloatPoint& p2, const FloatPoint& center, const FloatPoint radii, float x_axis_rotation, float theta_1, float theta_delta, Function<void(const FloatPoint&, const FloatPoint&)>&);
     static void for_each_line_segment_on_elliptical_arc(const FloatPoint& p1, const FloatPoint& p2, const FloatPoint& center, const FloatPoint radii, float x_axis_rotation, float theta_1, float theta_delta, Function<void(const FloatPoint&, const FloatPoint&)>&&);

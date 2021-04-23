@@ -41,6 +41,8 @@ public:
     {
     }
 
+    [[nodiscard]] static Point<T> midpoint_between(const Point<T>& p1, const Point<T>& p2);
+
     T x() const { return m_x; }
     T y() const { return m_y; }
 

@@ -161,6 +161,7 @@ void Path::close_all_subpaths()
         }
         case Segment::Type::LineTo:
         case Segment::Type::QuadraticBezierCurveTo:
+        case Segment::Type::CubicBezierCurveTo:
         case Segment::Type::EllipticalArcTo:
             if (is_first_point_in_subpath) {
                 start_of_subpath = cursor;
@@ -190,6 +191,9 @@ String Path::to_string() const
         case Segment::Type::QuadraticBezierCurveTo:
             builder.append("QuadraticBezierCurveTo");
             break;
+        case Segment::Type::CubicBezierCurveTo:
+            builder.append("CubicBezierCurveTo");
+            break;
         case Segment::Type::EllipticalArcTo:
             builder.append("EllipticalArcTo");
             break;
@@ -202,8 +206,13 @@ String Path::to_string() const
         switch (segment.type()) {
         case Segment::Type::QuadraticBezierCurveTo:
             builder.append(", ");
-            builder.append(static_cast<const QuadraticBezierCurveSegment&>(segment).through().to_string());
+            builder.append(static_cast<const QuadraticBezierCurveSegment&>(segment).control().to_string());
             break;
+        case Segment::Type::CubicBezierCurveTo: {
+            auto& curve = static_cast<const CubicBezierCurveSegment&>(segment);
+            builder.appendff(", {}, {}", curve.control1(), curve.control2());
+            break;
+        }
         case Segment::Type::EllipticalArcTo: {
             auto& arc = static_cast<const EllipticalArcSegment&>(segment);
             builder.appendff(", {}, {}, {}, {}, {}",
@@ -280,11 +289,19 @@ void Path::segmentize_path()
             break;
         }
         case Segment::Type::QuadraticBezierCurveTo: {
-            auto& control = static_cast<QuadraticBezierCurveSegment&>(segment).through();
-            Painter::for_each_line_segment_on_bezier_curve(control, cursor, segment.point(), [&](const FloatPoint& p0, const FloatPoint& p1) {
+            auto& control = static_cast<QuadraticBezierCurveSegment&>(segment).control();
+            Painter::for_each_line_segment_on_quadratic_bezier_curve(control, cursor, segment.point(), [&](const FloatPoint& p0, const FloatPoint& p1) {
                 add_line(p0, p1);
             });
             cursor = segment.point();
+            break;
+        }
+        case Segment::Type::CubicBezierCurveTo: {
+            auto& curve = static_cast<CubicBezierCurveSegment&>(segment);
+            Painter::for_each_line_segment_on_cubic_bezier_curve(curve.control1(), curve.control2(), cursor, curve.point(), [&](const FloatPoint& p0, const FloatPoint& p1) {
+                add_line(p0, p1);
+            });
+            cursor = curve.point();
             break;
         }
         case Segment::Type::EllipticalArcTo: {

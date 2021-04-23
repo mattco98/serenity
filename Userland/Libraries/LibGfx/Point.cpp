@@ -12,6 +12,18 @@
 
 namespace Gfx {
 
+template<>
+IntPoint IntPoint::midpoint_between(const IntPoint& p1, const IntPoint& p2)
+{
+    return (p1 + p2) / 2;
+}
+
+template<>
+FloatPoint FloatPoint::midpoint_between(const FloatPoint& p1, const FloatPoint& p2)
+{
+    return (p1 + p2) / 2.0f;
+}
+
 template<typename T>
 void Point<T>::constrain(const Rect<T>& rect)
 {

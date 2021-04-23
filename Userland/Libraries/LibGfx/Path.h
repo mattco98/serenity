@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <AK/Format.h>
 #include <AK/HashMap.h>
 #include <AK/NonnullRefPtrVector.h>
 #include <AK/Optional.h>
@@ -23,8 +24,9 @@ public:
         Invalid,
         MoveTo,
         LineTo,
-        QuadraticBezierCurveTo,
         EllipticalArcTo,
+        QuadraticBezierCurveTo,
+        CubicBezierCurveTo,
     };
 
     Segment(const FloatPoint& point)
@@ -65,24 +67,6 @@ private:
     virtual Type type() const override { return Segment::Type::LineTo; }
 };
 
-class QuadraticBezierCurveSegment final : public Segment {
-public:
-    QuadraticBezierCurveSegment(const FloatPoint& point, const FloatPoint& through)
-        : Segment(point)
-        , m_through(through)
-    {
-    }
-
-    virtual ~QuadraticBezierCurveSegment() override = default;
-
-    const FloatPoint& through() const { return m_through; }
-
-private:
-    virtual Type type() const override { return Segment::Type::QuadraticBezierCurveTo; }
-
-    FloatPoint m_through;
-};
-
 class EllipticalArcSegment final : public Segment {
 public:
     EllipticalArcSegment(const FloatPoint& point, const FloatPoint& center, const FloatPoint radii, float x_axis_rotation, float theta_1, float theta_delta)
@@ -113,6 +97,45 @@ private:
     float m_theta_delta;
 };
 
+class QuadraticBezierCurveSegment final : public Segment {
+public:
+    QuadraticBezierCurveSegment(const FloatPoint& point, const FloatPoint& control)
+        : Segment(point)
+        , m_control(control)
+    {
+    }
+
+    virtual ~QuadraticBezierCurveSegment() override = default;
+
+    const FloatPoint& control() const { return m_control; }
+
+private:
+    virtual Type type() const override { return Segment::Type::QuadraticBezierCurveTo; }
+
+    FloatPoint m_control;
+};
+
+class CubicBezierCurveSegment final : public Segment {
+public:
+    CubicBezierCurveSegment(const FloatPoint& point, const FloatPoint& control1, const FloatPoint& control2)
+        : Segment(point)
+        , m_control1(control1)
+        , m_control2(control2)
+    {
+    }
+
+    virtual ~CubicBezierCurveSegment() override = default;
+
+    const FloatPoint& control1() const { return m_control1; }
+    const FloatPoint& control2() const { return m_control2; }
+
+private:
+    virtual Type type() const override { return Segment::Type::CubicBezierCurveTo; }
+
+    FloatPoint m_control1;
+    FloatPoint m_control2;
+};
+
 class Path {
 public:
     Path() { }
@@ -131,6 +154,12 @@ public:
     void quadratic_bezier_curve_to(const FloatPoint& through, const FloatPoint& point)
     {
         append_segment<QuadraticBezierCurveSegment>(point, through);
+        invalidate_split_lines();
+    }
+
+    void cubic_bezier_curve_to(const FloatPoint& control1, const FloatPoint& control2, const FloatPoint& point)
+    {
+        append_segment<CubicBezierCurveSegment>(point, control1, control2);
         invalidate_split_lines();
     }
 
@@ -201,9 +230,18 @@ private:
     }
 
     NonnullRefPtrVector<Segment> m_segments {};
+    int m_scale { 1 };
 
     Optional<Vector<SplitLineSegment>> m_split_lines {};
     Optional<Gfx::FloatRect> m_bounding_box;
 };
 
 }
+
+template<>
+struct AK::Formatter<Gfx::Path> : AK::Formatter<String> {
+    void format(FormatBuilder& builder, const Gfx::Path& value)
+    {
+        return Formatter<String>::format(builder, value.to_string());
+    }
+};
