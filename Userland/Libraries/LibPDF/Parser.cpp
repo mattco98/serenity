@@ -629,13 +629,11 @@ NonnullRefPtr<StreamObject> Parser::parse_stream(NonnullRefPtr<DictObject> dict)
 
     ReadonlyBytes bytes;
 
-    auto length_value = dict->map().get("Length");
-    if (length_value.has_value()) {
+    auto maybe_length = dict->map().get("Length");
+    if (maybe_length.has_value()) {
         // The PDF writer has kindly provided us with the direct length of the stream
-        auto length = length_value.value();
-        VERIFY(length.is_int());
-
-        bytes = m_reader.bytes().slice(m_reader.offset(), length.as_int());
+        auto length = m_document->resolve_to<int>(maybe_length.value());
+        bytes = m_reader.bytes().slice(m_reader.offset(), length);
     } else {
         // We have to look for the endstream keyword
         auto stream_start = m_reader.offset();

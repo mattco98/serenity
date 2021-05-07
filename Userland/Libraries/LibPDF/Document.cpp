@@ -66,7 +66,7 @@ Page Document::get_page(u32 index)
     auto raw_page_object = object_cast<DictObject>(obj);
 
     auto resources = raw_page_object->get_dict(this, "Resources");
-    auto contents = raw_page_object->get_object("Contents");
+    auto contents = raw_page_object->get_object(this, "Contents");
 
     auto media_box_array = raw_page_object->get_array(this, "MediaBox");
     auto media_box = Rectangle {

@@ -48,11 +48,15 @@ void Renderer::render()
     // as one stream or multiple?
     Vector<GraphicsCommand> commands;
 
-    auto contents = m_document->resolve_to<ArrayObject>(m_page.contents);
-
-    for (auto& ref : *contents) {
-        VERIFY(ref.is_object());
-        auto stream = m_document->resolve_to<StreamObject>(ref);
+    if (m_page.contents->is_array()) {
+        auto contents = m_document->resolve_to<ArrayObject>(m_page.contents);
+        for (auto& ref : *contents) {
+            auto stream = m_document->resolve_to<StreamObject>(ref);
+            commands.append(Parser::parse_graphics_commands(stream->bytes()));
+        }
+    } else {
+        VERIFY(m_page.contents->is_stream());
+        auto stream = object_cast<StreamObject>(m_page.contents);
         commands.append(Parser::parse_graphics_commands(stream->bytes()));
     }
 
