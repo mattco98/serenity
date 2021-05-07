@@ -7,6 +7,7 @@
 #pragma once
 
 #include <AK/Format.h>
+#include <LibPDF/Forward.h>
 
 namespace PDF {
 

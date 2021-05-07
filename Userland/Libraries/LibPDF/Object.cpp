@@ -10,29 +10,25 @@
 
 namespace PDF {
 
-template<typename T>
-NonnullRefPtr<T> Object::resolved_to(Document* document) const
+NonnullRefPtr<Object> ArrayObject::get_object_at(Document* document, size_t index) const
 {
-    if (is_indirect_object_ref()) {
-        auto target = document->get_or_load_object(static_cast<const IndirectObjectRef*>(this)->index());
-        return object_cast<T>(target);
-    }
-    if (is_indirect_object()) {
-        auto target = static_cast<const IndirectObject*>(this)->object();
-        return object_cast<T>(target);
-    }
-    return *this;
+    return document->resolve_to<Object>(m_elements[index]);
+}
+
+NonnullRefPtr<Object> DictObject::get_object(Document* document, const FlyString& key) const
+{
+    return document->resolve_to<Object>(get_value(key));
 }
 
 #define DEFINE_ACCESSORS(class_name, snake_name)                                                           \
     NonnullRefPtr<class_name> ArrayObject::get_##snake_name##_at(Document* document, size_t index) const   \
     {                                                                                                      \
-        return m_elements[index].as_object()->resolved_to<class_name>(document);                           \
+        return document->resolve_to<class_name>(m_elements[index]);                                        \
     }                                                                                                      \
                                                                                                            \
     NonnullRefPtr<class_name> DictObject::get_##snake_name(Document* document, const FlyString& key) const \
     {                                                                                                      \
-        return get_object(key)->resolved_to<class_name>(document);                                         \
+        return document->resolve_to<class_name>(get(key).value());                                         \
     }
 ENUMERATE_DIRECT_OBJECT_TYPES(DEFINE_ACCESSORS)
 #undef DEFINE_INDEXER
@@ -129,7 +125,7 @@ String IndirectObject::to_string(int indent) const
     StringBuilder builder;
     builder.appendff("{} {} obj\n", index(), generation_index());
     append_indent(builder, indent + 1);
-    builder.append(object()->to_string(indent + 1));
+    builder.append(value().to_string(indent + 1));
     builder.append('\n');
     append_indent(builder, indent);
     builder.append("endobj");

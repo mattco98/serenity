@@ -28,19 +28,19 @@ Document::Document(Parser&& parser)
     build_page_tree();
 }
 
-NonnullRefPtr<Object> Document::get_or_load_object(u32 index)
+Value Document::get_or_load_value(u32 index)
 {
-    auto obj = get_object(index);
+    auto obj = get_value(index);
     if (obj)
-        return obj.release_nonnull();
+        return obj;
 
     VERIFY(m_xref_table.has_object(index));
     auto byte_offset = m_xref_table.byte_offset_for_object(index);
     auto indirect_object = m_parser.parse_indirect_obj_at_offset(byte_offset);
     VERIFY(indirect_object->index() == index);
-    auto object = indirect_object->object();
-    m_objects.set(index, object);
-    return object;
+    auto value = resolve(indirect_object->value());
+    m_values.set(index, value);
+    return value;
 }
 
 u32 Document::get_first_page_index() const
@@ -66,7 +66,7 @@ Page Document::get_page(u32 index)
 
     auto page_object_index = m_page_object_indices[index];
 
-    auto obj = get_or_load_object(page_object_index);
+    auto obj = get_or_load_value(page_object_index).as_object();
     auto raw_page_object = object_cast<DictObject>(obj);
 
     auto resources = raw_page_object->get_dict(this, "Resources");
@@ -104,6 +104,28 @@ Page Document::get_page(u32 index)
     Page page { resources, contents, media_box, crop_box, user_unit, rotate };
     m_pages.set(index, page);
     return page;
+}
+
+Value Document::resolve(const Value& value)
+{
+    if (!value.is_object())
+        return value;
+
+    auto obj = value.as_object();
+
+    // FIXME: Surely indirect PDF objects can't contain another indirect PDF object,
+    // right? Unsure from the spec, but if they can, these return values would have
+    // to be wrapped with another resolve() call.
+
+    if (obj->is_indirect_object_ref()) {
+        auto object_index = static_cast<NonnullRefPtr<IndirectObjectRef>>(obj)->index();
+        return get_or_load_value(object_index);
+    }
+
+    if (obj->is_indirect_object())
+        return static_cast<NonnullRefPtr<IndirectObject>>(obj)->value();
+
+    return obj;
 }
 
 void Document::build_page_tree()

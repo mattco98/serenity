@@ -9,6 +9,7 @@
 namespace PDF {
 
 class Document;
+class Object;
 
 #define ENUMERATE_DIRECT_OBJECT_TYPES(V) \
     V(StringObject, string)              \
@@ -25,5 +26,17 @@ class Document;
 #define FORWARD_DECL(class_name, _) class class_name;
 ENUMERATE_OBJECT_TYPES(FORWARD_DECL)
 #undef FORWARD_DECL
+
+template<typename T>
+concept IsObject = IsBaseOf<Object, T>;
+
+template<typename T>
+concept IsValuePrimitive = IsSame<T, bool> || IsSame<T, int> || IsSame<T, float>;
+
+template<typename T>
+concept IsValueType = IsValuePrimitive<T> || IsObject<T>;
+
+template<IsValueType T>
+using UnwrappedValueType = Conditional<IsObject<T>, NonnullRefPtr<T>, T>;
 
 }

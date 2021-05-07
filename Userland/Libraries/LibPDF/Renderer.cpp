@@ -46,14 +46,14 @@ void Renderer::render()
     // FIXME: Text operators are supposed to only have effects on the current
     // stream object. Do the text operators treat this concatenated stream
     // as one stream or multiple?
-    Vector<PDF::GraphicsCommand> commands;
+    Vector<GraphicsCommand> commands;
 
-    auto contents = m_page.contents->resolved_to<PDF::ArrayObject>(m_document);
+    auto contents = m_document->resolve_to<ArrayObject>(m_page.contents);
 
     for (auto& ref : *contents) {
         VERIFY(ref.is_object());
-        auto stream = ref.as_object()->resolved_to<PDF::StreamObject>(m_document);
-        commands.append(PDF::Parser::parse_graphics_commands(stream->bytes()));
+        auto stream = m_document->resolve_to<StreamObject>(ref);
+        commands.append(Parser::parse_graphics_commands(stream->bytes()));
     }
 
     for (auto& command : commands)
@@ -119,7 +119,7 @@ void Renderer::handle_set_miter_limit(const Vector<Value>& args)
 
 void Renderer::handle_set_dash_pattern(const Vector<Value>& args)
 {
-    auto dash_array = args[0].as_object()->resolved_to<ArrayObject>(m_document);
+    auto dash_array = m_document->resolve_to<ArrayObject>(args[0]);
     Vector<int> pattern;
     for (auto& element : *dash_array)
         pattern.append(element.as_int());
@@ -230,14 +230,14 @@ void Renderer::handle_text_set_leading(const Vector<Value>& args)
 
 void Renderer::handle_text_set_font(const Vector<Value>& args)
 {
-    auto target_font_name = args[0].as_object()->resolved_to<NameObject>(m_document)->name();
+    auto target_font_name = m_document->resolve_to<NameObject>(args[0])->name();
     auto fonts_dictionary = m_page.resources->get_dict(m_document, "Font");
     auto font_dictionary = fonts_dictionary->get_dict(m_document, target_font_name);
 
     // FIXME: We do not yet have the standard 14 fonts, as some of them are not open fonts,
     // so we just use LiberationSerif for everything
 
-    auto font_name = font_dictionary->get_object("BaseFont")->resolved_to<NameObject>(m_document)->name().to_lowercase();
+    auto font_name = font_dictionary->get_name(m_document, "BaseFont")->name().to_lowercase();
     auto font_view = font_name.view();
     bool is_bold = font_view.contains("bold");
     bool is_italic = font_view.contains("italic");
@@ -321,7 +321,7 @@ void Renderer::handle_text_next_line(const Vector<Value>&)
 
 void Renderer::handle_text_show_string(const Vector<Value>& args)
 {
-    show_text(args[0].as_object()->resolved_to<StringObject>(m_document)->string());
+    show_text(m_document->resolve_to<StringObject>(args[0])->string());
 }
 
 void Renderer::handle_text_next_line_show_string(const Vector<Value>& args)

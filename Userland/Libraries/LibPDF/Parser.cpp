@@ -339,10 +339,9 @@ NonnullRefPtr<IndirectObject> Parser::parse_indirect_object(int index, int gener
     if (matches_eol())
         consume_eol();
     auto value = parse_value();
-    VERIFY(value.is_object());
     VERIFY(m_reader.matches("endobj"));
 
-    return make_object<IndirectObject>(index, generation, value.as_object());
+    return make_object<IndirectObject>(index, generation, value);
 }
 
 NonnullRefPtr<IndirectObject> Parser::parse_indirect_object()

@@ -29,9 +29,6 @@ public:
     ENUMERATE_OBJECT_TYPES(DEFINE_ID)
 #undef DEFINE_ID
 
-    template<typename T>
-    NonnullRefPtr<T> resolved_to(Document*) const;
-
     virtual const char* type_name() const = 0;
     virtual String to_string(int indent = 0) const = 0;
 
@@ -97,6 +94,8 @@ public:
     ALWAYS_INLINE const Value& operator[](size_t index) const { return at(index); }
     ALWAYS_INLINE const Value& at(size_t index) const { return m_elements[index]; }
 
+    NonnullRefPtr<Object> get_object_at(Document*, size_t index) const;
+
 #define DEFINE_INDEXER(class_name, snake_name) \
     NonnullRefPtr<class_name> get_##snake_name##_at(Document*, size_t index) const;
     ENUMERATE_OBJECT_TYPES(DEFINE_INDEXER)
@@ -128,12 +127,9 @@ public:
 
     ALWAYS_INLINE Optional<Value> get(const FlyString& key) const { return m_map.get(key); }
 
-    Value get_value(const FlyString& key) const { return get(key).value(); }
+    ALWAYS_INLINE Value get_value(const FlyString& key) const { return get(key).value(); }
 
-    NonnullRefPtr<Object> get_object(const FlyString& key) const
-    {
-        return get_value(key).as_object();
-    }
+    NonnullRefPtr<Object> get_object(Document* document, const FlyString& key) const;
 
 #define DEFINE_GETTER(class_name, snake_name) \
     NonnullRefPtr<class_name> get_##snake_name(Document*, const FlyString& key) const;
@@ -175,9 +171,9 @@ private:
 
 class IndirectObject final : public Object {
 public:
-    IndirectObject(u32 index, u32 generation_index, const NonnullRefPtr<Object>& object)
+    IndirectObject(u32 index, u32 generation_index, const Value& value)
         : m_index(index)
-        , m_object(object)
+        , m_value(value)
     {
         set_generation_index(generation_index);
     }
@@ -185,7 +181,7 @@ public:
     ~IndirectObject() override = default;
 
     [[nodiscard]] ALWAYS_INLINE u32 index() const { return m_index; }
-    [[nodiscard]] ALWAYS_INLINE NonnullRefPtr<Object> object() const { return m_object; }
+    [[nodiscard]] ALWAYS_INLINE const Value& value() const { return m_value; }
 
     ALWAYS_INLINE bool is_indirect_object() const override { return true; }
     ALWAYS_INLINE const char* type_name() const override { return "indirect_object"; }
@@ -193,7 +189,7 @@ public:
 
 private:
     int m_index;
-    NonnullRefPtr<Object> m_object;
+    Value m_value;
 };
 
 class IndirectObjectRef final : public Object {
@@ -215,9 +211,6 @@ public:
 private:
     int m_index;
 };
-
-template<typename T>
-concept IsObject = IsBaseOf<Object, T>;
 
 template<IsObject To, IsObject From>
 [[nodiscard]] ALWAYS_INLINE static NonnullRefPtr<To> object_cast(NonnullRefPtr<From> obj

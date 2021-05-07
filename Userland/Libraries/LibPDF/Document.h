@@ -11,6 +11,7 @@
 #include <AK/RefCounted.h>
 #include <LibPDF/Object.h>
 #include <LibPDF/Parser.h>
+#include <LibPDF/Value.h>
 #include <LibPDF/XRefTable.h>
 
 namespace PDF {
@@ -39,14 +40,12 @@ public:
 
     ALWAYS_INLINE const DictObject& trailer() const { return *m_trailer; }
 
-    RefPtr<Object> get_object(u32 index) const
+    Value get_value(u32 index) const
     {
-        if (!m_objects.contains(index))
-            return {};
-        return m_objects.get(index).value();
+        return m_values.get(index).value_or({});
     }
 
-    [[nodiscard]] NonnullRefPtr<Object> get_or_load_object(u32 index);
+    [[nodiscard]] Value get_or_load_value(u32 index);
 
     [[nodiscard]] u32 get_first_page_index() const;
 
@@ -54,10 +53,29 @@ public:
 
     [[nodiscard]] Page get_page(u32 index);
 
-    ALWAYS_INLINE void set_object(u32 index, const NonnullRefPtr<Object>& object)
+    ALWAYS_INLINE void set_value(u32 index, const Value& value)
     {
-        m_objects.ensure_capacity(index);
-        m_objects.set(index, object);
+        m_values.ensure_capacity(index);
+        m_values.set(index, value);
+    }
+
+    Value resolve(const Value& value);
+
+    // FIXME: Why can't this method be defined out-of-line?
+    template<IsValueType T>
+    UnwrappedValueType<T> resolve_to(const Value& value)
+    {
+        auto resolved = resolve(value);
+
+        if constexpr (IsSame<T, bool>)
+            return resolved.as_bool();
+        if constexpr (IsSame<T, int>)
+            return resolved.as_int();
+        if constexpr (IsSame<T, float>)
+            return resolved.as_float();
+        if constexpr (IsObject<T>)
+            return object_cast<T>(resolved.as_object());
+        VERIFY_NOT_REACHED();
     }
 
 private:
@@ -78,7 +96,7 @@ private:
     RefPtr<DictObject> m_catalog;
     Vector<u32> m_page_object_indices;
     HashMap<u32, Page> m_pages;
-    HashMap<u32, NonnullRefPtr<Object>> m_objects;
+    HashMap<u32, Value> m_values;
 };
 
 }
