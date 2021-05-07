@@ -34,7 +34,7 @@ struct Page {
 
 class Document final : public RefCounted<Document> {
 public:
-    static NonnullRefPtr<Document> from(const ReadonlyBytes& bytes);
+    explicit Document(const ReadonlyBytes&);
 
     ALWAYS_INLINE const XRefTable& xref_table() const { return m_xref_table; }
 
@@ -79,8 +79,6 @@ public:
     }
 
 private:
-    explicit Document(Parser&& parser);
-
     // FIXME: Currently, to improve performance, we don't load any pages at Document
     // construction, rather we just load the page structure and populate
     // m_page_object_indices. However, we can be even lazier and defer page tree node

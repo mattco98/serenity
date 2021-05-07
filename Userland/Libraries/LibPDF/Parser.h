@@ -7,6 +7,7 @@
 #pragma once
 
 #include <AK/NonnullRefPtrVector.h>
+#include <LibPDF/Document.h>
 #include <LibPDF/Graphics.h>
 #include <LibPDF/Object.h>
 #include <LibPDF/Reader.h>
@@ -21,6 +22,8 @@ public:
     static Vector<GraphicsCommand> parse_graphics_commands(const ReadonlyBytes&);
 
     Parser(Badge<Document>, const ReadonlyBytes&);
+
+    void set_document(const RefPtr<Document>& document) { m_document = document; }
 
     bool perform_validation();
 
@@ -81,6 +84,7 @@ private:
     void consume(char);
 
     Reader m_reader;
+    RefPtr<Document> m_document;
 };
 
 }

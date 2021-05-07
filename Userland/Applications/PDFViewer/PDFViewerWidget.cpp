@@ -54,5 +54,5 @@ void PDFViewerWidget::open_file(const String& path)
     auto file_result = Core::File::open(path, Core::IODevice::OpenMode::ReadOnly);
     VERIFY(!file_result.is_error());
     m_buffer = file_result.value()->read_all();
-    m_viewer->set_document(PDF::Document::from(m_buffer));
+    m_viewer->set_document(adopt_ref(*new PDF::Document(m_buffer)));
 }
