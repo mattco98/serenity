@@ -633,10 +633,14 @@ NonnullRefPtr<StreamObject> Parser::parse_stream(NonnullRefPtr<DictObject> dict)
     auto maybe_length = dict->map().get("Length");
     if (maybe_length.has_value()) {
         // The PDF writer has kindly provided us with the direct length of the stream
+        m_reader.save();
         auto length = m_document->resolve_to<int>(maybe_length.value());
+        m_reader.load();
         bytes = m_reader.bytes().slice(m_reader.offset(), length);
+        m_reader.move_by(length);
+        consume_eol();
     } else {
-        // We have to look for the endstream keyword
+        // We have to look for the endstream keyword5
         auto stream_start = m_reader.offset();
 
         while (true) {
@@ -646,12 +650,13 @@ NonnullRefPtr<StreamObject> Parser::parse_stream(NonnullRefPtr<DictObject> dict)
             if (!m_reader.matches("endstream"))
                 continue;
 
-            m_reader.move_by(9);
-            consume_whitespace();
             bytes = m_reader.bytes().slice(stream_start, potential_stream_end - stream_start);
             break;
         }
     }
+
+    m_reader.move_by(9);
+    consume_whitespace();
 
     if (dict->contains("Filter")) {
         auto filter_type = static_cast<NonnullRefPtr<NameObject>>(dict->get("Filter").value().as_object())->name();
@@ -661,6 +666,7 @@ NonnullRefPtr<StreamObject> Parser::parse_stream(NonnullRefPtr<DictObject> dict)
         bytes = maybe_bytes.value();
     }
 
+    dbgln("addr={} size={}", bytes.data(), bytes.size());
     return make_object<StreamObject>(dict, bytes);
 }
 
@@ -693,6 +699,7 @@ Vector<GraphicsCommand> Parser::parse_graphics_commands()
             continue;
         }
 
+        m_reader.dump_state();
         command_args.append(parse_value());
     }
 

@@ -5,9 +5,8 @@
  */
 
 #include <AK/Hex.h>
-#include <LibCompress/Zlib.h>
+#include <LibCompress/Deflate.h>
 #include <LibPDF/Filter.h>
-#include <math.h>
 
 namespace PDF {
 
@@ -130,9 +129,16 @@ Optional<ByteBuffer> Filter::decode_flate(const ReadonlyBytes& bytes)
     // FIXME: The spec says Flate decoding is "based on" zlib, does that mean they
     // aren't exactly the same?
 
-    auto buff = Compress::Zlib::decompress_all(bytes);
-    VERIFY(buff.has_value());
-    return buff.value();
+    dbgln("{}", StringView(bytes));
+
+    auto buff = Compress::DeflateDecompressor::decompress_all(bytes.slice(2));
+    if (buff.has_value()) {
+        dbgln("{}", StringView(buff.value().span()));
+        return ByteBuffer::copy(buff.value());
+    } else {
+        dbgln("<empty>");
+        return {};
+    }
 };
 
 Optional<ByteBuffer> Filter::decode_run_length(const ReadonlyBytes&)
