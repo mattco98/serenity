@@ -6,6 +6,7 @@
 
 #include <AK/Hex.h>
 #include <LibPDF/Document.h>
+#include <LibPDF/Filter.h>
 #include <LibPDF/Object.h>
 
 namespace PDF {

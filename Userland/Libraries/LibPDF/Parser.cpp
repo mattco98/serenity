@@ -7,6 +7,7 @@
 #include <AK/ScopeGuard.h>
 #include <AK/TypeCasts.h>
 #include <LibPDF/Document.h>
+#include <LibPDF/Filter.h>
 #include <LibPDF/Parser.h>
 #include <ctype.h>
 #include <math.h>
@@ -650,6 +651,14 @@ NonnullRefPtr<StreamObject> Parser::parse_stream(NonnullRefPtr<DictObject> dict)
             bytes = m_reader.bytes().slice(stream_start, potential_stream_end - stream_start);
             break;
         }
+    }
+
+    if (dict->contains("Filter")) {
+        auto filter_type = static_cast<NonnullRefPtr<NameObject>>(dict->get("Filter").value().as_object())->name();
+        auto maybe_bytes = Filter::decode(bytes, filter_type);
+        // FIXME: Handle error condition
+        VERIFY(maybe_bytes.has_value());
+        bytes = maybe_bytes.value();
     }
 
     return make_object<StreamObject>(dict, bytes);
