@@ -127,14 +127,14 @@ public:
     void dump_state() const
     {
         StringBuilder builder;
-        builder.append("Reader State Dump\n\n");
+        builder.appendff("offset={} size={}\n", offset(), bytes().size());
 
-        size_t from = max(0ul, offset() - 10);
+        size_t from = max(0, static_cast<int>(offset()) - 10);
         size_t to = min(bytes().size() - 1, offset() + 10);
 
         for (auto i = from; i <= to; i++) {
             char value = static_cast<char>(bytes().at(i));
-            builder.appendff("{}: '{}' (value={:3d}) ", i, value, static_cast<u8>(value));
+            builder.appendff("  {}: '{}' (value={:3d}) ", i, value, static_cast<u8>(value));
             if (i == offset())
                 builder.appendff(" <<< current location, forwards={}", m_forwards);
             builder.append('\n');

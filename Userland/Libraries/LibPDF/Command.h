@@ -126,10 +126,16 @@ struct Formatter<PDF::Command> : Formatter<StringView> {
     void format(FormatBuilder& format_builder, const PDF::Command& command)
     {
         StringBuilder builder;
-        builder.appendff("{} [ ", PDF::Command::command_name(command.command_type()));
-        for (auto& argument : command.arguments())
-            builder.appendff(" {}", argument);
-        builder.append(" ]");
+        builder.appendff("{} ({})",
+            PDF::Command::command_name(command.command_type()),
+            PDF::Command::command_symbol(command.command_type()));
+
+        if (!command.arguments().is_empty()) {
+            builder.append(" [");
+            for (auto& argument : command.arguments())
+                builder.appendff(" {}", argument);
+            builder.append(" ]");
+        }
         Formatter<StringView>::format(format_builder, builder.to_string());
     }
 };
