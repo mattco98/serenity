@@ -18,15 +18,21 @@ template<typename ListType, typename ElementType>
 class SinglyLinkedListIterator {
 public:
     SinglyLinkedListIterator() = default;
+
     bool operator!=(const SinglyLinkedListIterator& other) const { return m_node != other.m_node; }
+
     SinglyLinkedListIterator& operator++()
     {
         m_prev = m_node;
         m_node = m_node->next;
         return *this;
     }
+
     ElementType& operator*() { return m_node->value; }
     ElementType* operator->() { return &m_node->value; }
+
+    SinglyLinkedListIterator next() const { return m_node ? SinglyLinkedListIterator(m_node->next, m_node) : nullptr; }
+
     bool is_end() const { return !m_node; }
     bool is_begin() const { return !m_prev; }
 
@@ -49,10 +55,12 @@ private:
             : value(move(v))
         {
         }
+
         explicit Node(const T& v)
             : value(v)
         {
         }
+
         T value;
         Node* next { nullptr };
     };
@@ -61,15 +69,7 @@ public:
     SinglyLinkedList() = default;
     ~SinglyLinkedList() { clear(); }
 
-    bool is_empty() const { return !head(); }
-
-    inline size_t size_slow() const
-    {
-        size_t size = 0;
-        for (auto* node = m_head; node; node = node->next)
-            ++size;
-        return size;
-    }
+    [[nodiscard]] ALWAYS_INLINE bool is_empty() const { return !head(); }
 
     void clear()
     {
@@ -82,22 +82,30 @@ public:
         m_tail = nullptr;
     }
 
-    T& first()
+    inline size_t size_slow() const
+    {
+        size_t size = 0;
+        for (auto* node = m_head; node; node = node->next)
+            ++size;
+        return size;
+    }
+
+    [[nodiscard]] T& first()
     {
         VERIFY(head());
         return head()->value;
     }
-    const T& first() const
+    [[nodiscard]] const T& first() const
     {
         VERIFY(head());
         return head()->value;
     }
-    T& last()
+    [[nodiscard]] T& last()
     {
         VERIFY(head());
         return tail()->value;
     }
-    const T& last() const
+    [[nodiscard]] const T& last() const
     {
         VERIFY(head());
         return tail()->value;
@@ -120,15 +128,17 @@ public:
     {
         auto* node = new Node(forward<U>(value));
         if (!m_head) {
+            VERIFY(!m_tail);
             m_head = node;
             m_tail = node;
             return;
         }
+        VERIFY(m_tail);
         m_tail->next = node;
         m_tail = node;
     }
 
-    bool contains_slow(const T& value) const
+    [[nodiscard]] bool contains_slow(const T& value) const
     {
         return find(value) != end();
     }
@@ -157,12 +167,12 @@ public:
 
     ConstIterator find(const T& value) const
     {
-        return find_if([&](auto& other) { return Traits<T>::equals(value, other); });
+        return AK::find(begin(), end(), value);
     }
 
     Iterator find(const T& value)
     {
-        return find_if([&](auto& other) { return Traits<T>::equals(value, other); });
+        return AK::find(begin(), end(), value);
     }
 
     void remove(Iterator iterator)
@@ -198,7 +208,6 @@ public:
 
         auto* node = new Node(forward<U>(value));
         node->next = iterator.m_node->next;
-
         iterator.m_node->next = node;
 
         if (m_tail == iterator.m_node)
