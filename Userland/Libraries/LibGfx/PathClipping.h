@@ -35,10 +35,10 @@ public:
 
     struct Event;
 
-    static Polygon clip(Path& a, Path& b, ClipType);
+    static Vector<Path> clip(Path& a, Path& b, ClipType);
     static Polygon convert_to_polygon(Path&, bool is_primary);
     static Polygon combine(const Polygon&, const Polygon&);
-    static Polygon select_segments(const Polygon&, ClipType);
+    static Vector<Path> select_segments(const Polygon&, ClipType);
 
 private:
     explicit PathClipping(bool is_combining_phase);
