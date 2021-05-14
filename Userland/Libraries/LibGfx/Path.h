@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <AK/Format.h>
 #include <AK/HashMap.h>
 #include <AK/NonnullRefPtrVector.h>
 #include <AK/Optional.h>
@@ -243,6 +244,11 @@ public:
         return m_bounding_box.value();
     }
 
+    // Vector<Path> intersection(Path&);
+    // Vector<Path> union_(Path&);
+    // Vector<Path> difference(Path&);
+    // Vector<Path> xor_(Path&);
+
     String to_string() const;
 
 private:
@@ -262,6 +268,64 @@ private:
 
     Optional<Vector<SplitLineSegment>> m_split_lines {};
     Optional<Gfx::FloatRect> m_bounding_box;
+};
+
+}
+
+namespace AK {
+
+template<>
+struct Formatter<Gfx::Path::SplitLineSegment> : Formatter<StringView> {
+    void format(FormatBuilder& builder, const Gfx::Path::SplitLineSegment& segment)
+    {
+        Formatter<StringView>::format(builder, String::formatted("{{ from={} to={} }}", segment.from, segment.to));
+    }
+};
+
+template<>
+struct Formatter<Gfx::Path> : Formatter<StringView> {
+    void format(FormatBuilder& format_builder, const Gfx::Path& path)
+    {
+        StringBuilder builder;
+        builder.append("Path [\n");
+        bool first = true;
+
+        for (auto& segment : path.segments()) {
+            if (!first)
+                builder.append(",\n  ");
+            first = false;
+
+            switch (segment.type()) {
+            case Gfx::Segment::Type::Invalid:
+                builder.append("Invalid");
+                break;
+            case Gfx::Segment::Type::MoveTo:
+                builder.appendff("MoveTo {{ {} }}", segment.point());
+                break;
+            case Gfx::Segment::Type::LineTo:
+                builder.appendff("LineTo {{ {} }}", segment.point());
+                break;
+            case Gfx::Segment::Type::QuadraticBezierCurveTo: {
+                auto& curve_segment = static_cast<const Gfx::QuadraticBezierCurveSegment&>(segment);
+                builder.appendff("QuadCurveTo {{ point={} through={} }}", curve_segment.point(), curve_segment.through());
+                break;
+            }
+            case Gfx::Segment::Type::EllipticalArcTo: {
+                auto& arc_segment = static_cast<const Gfx::EllipticalArcSegment&>(segment);
+                builder.appendff("ArcTo {{ point={} center={} radii={} x_axis_rotation={} theta_1={} theta_delta={} }}",
+                    arc_segment.point(),
+                    arc_segment.center(),
+                    arc_segment.radii(),
+                    arc_segment.x_axis_rotation(),
+                    arc_segment.theta_1(),
+                    arc_segment.theta_delta());
+                break;
+            }
+            }
+        }
+
+        Formatter<StringView>::format(format_builder, builder.to_string());
+    }
 };
 
 }

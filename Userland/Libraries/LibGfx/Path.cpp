@@ -11,6 +11,8 @@
 #include <AK/StringBuilder.h>
 #include <LibGfx/Painter.h>
 #include <LibGfx/Path.h>
+#include <LibGfx/PathClipping.h>
+#include <math.h>
 
 namespace Gfx {
 
@@ -331,5 +333,25 @@ void Path::segmentize_path()
     m_split_lines = move(segments);
     m_bounding_box = Gfx::FloatRect { min_x, min_y, max_x - min_x, max_y - min_y };
 }
+
+// Vector<Path> Path::intersection(Path& other)
+// {
+//     return PathClipping::clip(ClipType::Intersection, *this, other);
+// }
+//
+// Vector<Path> Path::union_(Path& other)
+// {
+//     return PathClipping::clip(ClipType::Union, *this, other);
+// }
+//
+// Vector<Path> Path::difference(Path& other)
+// {
+//     return PathClipping::clip(ClipType::Difference, *this, other);
+// }
+//
+// Vector<Path> Path::xor_(Path& other)
+// {
+//     return PathClipping::clip(ClipType::Xor, *this, other);
+// }
 
 }
