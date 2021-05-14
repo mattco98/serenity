@@ -18,6 +18,7 @@ set(SOURCES
     Painter.cpp
     Palette.cpp
     Path.cpp
+    PathClipping.cpp
     PBMLoader.cpp
     PGMLoader.cpp
     PNGLoader.cpp
