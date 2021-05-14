@@ -197,7 +197,7 @@ struct PathClipping::Event : public RefCounted<PathClipping::Event> {
     }
 };
 
-PathClipping::Polygon PathClipping::clip(Path& a, Path& b, ClipType clip_type)
+Vector<Path> PathClipping::clip(Path& a, Path& b, ClipType clip_type)
 {
     if (clip_type == ClipType::DifferenceReversed)
         return clip(b, a, ClipType::Difference);
@@ -249,7 +249,7 @@ PathClipping::Polygon PathClipping::combine(const Polygon& a, const Polygon& b)
     return processor.create_polygon();
 }
 
-PathClipping::Polygon PathClipping::select_segments(const Polygon&, ClipType)
+Vector<Path> PathClipping::select_segments(const Polygon&, ClipType)
 {
     VERIFY_NOT_REACHED();
 }
