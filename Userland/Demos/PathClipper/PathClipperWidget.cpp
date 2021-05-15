@@ -94,5 +94,5 @@ void PathClipperWidget::set_input_paths()
 
     m_input_grid->set_primary_path(primary_path);
     m_input_grid->set_secondary_path(secondary_path);
-    // m_output_grid->update(primary_path, secondary_path);
+    m_output_grid->update(primary_path, secondary_path);
 }

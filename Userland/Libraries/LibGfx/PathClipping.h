@@ -66,7 +66,17 @@ template<>
 struct Formatter<Gfx::PathClipping::Segment> : Formatter<StringView> {
     void format(FormatBuilder& builder, const Gfx::PathClipping::Segment& segment)
     {
-        Formatter<StringView>::format(builder, String::formatted("{{ start={} end={} }}", segment.start, segment.end));
+        String self = "???";
+        String other = "???";
+
+        if (segment.self_fill_above != TriState::Unknown || segment.self_fill_below != TriState::Unknown)
+            self = String::formatted("{} {}", segment.self_fill_above, segment.self_fill_below);
+        if (segment.other_fill_above != TriState::Unknown || segment.other_fill_below != TriState::Unknown)
+            other = String::formatted("{} {}", segment.other_fill_above, segment.other_fill_below);
+
+
+        auto str = String::formatted("{{ [{}, {}] self={} other={} }}", segment.start, segment.end, self, other);
+        Formatter<StringView>::format(builder, str);
     }
 };
 
