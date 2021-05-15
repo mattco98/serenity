@@ -6,13 +6,21 @@
 
 #include "DemoList.h"
 
+// #define MAKE_PATH(...)
+//     Gfx::Path path;
+//     Vector<Gfx::FloatPoint> points { __VA_ARGS__ };
+//     path.move_to(points[0] * GRID_SPACING);
+//     for (size_t i = 1; i < points.size(); i++)
+//         path.line_to(points[i] * GRID_SPACING);
+//     path.line_to(points[0] * GRID_SPACING);
+
 #define MAKE_PATH(...)                              \
     Gfx::Path path;                                 \
     Vector<Gfx::FloatPoint> points { __VA_ARGS__ }; \
-    path.move_to(points[0] * GRID_SPACING);         \
+    path.move_to(points[0]);                        \
     for (size_t i = 1; i < points.size(); i++)      \
-        path.line_to(points[i] * GRID_SPACING);     \
-    path.line_to(points[0] * GRID_SPACING);
+        path.line_to(points[i]);                    \
+    path.line_to(points[0]);
 
 #define MAKE_PRIMARY_PATH(...)        \
     {                                 \
@@ -57,8 +65,10 @@ void DemoList::initialize()
     m_initialized = true;
 
     // Simple parallelograms
-    MAKE_PRIMARY_PATH({ 2, 2 }, { 7, 2 }, { 8, 6 }, { 3, 6 });
-    MAKE_SECONDARY_PATH({ 4, 4 }, { 10, 5 }, { 10, 9 }, { 5, 7 });
+    // MAKE_PRIMARY_PATH({ 2, 2 }, { 7, 2 }, { 8, 6 }, { 3, 6 });
+    // MAKE_SECONDARY_PATH({ 4, 4 }, { 10, 5 }, { 10, 9 }, { 5, 7 });
+    MAKE_PRIMARY_PATH({ 0, 0 }, { 100, 0 }, { 130, 80 }, { 30, 80 });
+    MAKE_SECONDARY_PATH({ 40, 30 }, { 150, 40 }, { 160, 110 }, { 60, 110 });
 
     VERIFY(m_primary_paths.size() == m_secondary_paths.size());
 }

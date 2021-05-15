@@ -162,6 +162,8 @@ struct PathClipping::Event : public RefCounted<PathClipping::Event> {
     const FloatPoint& point() const { return is_start ? segment.start : segment.end; }
     const FloatPoint& other_point() const { return is_start ? segment.end : segment.start; }
 
+    void update_other_segment() { other_event->segment = segment; }
+
     int operator<=>(const Event& event) const
     {
         auto comp = point() <=> event.point();
@@ -177,7 +179,7 @@ struct PathClipping::Event : public RefCounted<PathClipping::Event> {
 
         if (is_start != event.is_start) {
             // Prefer sorting end events first
-            return is_start ? 1 : -1;
+            return is_start ? -1 : 1;
         }
 
         // Determine which event line is above the other
@@ -202,12 +204,17 @@ Vector<Path> PathClipping::clip(Path& a, Path& b, ClipType clip_type)
     if (clip_type == ClipType::DifferenceReversed)
         return clip(b, a, ClipType::Difference);
 
+    dbgln("\033[32;1m[clip]\033[0m STARTING");
+    dbgln("[clip] a = {}", a);
+    dbgln("[clip] b = {}", b);
+
     a.close_all_subpaths();
     b.close_all_subpaths();
 
     auto poly_a = convert_to_polygon(a, true);
     auto poly_b = convert_to_polygon(b, false);
     auto combined = combine(poly_a, poly_b);
+    dbgln("\033[32;1m[clip]\033[0m ENDING");
     return select_segments(combined, clip_type);
 }
 
@@ -216,11 +223,11 @@ PathClipping::Polygon PathClipping::convert_to_polygon(Path& path, bool is_prima
     PathClipping processor(false);
 
     auto split_lines = path.split_lines();
-    dbgln("[add_region] adding path...");
+    dbgln("\033[32;1m[convert_to_polygon]\033[0m STARTING");
 
     for (auto& split_line : split_lines) {
         auto is_forward = split_line.from <=> split_line.to;
-        dbgln("[add_region]   split_line={} is_forward={}", split_line, is_forward);
+        dbgln("[convert_to_polygon]   split_line={} is_forward={}", split_line, is_forward);
         if (is_forward == 0)
             continue;
 
@@ -232,13 +239,14 @@ PathClipping::Polygon PathClipping::convert_to_polygon(Path& path, bool is_prima
         processor.add_segment({ from, to }, is_primary);
     }
 
-    dbgln("[add_region] path added");
+    dbgln("\033[32;1m[convert_to_polygon]\033[0m ENDING");
 
     return processor.create_polygon();
 }
 
 PathClipping::Polygon PathClipping::combine(const Polygon& a, const Polygon& b)
 {
+    dbgln("\033[32;1m[combine]\033[0m STARTING");
     PathClipping processor(true);
 
     for (auto& segment : a)
@@ -246,6 +254,7 @@ PathClipping::Polygon PathClipping::combine(const Polygon& a, const Polygon& b)
     for (auto& segment : b)
         processor.add_segment(segment, false);
 
+    dbgln("\033[32;1m[combine]\033[0m ENDING");
     return processor.create_polygon();
 }
 
@@ -263,7 +272,7 @@ PathClipping::Polygon PathClipping::create_polygon()
 {
     Polygon polygon;
 
-    dbgln("=== CREATING POLYGON ===");
+    dbgln("\033[32;1m[create_polygon]\033[0m STARTING");
     dbgln();
     dbgln("[create] events:");
     size_t i = 0;
@@ -274,23 +283,29 @@ PathClipping::Polygon PathClipping::create_polygon()
     auto do_event_intersections = [&](RefPtr<Event>& event, RefPtr<Event>& other) {
         auto result = intersect_events(event, other);
         if (result) {
+            dbgln("\033[36;1m[create]\033[0m   result from do_event_intersections");
             // event is the same as other
-
             if (m_is_combining_phase) {
-                result->segment.other_fill_above = event->segment.other_fill_above;
-                result->segment.other_fill_below = event->segment.other_fill_below;
+                result->segment.other_fill_above = event->segment.self_fill_above;
+                result->segment.other_fill_below = event->segment.self_fill_below;
+                dbgln("\033[36;1m[create]\033[0m   other_fill_above={} other_fill_below={}", result->segment.other_fill_above, result->segment.other_fill_below);
+                result->update_other_segment();
             } else {
                 bool toggle;
                 if (event->segment.self_fill_below == TriState::Unknown) {
+                    dbgln("\033[36;1m[create]\033[0m   (1) toggle = true");
                     toggle = true;
                 } else {
                     toggle = event->segment.self_fill_above != event->segment.self_fill_below;
+                    dbgln("\033[36;1m[create]\033[0m   (2) toggle = {}", toggle);
                 }
 
                 if (toggle) {
                     auto fill_above = result->segment.self_fill_above;
                     VERIFY(fill_above != TriState::Unknown);
                     result->segment.self_fill_above = fill_above == TriState::True ? TriState::False : TriState::True;
+                    dbgln("\033[36;1m[create]\033[0m   Toggling self_fill_above from {} to {}", fill_above, result->segment.self_fill_above);
+                    result->update_other_segment();
                 }
             }
 
@@ -299,6 +314,7 @@ PathClipping::Polygon PathClipping::create_polygon()
 
             return true;
         }
+
         return false;
     };
 
@@ -306,10 +322,10 @@ PathClipping::Polygon PathClipping::create_polygon()
         auto& event = m_event_queue.first();
 
         dbgln();
-        dbgln("status stack:");
+        dbgln("\033[34;1m[create_polygon]\033[0m status stack: [");
         for (auto& event1 : m_status_stack)
-            dbgln("  {}", *event1);
-        dbgln();
+            dbgln("\033[34;1m[create_polygon]\033[0m   {}", *event1);
+        dbgln("\033[34;1m[create_polygon]\033[0m ]");
 
         dbgln("[create] processing event {}", *event);
 
@@ -332,14 +348,15 @@ PathClipping::Polygon PathClipping::create_polygon()
                 }
             }
 
-            if (event_before && do_event_intersections(event, event_before)) {
-                dbgln("[create]   intersected with previous event");
-                continue;
+            auto intersected = false;
+            if (event_before) {
+                dbgln("[create]   intersecting with previous event");
+                intersected = do_event_intersections(event, event_before);
             }
 
-            if (event_after && do_event_intersections(event, event_after)) {
+            if (!intersected && event_after) {
                 dbgln("[create]   intersected with next event");
-                continue;
+                do_event_intersections(event, event_after);
             }
 
             // In the case of intersection, events will have been added to the
@@ -351,33 +368,41 @@ PathClipping::Polygon PathClipping::create_polygon()
 
             if (m_is_combining_phase) {
                 if (event->segment.other_fill_above == TriState::Unknown) {
+                    dbgln("~~~~~~~~~~ NO OTHER FILL ABOVE INFO");
                     TriState inside;
                     if (!event_after) {
+                        dbgln("\033[36;1m[create]\033[0m   (1) inside = False");
                         inside = TriState::False;
                     } else if (event->is_primary == event_after->is_primary) {
                         inside = event_after->segment.other_fill_above;
+                        VERIFY(inside != TriState::Unknown);
+                        dbgln("\033[36;1m[create]\033[0m   (2) inside = {}", inside);
                     } else {
                         inside = event_after->segment.self_fill_above;
+                        dbgln("looking at event_after={}", *event_after);
+                        VERIFY(inside != TriState::Unknown);
+                        dbgln("\033[36;1m[create]\033[0m   (3) inside = {}", inside);
                     }
 
                     event->segment.other_fill_above = inside;
                     event->segment.other_fill_below = inside;
+                    event->update_other_segment();
                 }
             } else {
                 bool toggle;
                 if (event->segment.self_fill_below == TriState::Unknown) {
-                    dbgln("[create]   toggle = true (self_fill_below == Unknown)");
+                    dbgln("\033[36;1m[create]\033[0m   toggle = true (self_fill_below == Unknown)");
                     toggle = true;
                 } else {
                     toggle = event->segment.self_fill_above != event->segment.self_fill_below;
-                    dbgln("[create]   toggle = {}", toggle);
+                    dbgln("\033[36;1m[create]\033[0m   toggle = {}", toggle);
                 }
 
                 if (!event_after) {
-                    dbgln("[create]   No event after, setting self_fill_below to false");
+                    dbgln("\033[36;1m[create]\033[0m   No event after, setting self_fill_below to false");
                     event->segment.self_fill_below = TriState::False;
                 } else {
-                    dbgln("[create]   Event after, setting self_fill_below to {}", event_after->segment.self_fill_above);
+                    dbgln("\033[36;1m[create]\033[0m   Event after, setting self_fill_below to {}", event_after->segment.self_fill_above);
                     event->segment.self_fill_below = event_after->segment.self_fill_above;
                 }
 
@@ -385,11 +410,13 @@ PathClipping::Polygon PathClipping::create_polygon()
                     auto fill_below = event->segment.self_fill_below;
                     VERIFY(fill_below != TriState::Unknown);
                     event->segment.self_fill_above = fill_below == TriState::True ? TriState::False : TriState::True;
-                    dbgln("[create]   Toggling self_fill_above to {}", event->segment.self_fill_above);
+                    dbgln("\033[36;1m[create]\033[0m   Toggling self_fill_above to {}", event->segment.self_fill_above);
                 } else {
-                    dbgln("[create]   Setting self_fill_above to self_fill_below ({})", event->segment.self_fill_below);
+                    dbgln("\033[36;1m[create]\033[0m   Setting self_fill_above to self_fill_below ({})", event->segment.self_fill_below);
                     event->segment.self_fill_above = event->segment.self_fill_below;
                 }
+
+                event->update_other_segment();
             }
 
             dbgln("[create]   inserting event");
@@ -407,13 +434,21 @@ PathClipping::Polygon PathClipping::create_polygon()
                 // Swap fill info for secondary polygon
                 swap(event->segment.self_fill_above, event->segment.other_fill_above);
                 swap(event->segment.self_fill_below, event->segment.other_fill_below);
+                event->update_other_segment();
             }
 
+            dbgln("=== APPENDING SEGMENT {}", event->segment);
             polygon.append(event->segment);
         }
 
         m_event_queue.take_first();
     }
+
+    dbgln("\033[32;1m[create_polygon]\033[0m ENDING");
+    dbgln("\033[32;1m[create_polygon]\033[0m SEGMENTS:");
+    for (auto& segment : polygon)
+        dbgln("\033[32;1m[create_polygon]\033[0m   {}", segment);
+    dbgln();
 
     return polygon;
 }
@@ -575,7 +610,7 @@ void PathClipping::split_event(RefPtr<Event>& event, const FloatPoint& point_to_
     auto first_segment_end = adopt_ref(*new Event { false, event->is_primary, event->segment, event });
     add_event(first_segment_end);
 
-    Segment second_segment { point_to_split_at, end };
+    Segment second_segment { point_to_split_at, end, event->segment.self_fill_above, event->segment.self_fill_below, event->segment.other_fill_above, event->segment.other_fill_below };
     auto second_segment_start = adopt_ref(*new Event { true, event->is_primary, second_segment, {} });
     auto second_segment_end = adopt_ref(*new Event { false, event->is_primary, second_segment, second_segment_start });
     second_segment_start->other_event = second_segment_end;
@@ -605,7 +640,7 @@ template<>
 struct Formatter<Gfx::PathClipping::Event> : Formatter<StringView> {
     void format(FormatBuilder& builder, const Gfx::PathClipping::Event& event)
     {
-        Formatter<StringView>::format(builder, String::formatted("{{ segment={} is_start={} }}", event.segment, event.is_start));
+        Formatter<StringView>::format(builder, String::formatted("{{ segment={} start={} primary={} }}", event.segment, event.is_start, event.is_primary));
     }
 };
 
