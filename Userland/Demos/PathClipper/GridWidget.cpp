@@ -74,10 +74,18 @@ void OutputGridWidget::paint_event(GUI::PaintEvent& event)
         draw_path(painter, path, RESULT_STROKE_COLOR, RESULT_FILL_COLOR);
 }
 
+void OutputGridWidget::set_clip_type(Gfx::ClipType type)
+{
+    m_clip_type = type;
+    m_paths = Gfx::PathClipping::select_segments(m_polygon, type);
+    GridWidget::update();
+}
+
 void OutputGridWidget::update(Gfx::Path& primary, Gfx::Path& secondary)
 {
     auto primary_poly = Gfx::PathClipping::convert_to_polygon(primary, true);
     auto secondary_poly = Gfx::PathClipping::convert_to_polygon(secondary, false);
-    auto combined = Gfx::PathClipping::combine(primary_poly, secondary_poly);
-    m_paths = Gfx::PathClipping::select_segments(combined, m_clip_type);
+    m_polygon = Gfx::PathClipping::combine(primary_poly, secondary_poly);
+    m_paths = Gfx::PathClipping::select_segments(m_polygon, m_clip_type);
+    GridWidget::update();
 }

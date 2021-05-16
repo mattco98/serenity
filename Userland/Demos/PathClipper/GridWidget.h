@@ -13,12 +13,13 @@
 #include <LibGfx/Path.h>
 #include <LibGfx/PathClipping.h>
 
-static constexpr Color GRID_COLOR { 0x40, 0x40, 0x40 };
-static constexpr Color BACKGROUND_COLOR { 0xa0, 0xa0, 0xa0 };
-static constexpr Color PRIMARY_STROKE_COLOR { 0xff, 0x66, 0x66 };
-static constexpr Color PRIMARY_FILL_COLOR { 0xff, 0xcc, 0xcc };
-static constexpr Color SECONDARY_STROKE_COLOR { 0x66, 0x66, 0xff };
-static constexpr Color SECONDARY_FILL_COLOR { 0xcc, 0xcc, 0xff };
+static constexpr Color GRID_COLOR { 0xb0, 0xb0, 0xb0 };
+static constexpr Color BACKGROUND_COLOR { 0xff, 0xff, 0xff };
+
+static constexpr Color PRIMARY_STROKE_COLOR { 0xff, 0x66, 0x66, 0xa0 };
+static constexpr Color PRIMARY_FILL_COLOR { 0xff, 0xcc, 0xcc, 0xa0 };
+static constexpr Color SECONDARY_STROKE_COLOR { 0x66, 0x66, 0xff, 0xa0 };
+static constexpr Color SECONDARY_FILL_COLOR { 0xcc, 0xcc, 0xff, 0xa0 };
 static constexpr Color RESULT_STROKE_COLOR { 0x26, 0xbb, 0x26 };
 static constexpr Color RESULT_FILL_COLOR { 0x4c, 0xff, 0x4c };
 
@@ -69,11 +70,12 @@ public:
 
     void update(Gfx::Path& primary, Gfx::Path& secondary);
 
-    void set_clip_type(Gfx::ClipType type) { m_clip_type = type; }
+    void set_clip_type(Gfx::ClipType type);
 
 private:
     virtual void paint_event(GUI::PaintEvent&) override;
 
-    Gfx::ClipType m_clip_type { Gfx::ClipType::Union };
+    Gfx::ClipType m_clip_type { Gfx::ClipType::Intersection };
+    Gfx::PathClipping::Polygon m_polygon;
     Vector<Gfx::Path> m_paths;
 };
