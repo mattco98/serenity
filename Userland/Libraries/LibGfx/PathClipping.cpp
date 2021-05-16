@@ -60,7 +60,7 @@ constexpr static State xor_states[] = {
 };
 // clang-format on
 
-size_t segment_state_index(const PathClipping::Segment& segment)
+static size_t segment_state_index(const PathClipping::Segment& segment)
 {
     size_t index = 0;
     if (segment.self_fill_above == TriState::True)
@@ -74,7 +74,7 @@ size_t segment_state_index(const PathClipping::Segment& segment)
     return index;
 }
 
-const State* table_for_clip_type(ClipType clip_type)
+static const State* table_for_clip_type(ClipType clip_type)
 {
     switch (clip_type) {
     case ClipType::Intersection:
@@ -88,22 +88,22 @@ const State* table_for_clip_type(ClipType clip_type)
     case ClipType::Xor:
         return xor_states;
     }
+
+    VERIFY_NOT_REACHED();
 }
 
-bool equivalent(float a, float b);
-bool equivalent(float a, float b)
+static bool equivalent(float a, float b)
 {
     return fabsf(a - b) < EPSILON;
 }
 
-bool equivalent(const FloatPoint& a, const FloatPoint& b);
-bool equivalent(const FloatPoint& a, const FloatPoint& b)
+static bool equivalent(const FloatPoint& a, const FloatPoint& b)
 {
     return equivalent(a.x(), b.x()) && equivalent(a.y(), b.y());
 }
 
 template<typename T>
-int operator<=>(const Point<T>& a, const Point<T>& b)
+static int operator<=>(const Point<T>& a, const Point<T>& b)
 {
     if (equivalent(a.x(), b.x())) {
         if (equivalent(a.y(), b.y()))
@@ -125,8 +125,7 @@ struct IntersectionResult {
 };
 
 // All three points should be collinear
-bool is_point_between(const FloatPoint& point, const FloatPoint& a, const FloatPoint& b);
-bool is_point_between(const FloatPoint& point, const FloatPoint& a, const FloatPoint& b)
+static bool is_point_between(const FloatPoint& point, const FloatPoint& a, const FloatPoint& b)
 {
     VERIFY(a < b);
     if (equivalent(a.x(), b.x())) {
@@ -137,22 +136,19 @@ bool is_point_between(const FloatPoint& point, const FloatPoint& a, const FloatP
     return point.x() >= a.x() && point.x() <= b.x();
 }
 
-float line_slope(const FloatPoint& a, const FloatPoint& b);
-float line_slope(const FloatPoint& a, const FloatPoint& b)
+static float line_slope(const FloatPoint& a, const FloatPoint& b)
 {
     return (b.y() - a.y()) / (b.x() - a.x());
 }
 
-bool points_are_collinear(const FloatPoint& a, const FloatPoint& b, const FloatPoint& c);
-bool points_are_collinear(const FloatPoint& a, const FloatPoint& b, const FloatPoint& c)
+static bool points_are_collinear(const FloatPoint& a, const FloatPoint& b, const FloatPoint& c)
 {
     if (equivalent(a, b) || equivalent(b, c) || equivalent(a, c))
         return true;
     return fabsf(line_slope(a, b) - line_slope(b, c)) < EPSILON;
 }
 
-bool point_above_or_on_line(const FloatPoint& point, const FloatPoint& a, const FloatPoint& b);
-bool point_above_or_on_line(const FloatPoint& point, const FloatPoint& a, const FloatPoint& b)
+static bool point_above_or_on_line(const FloatPoint& point, const FloatPoint& a, const FloatPoint& b)
 {
     auto slope = line_slope(a, b);
     auto intersecting_y = (point.x() - a.x()) * slope + a.y();
@@ -160,8 +156,7 @@ bool point_above_or_on_line(const FloatPoint& point, const FloatPoint& a, const 
 }
 
 // https://en.wikipedia.org/wiki/Line%E2%80%93line_intersection#Given_two_points_on_each_line_segment
-IntersectionResult line_intersection(const FloatPoint& a1, const FloatPoint& a2, const FloatPoint& b1, const FloatPoint& b2);
-IntersectionResult line_intersection(const FloatPoint& a1, const FloatPoint& a2, const FloatPoint& b1, const FloatPoint& b2)
+static IntersectionResult line_intersection(const FloatPoint& a1, const FloatPoint& a2, const FloatPoint& b1, const FloatPoint& b2)
 {
     auto get_nonintersection_result = [&] {
         auto slope1 = line_slope(a1, a2);
@@ -220,8 +215,7 @@ IntersectionResult line_intersection(const FloatPoint& a1, const FloatPoint& a2,
     return IntersectionResult { IntersectionResult::Intersects, { x, y } };
 }
 
-int compare_events(bool a_is_start, const FloatPoint& a1, const FloatPoint& a2, bool b_is_start, const FloatPoint& b1, const FloatPoint& b2);
-int compare_events(bool a_is_start, const FloatPoint& a1, const FloatPoint& a2, bool b_is_start, const FloatPoint& b1, const FloatPoint& b2)
+static int compare_events(bool a_is_start, const FloatPoint& a1, const FloatPoint& a2, bool b_is_start, const FloatPoint& b1, const FloatPoint& b2)
 {
     auto comp = a1 <=> b1;
     if (comp != 0) {
@@ -335,12 +329,15 @@ PathClipping::Polygon PathClipping::combine(const Polygon& a, const Polygon& b)
 
 PathClipping::Polygon PathClipping::clip_polygon(const Polygon& input_polygon, ClipType clip_type)
 {
+    dbgln("[clip_polygon] clipping with type {}", clip_type);
     Polygon output_polygon;
     auto clip_table = table_for_clip_type(clip_type);
 
     for (auto& segment : input_polygon) {
         auto table_index = segment_state_index(segment);
         auto state = clip_table[table_index];
+
+        dbgln("[clip_polygon]   segment {} is of state {}", segment, state);
 
         if (state == State::Discard)
             continue;
@@ -358,6 +355,10 @@ PathClipping::Polygon PathClipping::clip_polygon(const Polygon& input_polygon, C
 
 Vector<Path> PathClipping::convert_to_path(Polygon& polygon)
 {
+    dbg("\033[32;1m[convert_to_path]\033[0m Converting...");
+    for (auto& segment : polygon)
+        dbg("[convert_to_path]   segment {}", segment);
+
     Vector<Vector<FloatPoint>> chains;
     Vector<Path> paths;
 
@@ -389,6 +390,16 @@ Vector<Path> PathClipping::convert_to_path(Polygon& polygon)
     };
 
     for (auto& segment : polygon) {
+        dbgln("[convert_to_path] processing {}", segment);
+        dbgln("[convert_to_path] chains:");
+        for (auto& chain : chains) {
+            StringBuilder builder;
+            builder.appendff("{}", chain[0]);
+            for (size_t i = 1; i < chain.size(); i++)
+                builder.appendff(" --> {}", chain[i]);
+            dbgln("[convert_to_path]   {}", builder.to_string());
+        }
+
         Optional<Match> maybe_first_match;
         Optional<Match> maybe_second_match;
 
@@ -408,17 +419,22 @@ Vector<Path> PathClipping::convert_to_path(Polygon& polygon)
             auto& chain = chains[i];
             auto& head = chain.first();
             auto& tail = chain.last();
+            dbgln("[convert_to_path]   looping over chain {} with head={} tail={}", i, head, tail);
 
             if (equivalent(head, segment.start)) {
+                dbgln("[convert_to_path]     head == segment.start");
                 if (set_match(i, true, true))
                     break;
             } else if (equivalent(head, segment.end)) {
+                dbgln("[convert_to_path]     head == segment.end");
                 if (set_match(i, true, false))
                     break;
             } else if (equivalent(tail, segment.start)) {
+                dbgln("[convert_to_path]     tail == segment.start");
                 if (set_match(i, false, true))
                     break;
             } else if (equivalent(tail, segment.end)) {
+                dbgln("[convert_to_path]     tail == segment.end");
                 if (set_match(i, false, false))
                     break;
             }
@@ -426,6 +442,7 @@ Vector<Path> PathClipping::convert_to_path(Polygon& polygon)
 
         if (!maybe_first_match.has_value()) {
             // No matches, make a new chain
+            dbgln("[convert_to_path]   no matches, making a new chain from {} to {}", segment.start, segment.end);
             Vector<FloatPoint> new_chain;
             new_chain.append(segment.start);
             new_chain.append(segment.end);
@@ -438,17 +455,24 @@ Vector<Path> PathClipping::convert_to_path(Polygon& polygon)
 
             auto& match = maybe_first_match.value();
             auto& chain = chains[match.index];
-            auto& point_to_append = match.matches_start_of_segment ? segment.start : segment.end;
-            auto& opposite_point = match.matches_start_of_chain ? chain.last() : chain.first();
+            auto& point_to_append = match.matches_start_of_segment ? segment.end : segment.start;
+            auto opposite_point = match.matches_start_of_chain ? chain.last() : chain.first();
+
+            dbgln("[convert_to_path]   chain.first={} chain.last={}", chain.first(), chain.last());
+            dbgln("[convert_to_path]   found one match with chain {} (matches_start_of_chain={} matches_start_of_segment={})", match.index, match.matches_start_of_chain, match.matches_start_of_segment);
 
             if (match.matches_start_of_chain) {
+                dbgln("[convert_to_path]     prepending {} to chain", point_to_append);
                 chain.prepend(point_to_append);
             } else {
+                dbgln("[convert_to_path]     appending {} to chain", point_to_append);
                 chain.append(point_to_append);
             }
 
+            dbgln("[convert_to_path]   point_to_append={} opposite_point={}", point_to_append, opposite_point);
             if (equivalent(point_to_append, opposite_point)) {
                 // this chain is closing
+                dbgln("[convert_to_path]   closing this chain");
                 finalize_chain(match.index);
             }
 
@@ -457,34 +481,50 @@ Vector<Path> PathClipping::convert_to_path(Polygon& polygon)
 
         // Two matches, we have to join two chains
 
+        dbgln("[convert_to_path]   found two matches");
+
         auto& first_match = maybe_first_match.value();
         auto& second_match = maybe_second_match.value();
 
         auto first_match_index = first_match.index;
         auto second_match_index = second_match.index;
 
+        dbgln("[convert_to_path]     first_match_index={}", first_match_index);
+        dbgln("[convert_to_path]     second_match_index={}", second_match_index);
+
         auto reverse_first_chain = chains[first_match_index].size() < chains[second_match_index].size();
 
+        dbgln("[convert_to_path]     reverse_first_chain={}", reverse_first_chain);
+
         if (first_match.matches_start_of_chain) {
+            dbgln("[convert_to_path]     1");
             if (second_match.matches_start_of_chain) {
+                dbgln("[convert_to_path]     2");
                 if (reverse_first_chain) {
+                    dbgln("[convert_to_path]     3");
                     reverse_chain(first_match_index);
                     merge_chains(first_match_index, second_match_index);
                 } else {
+                    dbgln("[convert_to_path]     4");
                     reverse_chain(second_match_index);
                     merge_chains(second_match_index, first_match_index);
                 }
             } else {
+                dbgln("[convert_to_path]     5");
                 merge_chains(second_match_index, first_match_index);
             }
         } else {
+            dbgln("[convert_to_path]     6");
             if (second_match.matches_start_of_chain) {
+                dbgln("[convert_to_path]     7");
                 merge_chains(first_match_index, second_match_index);
             } else {
                 if (reverse_first_chain) {
+                    dbgln("[convert_to_path]     8");
                     reverse_chain(first_match_index);
                     merge_chains(second_match_index, first_match_index);
                 } else {
+                    dbgln("[convert_to_path]     9");
                     reverse_chain(second_match_index);
                     merge_chains(first_match_index, second_match_index);
                 }
@@ -492,6 +532,7 @@ Vector<Path> PathClipping::convert_to_path(Polygon& polygon)
         }
     }
 
+    dbgln("chains size={}", chains.size());
     VERIFY(chains.is_empty());
     return paths;
 }
@@ -898,6 +939,48 @@ struct Formatter<Gfx::IntersectionResult> : Formatter<StringView> {
         }
 
         Formatter<StringView>::format(builder, String::formatted("{{ type={} point={} }}", type, result.point));
+    }
+};
+
+template<>
+struct Formatter<Gfx::State> : Formatter<StringView> {
+    void format(FormatBuilder& builder, const Gfx::State& result)
+    {
+        switch (result) {
+        case Gfx::State::Discard:
+            Formatter<StringView>::format(builder, "Discard");
+            break;
+        case Gfx::State::FillAbove:
+            Formatter<StringView>::format(builder, "FillAbove");
+            break;
+        case Gfx::State::FillBelow:
+            Formatter<StringView>::format(builder, "FillBelow");
+            break;
+        }
+    }
+};
+
+template<>
+struct Formatter<Gfx::ClipType> : Formatter<StringView> {
+    void format(FormatBuilder& builder, const Gfx::ClipType& result)
+    {
+        switch (result) {
+        case Gfx::ClipType::Intersection:
+            Formatter<StringView>::format(builder, "Intersection");
+            break;
+        case Gfx::ClipType::Union:
+            Formatter<StringView>::format(builder, "Union");
+            break;
+        case Gfx::ClipType::Difference:
+            Formatter<StringView>::format(builder, "Difference");
+            break;
+        case Gfx::ClipType::DifferenceReversed:
+            Formatter<StringView>::format(builder, "DifferenceReversed");
+            break;
+        case Gfx::ClipType::Xor:
+            Formatter<StringView>::format(builder, "Xor");
+            break;
+        }
     }
 };
 
