@@ -20,6 +20,8 @@ enum class ClipType {
     Xor,
 };
 
+
+
 class PathClipping {
 public:
     struct Segment {
@@ -41,6 +43,9 @@ public:
     static Vector<Path> select_segments(const Polygon&, ClipType);
 
 private:
+    static Polygon clip_polygon(const Polygon&, ClipType);
+    static Vector<Path> convert_to_path(Polygon&);
+
     explicit PathClipping(bool is_combining_phase);
 
     Polygon create_polygon();

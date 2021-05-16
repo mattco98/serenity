@@ -13,6 +13,83 @@ namespace Gfx {
 
 static constexpr float EPSILON = 0.0001f;
 
+// Boolean segment tables
+
+enum class State : u8 {
+    Discard,
+    FillAbove,
+    FillBelow,
+};
+
+// Turn off clang-format here so we can have 4 entries per row, otherwise
+// these tables take up a lot of space
+// clang-format off
+constexpr static State union_states[] = {
+    State::Discard,   State::FillBelow, State::FillAbove, State::Discard,
+    State::FillBelow, State::FillBelow, State::Discard,   State::Discard,
+    State::FillAbove, State::Discard,   State::FillAbove, State::Discard,
+    State::Discard,   State::Discard,   State::Discard,   State::Discard,
+};
+
+constexpr static State intersect_states[] = {
+    State::Discard, State::Discard,   State::Discard,   State::Discard,
+    State::Discard, State::FillBelow, State::Discard,   State::FillBelow,
+    State::Discard, State::Discard,   State::FillAbove, State::FillAbove,
+    State::Discard, State::FillBelow, State::FillAbove, State::Discard,
+};
+
+constexpr static State difference_states[] = {
+    State::Discard,   State::Discard,   State::Discard,   State::Discard,
+    State::FillBelow, State::Discard,   State::FillBelow, State::Discard,
+    State::FillAbove, State::FillAbove, State::Discard,   State::Discard,
+    State::Discard,   State::FillAbove, State::FillBelow, State::Discard,
+};
+
+constexpr static State difference_reversed_states[] = {
+    State::Discard, State::FillBelow, State::FillAbove, State::Discard,
+    State::Discard, State::Discard,   State::FillAbove, State::FillAbove,
+    State::Discard, State::FillBelow, State::Discard,   State::FillBelow,
+    State::Discard, State::Discard,   State::Discard,   State::Discard,
+};
+
+constexpr static State xor_states[] = {
+    State::Discard,   State::FillBelow, State::FillAbove, State::Discard,
+    State::FillBelow, State::Discard,   State::Discard,   State::FillAbove,
+    State::FillAbove, State::Discard,   State::Discard,   State::FillBelow,
+    State::Discard,   State::FillAbove, State::FillBelow, State::Discard,
+};
+// clang-format on
+
+size_t segment_state_index(const PathClipping::Segment& segment)
+{
+    size_t index = 0;
+    if (segment.self_fill_above == TriState::True)
+        index += 8;
+    if (segment.self_fill_below == TriState::True)
+        index += 4;
+    if (segment.other_fill_above == TriState::True)
+        index += 2;
+    if (segment.other_fill_below == TriState::True)
+        index += 1;
+    return index;
+}
+
+const State* table_for_clip_type(ClipType clip_type)
+{
+    switch (clip_type) {
+    case ClipType::Intersection:
+        return intersect_states;
+    case ClipType::Union:
+        return union_states;
+    case ClipType::Difference:
+        return difference_states;
+    case ClipType::DifferenceReversed:
+        return difference_reversed_states;
+    case ClipType::Xor:
+        return xor_states;
+    }
+}
+
 bool equivalent(float a, float b);
 bool equivalent(float a, float b)
 {
@@ -164,11 +241,11 @@ int compare_events(bool a_is_start, const FloatPoint& a1, const FloatPoint& a2, 
 
     // Determine which event line is above the other
     return point_above_or_on_line(
-        a2,
-        b_is_start ? b1 : b2,
-        b_is_start ? b2 : b1)
-           ? 1
-           : -1;
+               a2,
+               b_is_start ? b1 : b2,
+               b_is_start ? b2 : b1)
+        ? 1
+        : -1;
 }
 
 struct PathClipping::Event : public RefCounted<PathClipping::Event> {
@@ -256,9 +333,173 @@ PathClipping::Polygon PathClipping::combine(const Polygon& a, const Polygon& b)
     return processor.create_polygon();
 }
 
-Vector<Path> PathClipping::select_segments(const Polygon&, ClipType)
+PathClipping::Polygon PathClipping::clip_polygon(const Polygon& input_polygon, ClipType clip_type)
 {
-    VERIFY_NOT_REACHED();
+    Polygon output_polygon;
+    auto clip_table = table_for_clip_type(clip_type);
+
+    for (auto& segment : input_polygon) {
+        auto table_index = segment_state_index(segment);
+        auto state = clip_table[table_index];
+
+        if (state == State::Discard)
+            continue;
+
+        output_polygon.append(Segment {
+            segment.start,
+            segment.end,
+            state == State::FillAbove ? TriState::True : TriState::False,
+            state == State::FillBelow ? TriState::True : TriState::False,
+        });
+    }
+
+    return output_polygon;
+}
+
+Vector<Path> PathClipping::convert_to_path(Polygon& polygon)
+{
+    Vector<Vector<FloatPoint>> chains;
+    Vector<Path> paths;
+
+    auto reverse_chain = [&](size_t chain_index) {
+        chains[chain_index] = chains[chain_index].reversed();
+    };
+
+    auto merge_chains = [&](size_t first_chain_index, size_t second_chain_index) {
+        auto& first_chain = chains[first_chain_index];
+        auto& second_chain = chains[second_chain_index];
+        first_chain.append(move(second_chain));
+        chains.remove(second_chain_index);
+    };
+
+    auto finalize_chain = [&](size_t chain_index) {
+        auto chain = chains[chain_index];
+        chains.remove(chain_index);
+        Path path;
+        path.move_to(chain[0]);
+        for (size_t i = 1; i < chain.size(); i++)
+            path.line_to(chain[i]);
+        paths.append(move(path));
+    };
+
+    struct Match {
+        size_t index;
+        bool matches_start_of_chain;
+        bool matches_start_of_segment;
+    };
+
+    for (auto& segment : polygon) {
+        Optional<Match> maybe_first_match;
+        Optional<Match> maybe_second_match;
+
+        auto set_match = [&](size_t index, bool matches_start_of_chain, bool matches_start_of_segment) {
+            Match match { index, matches_start_of_chain, matches_start_of_segment };
+
+            if (!maybe_first_match.has_value()) {
+                maybe_first_match = match;
+                return false;
+            }
+
+            maybe_second_match = match;
+            return true;
+        };
+
+        for (size_t i = 0; i < chains.size(); i++) {
+            auto& chain = chains[i];
+            auto& head = chain.first();
+            auto& tail = chain.last();
+
+            if (equivalent(head, segment.start)) {
+                if (set_match(i, true, true))
+                    break;
+            } else if (equivalent(head, segment.end)) {
+                if (set_match(i, true, false))
+                    break;
+            } else if (equivalent(tail, segment.start)) {
+                if (set_match(i, false, true))
+                    break;
+            } else if (equivalent(tail, segment.end)) {
+                if (set_match(i, false, false))
+                    break;
+            }
+        }
+
+        if (!maybe_first_match.has_value()) {
+            // No matches, make a new chain
+            Vector<FloatPoint> new_chain;
+            new_chain.append(segment.start);
+            new_chain.append(segment.end);
+            chains.append(move(new_chain));
+            continue;
+        }
+
+        if (!maybe_second_match.has_value()) {
+            // One match
+
+            auto& match = maybe_first_match.value();
+            auto& chain = chains[match.index];
+            auto& point_to_append = match.matches_start_of_segment ? segment.start : segment.end;
+            auto& opposite_point = match.matches_start_of_chain ? chain.last() : chain.first();
+
+            if (match.matches_start_of_chain) {
+                chain.prepend(point_to_append);
+            } else {
+                chain.append(point_to_append);
+            }
+
+            if (equivalent(point_to_append, opposite_point)) {
+                // this chain is closing
+                finalize_chain(match.index);
+            }
+
+            continue;
+        }
+
+        // Two matches, we have to join two chains
+
+        auto& first_match = maybe_first_match.value();
+        auto& second_match = maybe_second_match.value();
+
+        auto first_match_index = first_match.index;
+        auto second_match_index = second_match.index;
+
+        auto reverse_first_chain = chains[first_match_index].size() < chains[second_match_index].size();
+
+        if (first_match.matches_start_of_chain) {
+            if (second_match.matches_start_of_chain) {
+                if (reverse_first_chain) {
+                    reverse_chain(first_match_index);
+                    merge_chains(first_match_index, second_match_index);
+                } else {
+                    reverse_chain(second_match_index);
+                    merge_chains(second_match_index, first_match_index);
+                }
+            } else {
+                merge_chains(second_match_index, first_match_index);
+            }
+        } else {
+            if (second_match.matches_start_of_chain) {
+                merge_chains(first_match_index, second_match_index);
+            } else {
+                if (reverse_first_chain) {
+                    reverse_chain(first_match_index);
+                    merge_chains(second_match_index, first_match_index);
+                } else {
+                    reverse_chain(second_match_index);
+                    merge_chains(first_match_index, second_match_index);
+                }
+            }
+        }
+    }
+
+    VERIFY(chains.is_empty());
+    return paths;
+}
+
+Vector<Path> PathClipping::select_segments(const Polygon& input_polygon, ClipType clip_type)
+{
+    auto output_polygon = clip_polygon(input_polygon, clip_type);
+    return convert_to_path(output_polygon);
 }
 
 PathClipping::PathClipping(bool is_combining_phase)
