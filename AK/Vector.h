@@ -256,6 +256,20 @@ public:
         m_size -= count;
     }
 
+    Vector<T> reversed() const
+    {
+        Vector<T, inline_capacity> new_vec;
+        new_vec.ensure_capacity(capacity());
+
+        for (size_t i = size() - 1;; i--) {
+            new_vec.append(at(i));
+            if (i == 0)
+                break;
+        }
+
+        return new_vec;
+    }
+
     template<typename U = T>
     [[nodiscard]] bool try_insert(size_t index, U&& value)
     {
