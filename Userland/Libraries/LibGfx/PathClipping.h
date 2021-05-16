@@ -51,7 +51,7 @@ private:
     // Return of true means the first event is redundant and should be removed
     RefPtr<Event> intersect_events(RefPtr<Event>&, RefPtr<Event>&);
     void split_event(RefPtr<Event>&, const FloatPoint& point_to_split_at);
-    void add_event(const RefPtr<Event>&);
+    void add_event(const RefPtr<Event>&, const FloatPoint& other_point);
 
     bool m_is_combining_phase;
     DoublyLinkedList<RefPtr<Event>> m_event_queue;

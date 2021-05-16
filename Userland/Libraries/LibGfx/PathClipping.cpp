@@ -6,25 +6,34 @@
 
 #include <LibGfx/PathClipping.h>
 
+#define DEBUG_PATH_CLIPPING 1
+#define dbg(...) dbgln_if(DEBUG_PATH_CLIPPING, __VA_ARGS__)
+
 namespace Gfx {
 
 static constexpr float EPSILON = 0.0001f;
 
+bool equivalent(float a, float b);
+bool equivalent(float a, float b)
+{
+    return fabsf(a - b) < EPSILON;
+}
+
+bool equivalent(const FloatPoint& a, const FloatPoint& b);
+bool equivalent(const FloatPoint& a, const FloatPoint& b)
+{
+    return equivalent(a.x(), b.x()) && equivalent(a.y(), b.y());
+}
+
 template<typename T>
 int operator<=>(const Point<T>& a, const Point<T>& b)
 {
-    if (a.x() == b.x()) {
-        if (a.y() == b.y())
+    if (equivalent(a.x(), b.x())) {
+        if (equivalent(a.y(), b.y()))
             return 0;
-        auto diff = b.y() - a.y();
-        if (fabsf(diff) < EPSILON)
-            return 0;
-        return diff;
+        return a.y() < b.y() ? -1 : 1;
     }
-    auto diff = b.x() - a.x();
-    if (fabsf(diff) < EPSILON)
-        return 0;
-    return diff;
+    return a.x() < b.x() ? -1 : 1;
 }
 
 struct IntersectionResult {
@@ -43,7 +52,7 @@ bool is_point_between(const FloatPoint& point, const FloatPoint& a, const FloatP
 bool is_point_between(const FloatPoint& point, const FloatPoint& a, const FloatPoint& b)
 {
     VERIFY(a < b);
-    if (a.x() == b.x()) {
+    if (equivalent(a.x(), b.x())) {
         // This is a vertical line
         return point.y() >= a.y() && point.y() <= b.y();
     }
@@ -57,16 +66,10 @@ float line_slope(const FloatPoint& a, const FloatPoint& b)
     return (b.y() - a.y()) / (b.x() - a.x());
 }
 
-bool points_are_equivalent(const FloatPoint& a, const FloatPoint& b);
-bool points_are_equivalent(const FloatPoint& a, const FloatPoint& b)
-{
-    return (a <=> b) == 0;
-}
-
 bool points_are_collinear(const FloatPoint& a, const FloatPoint& b, const FloatPoint& c);
 bool points_are_collinear(const FloatPoint& a, const FloatPoint& b, const FloatPoint& c)
 {
-    if (points_are_equivalent(a, b) || points_are_equivalent(b, c) || points_are_equivalent(a, c))
+    if (equivalent(a, b) || equivalent(b, c) || equivalent(a, c))
         return true;
     return fabsf(line_slope(a, b) - line_slope(b, c)) < EPSILON;
 }
@@ -140,9 +143,32 @@ IntersectionResult line_intersection(const FloatPoint& a1, const FloatPoint& a2,
     return IntersectionResult { IntersectionResult::Intersects, { x, y } };
 }
 
-ALWAYS_INLINE IntersectionResult line_intersection(const PathClipping::Segment& a, const PathClipping::Segment& b)
+int compare_events(bool a_is_start, const FloatPoint& a1, const FloatPoint& a2, bool b_is_start, const FloatPoint& b1, const FloatPoint& b2);
+int compare_events(bool a_is_start, const FloatPoint& a1, const FloatPoint& a2, bool b_is_start, const FloatPoint& b1, const FloatPoint& b2)
 {
-    return line_intersection(a.start, a.end, b.start, b.end);
+    auto comp = a1 <=> b1;
+    if (comp != 0) {
+        // Different target points makes this easy
+        return comp;
+    }
+
+    if (a2 == b2) {
+        // Both ends of both events are the same, so it doesn't matter
+        return 0;
+    }
+
+    if (a_is_start != b_is_start) {
+        // Prefer sorting end events first
+        return a_is_start ? 1 : -1;
+    }
+
+    // Determine which event line is above the other
+    return point_above_or_on_line(
+        a2,
+        b_is_start ? b1 : b2,
+        b_is_start ? b2 : b1)
+           ? 1
+           : -1;
 }
 
 struct PathClipping::Event : public RefCounted<PathClipping::Event> {
@@ -164,38 +190,10 @@ struct PathClipping::Event : public RefCounted<PathClipping::Event> {
 
     void update_other_segment() { other_event->segment = segment; }
 
+    // // FIXME: Remove?
     int operator<=>(const Event& event) const
     {
-        auto comp = point() <=> event.point();
-        if (comp != 0) {
-            // Different target points makes this easy
-            return comp;
-        }
-
-        if (other_point() == event.other_point()) {
-            // Both ends of both events are the same, so it doesn't matter
-            return 0;
-        }
-
-        if (is_start != event.is_start) {
-            // Prefer sorting end events first
-            return is_start ? -1 : 1;
-        }
-
-        // Determine which event line is above the other
-
-        auto line_start = point();
-        auto line_end = other_point();
-        auto other_point = event.other_point();
-
-        if (!is_start)
-            swap(line_start, line_end);
-
-        auto slope = (line_end.y() - line_start.y()) / (line_end.x() - line_start.x());
-        auto projected_y = line_start.y() + slope * (other_point.x() - line_start.x());
-
-        // FIXME: Wrong order?
-        return projected_y > other_point.y() ? 1 : -1;
+        return compare_events(is_start, point(), other_point(), event.is_start, event.point(), event.other_point());
     }
 };
 
@@ -204,9 +202,9 @@ Vector<Path> PathClipping::clip(Path& a, Path& b, ClipType clip_type)
     if (clip_type == ClipType::DifferenceReversed)
         return clip(b, a, ClipType::Difference);
 
-    dbgln("\033[32;1m[clip]\033[0m STARTING");
-    dbgln("[clip] a = {}", a);
-    dbgln("[clip] b = {}", b);
+    dbg("\033[32;1m[clip]\033[0m STARTING");
+    dbg("[clip] a = {}", a);
+    dbg("[clip] b = {}", b);
 
     a.close_all_subpaths();
     b.close_all_subpaths();
@@ -214,7 +212,7 @@ Vector<Path> PathClipping::clip(Path& a, Path& b, ClipType clip_type)
     auto poly_a = convert_to_polygon(a, true);
     auto poly_b = convert_to_polygon(b, false);
     auto combined = combine(poly_a, poly_b);
-    dbgln("\033[32;1m[clip]\033[0m ENDING");
+    dbg("\033[32;1m[clip]\033[0m ENDING");
     return select_segments(combined, clip_type);
 }
 
@@ -223,30 +221,30 @@ PathClipping::Polygon PathClipping::convert_to_polygon(Path& path, bool is_prima
     PathClipping processor(false);
 
     auto split_lines = path.split_lines();
-    dbgln("\033[32;1m[convert_to_polygon]\033[0m STARTING");
+    dbg("\033[32;1m[convert_to_polygon]\033[0m STARTING");
 
     for (auto& split_line : split_lines) {
         auto is_forward = split_line.from <=> split_line.to;
-        dbgln("[convert_to_polygon]   split_line={} is_forward={}", split_line, is_forward);
+        dbg("[convert_to_polygon]   split_line={} is_forward={}", split_line, is_forward);
         if (is_forward == 0)
             continue;
 
         auto from = split_line.from;
         auto to = split_line.to;
-        if (is_forward < 0)
+        if (is_forward > 0)
             swap(from, to);
 
         processor.add_segment({ from, to }, is_primary);
     }
 
-    dbgln("\033[32;1m[convert_to_polygon]\033[0m ENDING");
+    dbg("\033[32;1m[convert_to_polygon]\033[0m ENDING");
 
     return processor.create_polygon();
 }
 
 PathClipping::Polygon PathClipping::combine(const Polygon& a, const Polygon& b)
 {
-    dbgln("\033[32;1m[combine]\033[0m STARTING");
+    dbg("\033[32;1m[combine]\033[0m STARTING");
     PathClipping processor(true);
 
     for (auto& segment : a)
@@ -254,7 +252,7 @@ PathClipping::Polygon PathClipping::combine(const Polygon& a, const Polygon& b)
     for (auto& segment : b)
         processor.add_segment(segment, false);
 
-    dbgln("\033[32;1m[combine]\033[0m ENDING");
+    dbg("\033[32;1m[combine]\033[0m ENDING");
     return processor.create_polygon();
 }
 
@@ -272,39 +270,39 @@ PathClipping::Polygon PathClipping::create_polygon()
 {
     Polygon polygon;
 
-    dbgln("\033[32;1m[create_polygon]\033[0m STARTING");
-    dbgln();
-    dbgln("[create] events:");
+    dbg("\033[32;1m[create_polygon]\033[0m STARTING");
+    dbg();
+    dbg("[create] events:");
     size_t i = 0;
     for (auto& event : m_event_queue)
-        dbgln("[create]   event{} = {}", i++, *event);
-    dbgln();
+        dbg("[create]   event{} = {}", i++, *event);
+    dbg();
 
     auto do_event_intersections = [&](RefPtr<Event>& event, RefPtr<Event>& other) {
         auto result = intersect_events(event, other);
         if (result) {
-            dbgln("\033[36;1m[create]\033[0m   result from do_event_intersections");
+            dbg("\033[36;1m[create]\033[0m   result from do_event_intersections");
             // event is the same as other
             if (m_is_combining_phase) {
                 result->segment.other_fill_above = event->segment.self_fill_above;
                 result->segment.other_fill_below = event->segment.self_fill_below;
-                dbgln("\033[36;1m[create]\033[0m   other_fill_above={} other_fill_below={}", result->segment.other_fill_above, result->segment.other_fill_below);
+                dbg("\033[36;1m[create]\033[0m   other_fill_above={} other_fill_below={}", result->segment.other_fill_above, result->segment.other_fill_below);
                 result->update_other_segment();
             } else {
                 bool toggle;
                 if (event->segment.self_fill_below == TriState::Unknown) {
-                    dbgln("\033[36;1m[create]\033[0m   (1) toggle = true");
+                    dbg("\033[36;1m[create]\033[0m   (1) toggle = true");
                     toggle = true;
                 } else {
                     toggle = event->segment.self_fill_above != event->segment.self_fill_below;
-                    dbgln("\033[36;1m[create]\033[0m   (2) toggle = {}", toggle);
+                    dbg("\033[36;1m[create]\033[0m   (2) toggle = {}", toggle);
                 }
 
                 if (toggle) {
                     auto fill_above = result->segment.self_fill_above;
                     VERIFY(fill_above != TriState::Unknown);
                     result->segment.self_fill_above = fill_above == TriState::True ? TriState::False : TriState::True;
-                    dbgln("\033[36;1m[create]\033[0m   Toggling self_fill_above from {} to {}", fill_above, result->segment.self_fill_above);
+                    dbg("\033[36;1m[create]\033[0m   Toggling self_fill_above from {} to {}", fill_above, result->segment.self_fill_above);
                     result->update_other_segment();
                 }
             }
@@ -321,13 +319,13 @@ PathClipping::Polygon PathClipping::create_polygon()
     while (!m_event_queue.is_empty()) {
         auto& event = m_event_queue.first();
 
-        dbgln();
-        dbgln("\033[34;1m[create_polygon]\033[0m status stack: [");
+        dbg();
+        dbg("\033[34;1m[create_polygon]\033[0m status stack: [");
         for (auto& event1 : m_status_stack)
-            dbgln("\033[34;1m[create_polygon]\033[0m   {}", *event1);
-        dbgln("\033[34;1m[create_polygon]\033[0m ]");
+            dbg("\033[34;1m[create_polygon]\033[0m   {}", *event1);
+        dbg("\033[34;1m[create_polygon]\033[0m ]");
 
-        dbgln("[create] processing event {}", *event);
+        dbg("[create] processing event {}", *event);
 
         if (event->is_start) {
             auto find_result = find_transition(event);
@@ -339,23 +337,23 @@ PathClipping::Polygon PathClipping::create_polygon()
                 auto prev = find_result.prev();
                 auto next = find_result;
                 if (prev) {
-                    dbgln("[create]   event has a previous event");
+                    dbg("[create]   event has a previous event");
                     event_before = *prev;
                 }
                 if (next) {
-                    dbgln("[create]   event has a next event");
+                    dbg("[create]   event has a next event");
                     event_after = *next;
                 }
             }
 
             auto intersected = false;
             if (event_before) {
-                dbgln("[create]   intersecting with previous event");
+                dbg("[create]   intersecting with previous event");
                 intersected = do_event_intersections(event, event_before);
             }
 
             if (!intersected && event_after) {
-                dbgln("[create]   intersected with next event");
+                dbg("[create]   intersected with next event");
                 do_event_intersections(event, event_after);
             }
 
@@ -368,20 +366,20 @@ PathClipping::Polygon PathClipping::create_polygon()
 
             if (m_is_combining_phase) {
                 if (event->segment.other_fill_above == TriState::Unknown) {
-                    dbgln("~~~~~~~~~~ NO OTHER FILL ABOVE INFO");
+                    dbg("~~~~~~~~~~ NO OTHER FILL ABOVE INFO");
                     TriState inside;
                     if (!event_after) {
-                        dbgln("\033[36;1m[create]\033[0m   (1) inside = False");
+                        dbg("\033[36;1m[create]\033[0m   (1) inside = False");
                         inside = TriState::False;
                     } else if (event->is_primary == event_after->is_primary) {
                         inside = event_after->segment.other_fill_above;
                         VERIFY(inside != TriState::Unknown);
-                        dbgln("\033[36;1m[create]\033[0m   (2) inside = {}", inside);
+                        dbg("\033[36;1m[create]\033[0m   (2) inside = {}", inside);
                     } else {
                         inside = event_after->segment.self_fill_above;
-                        dbgln("looking at event_after={}", *event_after);
+                        dbg("looking at event_after={}", *event_after);
                         VERIFY(inside != TriState::Unknown);
-                        dbgln("\033[36;1m[create]\033[0m   (3) inside = {}", inside);
+                        dbg("\033[36;1m[create]\033[0m   (3) inside = {}", inside);
                     }
 
                     event->segment.other_fill_above = inside;
@@ -391,18 +389,18 @@ PathClipping::Polygon PathClipping::create_polygon()
             } else {
                 bool toggle;
                 if (event->segment.self_fill_below == TriState::Unknown) {
-                    dbgln("\033[36;1m[create]\033[0m   toggle = true (self_fill_below == Unknown)");
+                    dbg("\033[36;1m[create]\033[0m   toggle = true (self_fill_below == Unknown)");
                     toggle = true;
                 } else {
                     toggle = event->segment.self_fill_above != event->segment.self_fill_below;
-                    dbgln("\033[36;1m[create]\033[0m   toggle = {}", toggle);
+                    dbg("\033[36;1m[create]\033[0m   toggle = {}", toggle);
                 }
 
                 if (!event_after) {
-                    dbgln("\033[36;1m[create]\033[0m   No event after, setting self_fill_below to false");
+                    dbg("\033[36;1m[create]\033[0m   No event after, setting self_fill_below to false");
                     event->segment.self_fill_below = TriState::False;
                 } else {
-                    dbgln("\033[36;1m[create]\033[0m   Event after, setting self_fill_below to {}", event_after->segment.self_fill_above);
+                    dbg("\033[36;1m[create]\033[0m   Event after, setting self_fill_below to {}", event_after->segment.self_fill_above);
                     event->segment.self_fill_below = event_after->segment.self_fill_above;
                 }
 
@@ -410,16 +408,16 @@ PathClipping::Polygon PathClipping::create_polygon()
                     auto fill_below = event->segment.self_fill_below;
                     VERIFY(fill_below != TriState::Unknown);
                     event->segment.self_fill_above = fill_below == TriState::True ? TriState::False : TriState::True;
-                    dbgln("\033[36;1m[create]\033[0m   Toggling self_fill_above to {}", event->segment.self_fill_above);
+                    dbg("\033[36;1m[create]\033[0m   Toggling self_fill_above to {}", event->segment.self_fill_above);
                 } else {
-                    dbgln("\033[36;1m[create]\033[0m   Setting self_fill_above to self_fill_below ({})", event->segment.self_fill_below);
+                    dbg("\033[36;1m[create]\033[0m   Setting self_fill_above to self_fill_below ({})", event->segment.self_fill_below);
                     event->segment.self_fill_above = event->segment.self_fill_below;
                 }
 
                 event->update_other_segment();
             }
 
-            dbgln("[create]   inserting event");
+            dbg("[create]   inserting event");
             m_status_stack.insert_before(find_result, event);
         } else {
             auto existing_status = m_status_stack.find(event->other_event);
@@ -427,28 +425,28 @@ PathClipping::Polygon PathClipping::create_polygon()
                 do_event_intersections(*existing_status.prev(), *existing_status.next());
             }
 
-            dbgln("[create]   removing event");
+            dbg("[create]   removing event");
             m_status_stack.remove(existing_status);
 
-            if (!event->is_primary) {
+            if (m_is_combining_phase && !event->is_primary) {
                 // Swap fill info for secondary polygon
                 swap(event->segment.self_fill_above, event->segment.other_fill_above);
                 swap(event->segment.self_fill_below, event->segment.other_fill_below);
                 event->update_other_segment();
             }
 
-            dbgln("=== APPENDING SEGMENT {}", event->segment);
+            dbg("=== APPENDING SEGMENT {}", event->segment);
             polygon.append(event->segment);
         }
 
         m_event_queue.take_first();
     }
 
-    dbgln("\033[32;1m[create_polygon]\033[0m ENDING");
-    dbgln("\033[32;1m[create_polygon]\033[0m SEGMENTS:");
+    dbg("\033[32;1m[create_polygon]\033[0m ENDING");
+    dbg("\033[32;1m[create_polygon]\033[0m SEGMENTS:");
     for (auto& segment : polygon)
-        dbgln("\033[32;1m[create_polygon]\033[0m   {}", segment);
-    dbgln();
+        dbg("\033[32;1m[create_polygon]\033[0m   {}", segment);
+    dbg();
 
     return polygon;
 }
@@ -459,15 +457,15 @@ void PathClipping::add_segment(const Segment& segment, bool is_primary)
     auto end = adopt_ref(*new Event(false, is_primary, segment, start));
     start->other_event = end;
 
-    add_event(start);
-    add_event(end);
+    add_event(start, segment.end);
+    add_event(end, segment.start);
 }
 
 DoublyLinkedList<RefPtr<PathClipping::Event>>::Iterator PathClipping::find_transition(RefPtr<Event> event)
 {
     auto a1 = event->segment.start;
     auto a2 = event->segment.end;
-    dbgln("[find_transition] finding transition (a1={} a2={})", a1, a2);
+    dbg("[find_transition] finding transition (a1={} a2={})", a1, a2);
 
     size_t offset = 0;
 
@@ -475,51 +473,51 @@ DoublyLinkedList<RefPtr<PathClipping::Event>>::Iterator PathClipping::find_trans
         offset++;
         auto b1 = other_event->segment.start;
         auto b2 = other_event->segment.end;
-        dbgln("[find_transition]   candidate event (b1={} b2={})", b1, b2);
+        dbg("[find_transition]   candidate event (b1={} b2={})", b1, b2);
 
         if (points_are_collinear(a1, b1, b2)) {
-            dbgln("[find_transition]     a1 is collinear with b1->b2");
+            dbg("[find_transition]     a1 is collinear with b1->b2");
             if (points_are_collinear(a2, b1, b2)) {
-                dbgln("[find_transition]     a2 is collinear with b1->b2");
+                dbg("[find_transition]     a2 is collinear with b1->b2");
                 return true;
             }
             if (point_above_or_on_line(a2, b1, b2)) {
-                dbgln("[find_transition]     a2 is above/on b1->b2");
+                dbg("[find_transition]     a2 is above/on b1->b2");
             } else {
-                dbgln("[find_transition]     a2 is NOT above/on b1->b2");
+                dbg("[find_transition]     a2 is NOT above/on b1->b2");
             }
             return point_above_or_on_line(a2, b1, b2);
         }
         if (point_above_or_on_line(a1, b1, b2)) {
-            dbgln("[find_transition]     a1 is above/on b1->b2");
+            dbg("[find_transition]     a1 is above/on b1->b2");
         } else {
-            dbgln("[find_transition]     a1 is NOT above/on b1->b2");
+            dbg("[find_transition]     a1 is NOT above/on b1->b2");
         }
         return point_above_or_on_line(a1, b1, b2);
     });
 
-    dbgln("[find_transition]   transition found at offset {} (end={})", offset == 0 ? offset : offset - 1, r.is_end());
+    dbg("[find_transition]   transition found at offset {} (end={})", offset == 0 ? offset : offset - 1, r.is_end());
 
     return r;
 }
 
 RefPtr<PathClipping::Event> PathClipping::intersect_events(RefPtr<Event>& a, RefPtr<Event>& b)
 {
-    dbgln("[intersect_event] intersecting {} and {}", *a, *b);
-    auto share_points = points_are_equivalent(a->point(), b->point())
-        || points_are_equivalent(a->point(), b->other_point())
-        || points_are_equivalent(a->other_point(), b->point())
-        || points_are_equivalent(a->other_point(), b->other_point());
+    dbg("[intersect_event] intersecting {} and {}", *a, *b);
+    auto share_points = equivalent(a->point(), b->point())
+        || equivalent(a->point(), b->other_point())
+        || equivalent(a->other_point(), b->point())
+        || equivalent(a->other_point(), b->other_point());
 
     if (share_points) {
         // The segments are joined at one end, so we just ignore this and process
         // them as two normal segments
-        dbgln("[intersect_event]   segments are joined at ends");
+        dbg("[intersect_event]   segments are joined at ends");
         return {};
     }
 
     auto intersection_result = line_intersection(a->segment.start, a->segment.end, b->segment.start, b->segment.end);
-    dbgln("[intersect_event]   intersection_result={}", intersection_result);
+    dbg("[intersect_event]   intersection_result={}", intersection_result);
 
     if (intersection_result.type == IntersectionResult::Intersects) {
         auto split_point = intersection_result.point;
@@ -528,7 +526,7 @@ RefPtr<PathClipping::Event> PathClipping::intersect_events(RefPtr<Event>& a, Ref
         auto split_a = (split_point <=> a->point()) != 0 && (split_point <=> a->other_point()) != 0;
         auto split_b = (split_point <=> b->point()) != 0 && (split_point <=> b->other_point()) != 0;
 
-        dbgln("[intersect_event]   split_a={} split_b={}", split_a, split_b);
+        dbg("[intersect_event]   split_a={} split_b={}", split_a, split_b);
 
         if (split_a)
             split_event(a, split_point);
@@ -539,7 +537,7 @@ RefPtr<PathClipping::Event> PathClipping::intersect_events(RefPtr<Event>& a, Ref
         auto a1_eq_b1 = (a->point() <=> b->point()) == 0;
         auto a2_eq_b2 = (a->other_point() <=> b->other_point()) == 0;
 
-        dbgln("[intersect_event]   a1_eq_b1={} a2_eq_b2={}", a1_eq_b1, a2_eq_b2);
+        dbg("[intersect_event]   a1_eq_b1={} a2_eq_b2={}", a1_eq_b1, a2_eq_b2);
 
         if (a1_eq_b1 && a2_eq_b2) {
             // The segments are equal
@@ -549,7 +547,7 @@ RefPtr<PathClipping::Event> PathClipping::intersect_events(RefPtr<Event>& a, Ref
         auto a1_between = !a1_eq_b1 && is_point_between(a->point(), b->point(), b->other_point());
         auto a2_between = !a2_eq_b2 && is_point_between(a->other_point(), b->point(), b->other_point());
 
-        dbgln("[intersect_event]   a1_between={} a2_between={}", a1_between, a2_between);
+        dbg("[intersect_event]   a1_between={} a2_between={}", a1_between, a2_between);
 
         if (a1_eq_b1) {
             if (a2_between) {
@@ -590,7 +588,7 @@ RefPtr<PathClipping::Event> PathClipping::intersect_events(RefPtr<Event>& a, Ref
 
 void PathClipping::split_event(RefPtr<Event>& event, const FloatPoint& point_to_split_at)
 {
-    dbgln("[split_event] splitting {} at point {}", *event, point_to_split_at);
+    dbg("[split_event] splitting {} at point {}", *event, point_to_split_at);
     // from:
     //      (start)---------(s)----(end)
     // to:
@@ -603,31 +601,28 @@ void PathClipping::split_event(RefPtr<Event>& event, const FloatPoint& point_to_
 
     VERIFY(event->is_start);
 
-    dbgln("[split_event]   removing {}", *event->other_event);
-    m_event_queue.remove(m_event_queue.find(event->other_event));
-    auto end = event->segment.end;
+    dbg("[split_event]   removing {}", *event->other_event);
+
+    Segment new_segment { point_to_split_at, event->segment.end, event->segment.self_fill_above, event->segment.self_fill_below };
+
+    m_event_queue.remove(event->other_event);
     event->segment.end = point_to_split_at;
-    auto first_segment_end = adopt_ref(*new Event { false, event->is_primary, event->segment, event });
-    add_event(first_segment_end);
+    auto first_segment_end = adopt_ref(*new Event { !event->is_start, event->is_primary, event->segment, event });
+    event->other_event = first_segment_end;
+    add_event(first_segment_end, event->point());
 
-    Segment second_segment { point_to_split_at, end, event->segment.self_fill_above, event->segment.self_fill_below, event->segment.other_fill_above, event->segment.other_fill_below };
-    auto second_segment_start = adopt_ref(*new Event { true, event->is_primary, second_segment, {} });
-    auto second_segment_end = adopt_ref(*new Event { false, event->is_primary, second_segment, second_segment_start });
-    second_segment_start->other_event = second_segment_end;
-
-    add_event(second_segment_start);
-    add_event(second_segment_end);
+    add_segment(new_segment, event->is_primary);
 }
 
-void PathClipping::add_event(const RefPtr<Event>& event)
+void PathClipping::add_event(const RefPtr<Event>& event, const FloatPoint& other_point)
 {
-    size_t offset = 0;
-    auto insertion_location = m_event_queue.find_if([&](const RefPtr<Event>& a) {
-        offset++;
-        return *event >= *a;
-    });
+    dbg("[add_event] adding {} (other_point={})", *event, other_point);
 
-    dbgln("[add_event] adding event {} at offset {} (size={})", *event, offset, m_event_queue.size_slow());
+    auto insertion_location = m_event_queue.find_if([&](const RefPtr<Event>& a) {
+        auto r = compare_events(event->is_start, event->point(), other_point, a->is_start, a->point(), a->other_point());
+        dbg("[add_event]   comparison to {}: {}", *a, r);
+        return r < 0;
+    });
 
     m_event_queue.insert_before(insertion_location, event);
 }

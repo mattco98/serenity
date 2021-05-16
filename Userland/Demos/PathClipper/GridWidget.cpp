@@ -79,5 +79,5 @@ void OutputGridWidget::update(Gfx::Path& primary, Gfx::Path& secondary)
     auto primary_poly = Gfx::PathClipping::convert_to_polygon(primary, true);
     auto secondary_poly = Gfx::PathClipping::convert_to_polygon(secondary, false);
     auto combined = Gfx::PathClipping::combine(primary_poly, secondary_poly);
-    m_paths = Gfx::PathClipping::select_segments(combined, m_clip_type);
+    // m_paths = Gfx::PathClipping::select_segments(combined, m_clip_type);
 }
