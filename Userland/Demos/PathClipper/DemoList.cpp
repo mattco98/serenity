@@ -9,10 +9,10 @@
 #define MAKE_PATH(...)                              \
     Gfx::Path path;                                 \
     Vector<Gfx::FloatPoint> points { __VA_ARGS__ }; \
-    path.move_to(points[0] * GRID_SPACING);         \
+    path.move_to(points[0]);                        \
     for (size_t i = 1; i < points.size(); i++)      \
-        path.line_to(points[i] * GRID_SPACING);     \
-    path.line_to(points[0] * GRID_SPACING);
+        path.line_to(points[i]);                    \
+    path.line_to(points[0]);
 
 #define MAKE_PRIMARY_PATH(...)        \
     {                                 \
@@ -56,17 +56,17 @@ void DemoList::initialize()
     VERIFY(!m_initialized);
     m_initialized = true;
 
-    // Simple parallelograms
-    MAKE_PRIMARY_PATH({ 2, 2 }, { 7, 2 }, { 8, 6 }, { 3, 6 });
-    MAKE_SECONDARY_PATH({ 3, 4 }, { 10, 5 }, { 10, 9 }, { 5, 7 });
-
-    // Rectangles with vertical lines
-    MAKE_PRIMARY_PATH({ 2, 5 }, { 9, 5 }, { 9, 10 }, { 2, 10 });
-    MAKE_SECONDARY_PATH({ 3, 6 }, { 10, 6 }, { 10, 11 }, { 3, 11 });
+    // // Simple parallelograms
+    // MAKE_PRIMARY_PATH({ 40, 40 }, { 140, 40 }, { 160, 120 }, { 60, 120 });
+    // MAKE_SECONDARY_PATH({ 60, 80 }, { 200, 100 }, { 200, 180 }, { 100, 140 });
+    //
+    // // Rectangles with vertical lines
+    // MAKE_PRIMARY_PATH({ 40, 100 }, { 180, 100 }, { 180, 200 }, { 40, 200 });
+    // MAKE_SECONDARY_PATH({ 60, 120 }, { 10, 120 }, { 200, 220 }, { 60, 220 });
 
     // Rectangles with a shared left edge (secondary side fully enclosed in primary side)
-    MAKE_PRIMARY_PATH({ 2, 5 }, { 9, 5 }, { 9, 10 }, { 2, 10 });
-    MAKE_SECONDARY_PATH({ 2, 6 }, { 8, 6 }, { 8, 9 }, { 2, 9 });
+    MAKE_PRIMARY_PATH({ 40, 100 }, { 180, 100 }, { 180, 200 }, { 40, 200 });
+    MAKE_SECONDARY_PATH({ 40, 120 }, { 160, 120 }, { 160, 180 }, { 40, 180 });
 
     VERIFY(m_primary_paths.size() == m_secondary_paths.size());
 }
