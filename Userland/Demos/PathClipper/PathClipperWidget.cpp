@@ -11,10 +11,14 @@
 #include <LibGUI/BoxLayout.h>
 #include <LibGUI/Menu.h>
 #include <LibGUI/Menubar.h>
+#include <LibGUI/Toolbar.h>
+#include <LibGUI/ToolbarContainer.h>
 
 PathClipperWidget::PathClipperWidget()
 {
     set_layout<GUI::VerticalBoxLayout>();
+    add_toolbar();
+
     m_splitter = add<GUI::HorizontalSplitter>();
     m_input_grid = m_splitter->add<InputGridWidget>();
     m_output_grid = m_splitter->add<OutputGridWidget>();
@@ -26,16 +30,21 @@ PathClipperWidget::PathClipperWidget()
     load_current_demo();
 }
 
+void PathClipperWidget::add_toolbar()
+{
+    auto& toolbar_container = add<GUI::ToolbarContainer>();
+    auto& toolbar = toolbar_container.add<GUI::Toolbar>();
+    toolbar.add_action(GUI::CommonActions::make_go_back_action([this](auto&) {
+        go_to_previous_demo();
+    }));
+    toolbar.add_action(GUI::CommonActions::make_go_forward_action([this](auto&) {
+        go_to_next_demo();
+    }));
+}
+
 void PathClipperWidget::initialize_menubar(GUI::Menubar& menubar)
 {
     auto& file_menu = menubar.add_menu("&File");
-    file_menu.add_action(GUI::CommonActions::make_go_back_action([this](auto&) {
-        go_to_previous_demo();
-    }));
-    file_menu.add_action(GUI::CommonActions::make_go_forward_action([this](auto&) {
-        go_to_next_demo();
-    }));
-    file_menu.add_separator();
     file_menu.add_action(GUI::CommonActions::make_quit_action([](auto&) {
         GUI::Application::the()->quit();
     }));
