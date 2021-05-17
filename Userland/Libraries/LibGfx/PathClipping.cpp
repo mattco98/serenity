@@ -6,7 +6,7 @@
 
 #include <LibGfx/PathClipping.h>
 
-#define DEBUG_PATH_CLIPPING 0
+#define DEBUG_PATH_CLIPPING 1
 #define dbg(...) dbgln_if(DEBUG_PATH_CLIPPING, __VA_ARGS__)
 
 namespace Gfx {
@@ -180,6 +180,11 @@ static IntersectionResult line_intersection(const FloatPoint& a1, const FloatPoi
     auto y4 = b2.y();
 
     auto denominator = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
+
+    if (fabsf(denominator) < EPSILON) {
+        // Guaranteed to be parallel or coincident
+        return get_nonintersection_result();
+    }
 
     auto t_numerator = (x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4);
     auto u_numerator = (x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3);
