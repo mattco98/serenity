@@ -626,6 +626,8 @@ PathClipping::Polygon PathClipping::create_polygon()
                     dbg("[create]   event has a next event");
                     event_after = *next;
                 }
+            } else if (!m_status_stack.is_empty()) {
+                event_before = m_status_stack.last();
             }
 
             auto intersected = false;
