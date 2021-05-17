@@ -51,14 +51,34 @@ public:
     InputGridWidget();
     virtual ~InputGridWidget() = default;
 
-    void set_primary_path(Gfx::Path& path) { m_primary_path = path; }
-    void set_secondary_path(Gfx::Path& path) { m_secondary_path = path; }
+    void set_primary_path(Gfx::Path& path)
+    {
+        update();
+        m_primary_path = path;
+    }
+
+    void set_secondary_path(Gfx::Path& path)
+    {
+        update();
+        m_secondary_path = path;
+    }
+
+    // Called when a user drags the path
+    Function<void(Gfx::Path& primary, Gfx::Path& secondary)> on_input_paths_changed;
 
 private:
     virtual void paint_event(GUI::PaintEvent&) override;
+    virtual void mousedown_event(GUI::MouseEvent&) override;
+    virtual void mouseup_event(GUI::MouseEvent&) override;
+    virtual void mousemove_event(GUI::MouseEvent&) override;
+
+    Gfx::IntPoint get_closest_grid_point_to(const Gfx::IntPoint& point) const;
 
     Gfx::Path m_primary_path;
     Gfx::Path m_secondary_path;
+
+    Optional<Gfx::FloatPoint> m_point_being_dragged;
+    bool m_primary_path_being_dragged { false };
 };
 
 class OutputGridWidget final : public GridWidget {

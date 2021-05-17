@@ -8,9 +8,9 @@
 #include <LibGUI/Action.h>
 #include <LibGUI/ActionGroup.h>
 #include <LibGUI/Application.h>
+#include <LibGUI/BoxLayout.h>
 #include <LibGUI/Menu.h>
 #include <LibGUI/Menubar.h>
-#include <LibGUI/BoxLayout.h>
 
 PathClipperWidget::PathClipperWidget()
 {
@@ -19,7 +19,11 @@ PathClipperWidget::PathClipperWidget()
     m_input_grid = m_splitter->add<InputGridWidget>();
     m_output_grid = m_splitter->add<OutputGridWidget>();
 
-    set_input_paths();
+    m_input_grid->on_input_paths_changed = [&](Gfx::Path& primary, Gfx::Path& secondary) {
+        m_output_grid->update(primary, secondary);
+    };
+
+    load_current_demo();
 }
 
 void PathClipperWidget::initialize_menubar(GUI::Menubar& menubar)
@@ -75,7 +79,7 @@ void PathClipperWidget::go_to_next_demo()
 {
     if (m_demo_index <= DemoList::path_count() - 1) {
         m_demo_index++;
-        set_input_paths();
+        load_current_demo();
     }
 }
 
@@ -83,15 +87,17 @@ void PathClipperWidget::go_to_previous_demo()
 {
     if (m_demo_index > 0) {
         m_demo_index--;
-        set_input_paths();
+        load_current_demo();
     }
 }
 
-void PathClipperWidget::set_input_paths()
+void PathClipperWidget::load_current_demo()
 {
-    auto primary_path = DemoList::get_primary_path(m_demo_index);
-    auto secondary_path = DemoList::get_secondary_path(m_demo_index);
+    set_input_paths(DemoList::get_primary_path(m_demo_index), DemoList::get_secondary_path(m_demo_index));
+}
 
+void PathClipperWidget::set_input_paths(Gfx::Path& primary_path, Gfx::Path& secondary_path)
+{
     m_input_grid->set_primary_path(primary_path);
     m_input_grid->set_secondary_path(secondary_path);
     m_output_grid->update(primary_path, secondary_path);

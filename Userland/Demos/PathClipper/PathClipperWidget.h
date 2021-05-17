@@ -28,7 +28,8 @@ public:
     void go_to_previous_demo();
 
 private:
-    void set_input_paths();
+    void load_current_demo();
+    void set_input_paths(Gfx::Path& primary, Gfx::Path& secondary);
 
     GUI::ActionGroup m_clip_type_group;
     RefPtr<GUI::HorizontalSplitter> m_splitter;

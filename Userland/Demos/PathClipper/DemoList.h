@@ -18,8 +18,8 @@ struct Entry {
 
 class DemoList {
 public:
-    static Gfx::Path get_primary_path(size_t index);
-    static Gfx::Path get_secondary_path(size_t index);
+    static Gfx::Path& get_primary_path(size_t index);
+    static Gfx::Path& get_secondary_path(size_t index);
     static size_t path_count();
 
 private:

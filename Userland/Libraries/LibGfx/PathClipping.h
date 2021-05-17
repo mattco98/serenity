@@ -41,10 +41,10 @@ public:
     static Polygon convert_to_polygon(Path&, bool is_primary);
     static Polygon combine(const Polygon&, const Polygon&);
     static Vector<Path> select_segments(const Polygon&, ClipType);
-
-private:
     static Polygon clip_polygon(const Polygon&, ClipType);
     static Vector<Path> convert_to_path(Polygon&);
+
+private:
 
     explicit PathClipping(bool is_combining_phase);
 
