@@ -121,7 +121,7 @@ struct IntersectionResult {
     };
 
     Type type;
-    FloatPoint point;
+    FloatPoint point {};
 };
 
 // All three points should be collinear
@@ -150,6 +150,9 @@ static bool points_are_collinear(const FloatPoint& a, const FloatPoint& b, const
 
 static bool point_above_or_on_line(const FloatPoint& point, const FloatPoint& a, const FloatPoint& b)
 {
+    if (equivalent(a.x(), b.x()))
+        return point.x() >= a.x();
+
     auto slope = line_slope(a, b);
     auto intersecting_y = (point.x() - a.x()) * slope + a.y();
     return point.y() <= intersecting_y;
@@ -162,12 +165,18 @@ static IntersectionResult line_intersection(const FloatPoint& a1, const FloatPoi
         auto slope1 = line_slope(a1, a2);
         auto slope2 = line_slope(b1, b2);
 
-        if (fabsf(slope1 - slope2) < EPSILON) {
-            if (fabsf(a1.x() - b1.x()) < EPSILON && abs(a1.y() - b1.y()) < EPSILON)
-                return IntersectionResult { IntersectionResult::Coincident, {} };
+        if (isinf(slope1)) {
+            if (isinf(slope2) && equivalent(a1.x(), b1.x()))
+                return IntersectionResult { IntersectionResult::Coincident };
+            return IntersectionResult { IntersectionResult::DoesNotIntersect };
         }
 
-        return IntersectionResult { IntersectionResult::DoesNotIntersect, {} };
+        if (fabsf(slope1 - slope2) < EPSILON) {
+            if (fabsf(a1.x() - b1.x()) < EPSILON && abs(a1.y() - b1.y()) < EPSILON)
+                return IntersectionResult { IntersectionResult::Coincident };
+        }
+
+        return IntersectionResult { IntersectionResult::DoesNotIntersect };
     };
 
     auto x1 = a1.x();
@@ -611,8 +620,12 @@ PathClipping::Polygon PathClipping::create_polygon()
         for (auto& event1 : m_status_stack)
             dbg("\033[32;1m[create_polygon]\033[0m   {}", *event1);
         dbg("\033[32;1m[create_polygon]\033[0m ]");
+        dbg("\033[32;1m[create_polygon]\033[0m event queue: [");
+        for (auto& event1 : m_event_queue)
+            dbg("\033[32;1m[create_polygon]\033[0m   {} ({})", *event1, event1);
+        dbg("\033[32;1m[create_polygon]\033[0m ]");
 
-        dbg("[create] processing event {}", *event);
+        dbg("\033[32;1m[create_polygon]\033[0m processing event {} ({})", *event, event);
 
         if (event->is_start) {
             auto find_result = find_transition(event);
@@ -624,11 +637,11 @@ PathClipping::Polygon PathClipping::create_polygon()
                 auto prev = find_result.prev();
                 auto next = find_result;
                 if (prev) {
-                    dbg("[create]   event has a previous event");
+                    dbg("\033[32;1m[create_polygon]\033[0m   event has a previous event");
                     event_before = *prev;
                 }
                 if (next) {
-                    dbg("[create]   event has a next event");
+                    dbg("\033[32;1m[create_polygon]\033[0m   event has a next event");
                     event_after = *next;
                 }
             } else if (!m_status_stack.is_empty()) {
@@ -637,12 +650,12 @@ PathClipping::Polygon PathClipping::create_polygon()
 
             auto intersected = false;
             if (event_before) {
-                dbg("[create]   intersecting with previous event");
+                dbg("\033[32;1m[create_polygon]\033[0m   intersecting with previous event");
                 intersected = do_event_intersections(event, event_before);
             }
 
             if (!intersected && event_after) {
-                dbg("[create]   intersected with next event");
+                dbg("\033[32;1m[create_polygon]\033[0m   intersected with next event");
                 do_event_intersections(event, event_after);
             }
 
@@ -706,7 +719,7 @@ PathClipping::Polygon PathClipping::create_polygon()
                 event->update_other_segment();
             }
 
-            dbg("[create]   inserting event");
+            dbg("\033[32;1m[create_polygon]\033[0m   inserting event");
             m_status_stack.insert_before(find_result, event);
         } else {
             auto existing_status = m_status_stack.find(event->other_event);
@@ -714,7 +727,7 @@ PathClipping::Polygon PathClipping::create_polygon()
                 do_event_intersections(*existing_status.prev(), *existing_status.next());
             }
 
-            dbg("[create]   removing event");
+            dbg("\033[32;1m[create_polygon]\033[0m   removing event");
             m_status_stack.remove(existing_status);
 
             if (m_is_combining_phase && !event->is_primary) {
@@ -907,12 +920,15 @@ void PathClipping::add_event(const RefPtr<Event>& event, const FloatPoint& other
 {
     dbg("[add_event] adding {} (other_point={})", *event, other_point);
 
+    size_t offset = 0;
     auto insertion_location = m_event_queue.find_if([&](const RefPtr<Event>& a) {
+        offset++;
         auto r = compare_events(event->is_start, event->point(), other_point, a->is_start, a->point(), a->other_point());
         dbg("[add_event]   comparison to {}: {}", *a, r);
         return r < 0;
     });
 
+    dbg("\033[35;1m[add_event]\033[0m adding {} ({}) @ {}", *event, event, insertion_location.is_end() ? "<end>" : String::number(offset));
     m_event_queue.insert_before(insertion_location, event);
 }
 
