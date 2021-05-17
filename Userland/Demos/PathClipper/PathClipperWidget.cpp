@@ -45,14 +45,15 @@ void PathClipperWidget::add_toolbar()
 void PathClipperWidget::initialize_menubar(GUI::Menubar& menubar)
 {
     auto& file_menu = menubar.add_menu("&File");
+    file_menu.add_separator();
     file_menu.add_action(GUI::CommonActions::make_quit_action([](auto&) {
         GUI::Application::the()->quit();
     }));
 
-    auto& view_menu = menubar.add_menu("&View");
+    auto& shapes_menu = menubar.add_menu("&Shapes");
 
     m_clip_type_group.set_exclusive(true);
-    auto& clip_menu = view_menu.add_submenu("&Clip Type");
+    auto& clip_menu = shapes_menu.add_submenu("&Clip Type");
 
     auto intersection_action = GUI::Action::create_checkable("Intersection", [this](auto&) {
         m_output_grid->set_clip_type(Gfx::ClipType::Intersection);
@@ -82,6 +83,24 @@ void PathClipperWidget::initialize_menubar(GUI::Menubar& menubar)
     clip_menu.add_action(*xor_action);
 
     intersection_action->set_checked(true);
+
+    shapes_menu.add_separator();
+
+    shapes_menu.add_action(GUI::Action::create("Add Point to &Primary Shape", [&](auto&) {
+        m_input_grid->add_point(true);
+    }));
+
+    shapes_menu.add_action(GUI::Action::create("Add Point to &Secondary Shape", [&](auto&) {
+        m_input_grid->add_point(false);
+    }));
+
+    shapes_menu.add_action(GUI::Action::create("&Dump Current Positions", [&](auto&) {
+        dbgln("Primary path: {}", m_input_grid->primary_path());
+        dbgln("Secondary path: {}", m_input_grid->secondary_path());
+        dbgln("Output paths: ");
+        for (auto& path : m_output_grid->paths())
+            dbgln("  {}", path);
+    }));
 }
 
 void PathClipperWidget::go_to_next_demo()

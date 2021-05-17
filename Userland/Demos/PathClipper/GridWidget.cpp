@@ -49,6 +49,51 @@ InputGridWidget::InputGridWidget()
 {
 }
 
+// Adds a point between the first and second points
+void InputGridWidget::add_point(bool primary_path)
+{
+    auto& path = primary_path ? m_primary_path : m_secondary_path;
+    Gfx::Path new_path;
+    Gfx::FloatPoint cursor;
+    bool add_to_next_point = true;
+
+    auto& segments = path.segments();
+    for (auto& segment : segments) {
+        switch (segment.type()) {
+        case Gfx::Segment::Type::MoveTo:
+            new_path.move_to(segment.point());
+            cursor = segment.point();
+            break;
+        case Gfx::Segment::Type::LineTo: {
+            if (add_to_next_point) {
+                auto mid = (cursor + segment.point()) / 2.0f;
+                auto aligned_mid = get_closest_grid_point_to(mid.to_type<int>());
+                if (aligned_mid != cursor && aligned_mid != segment.point()) {
+                    new_path.line_to(aligned_mid.to_type<float>());
+                    new_path.line_to(segment.point());
+                    cursor = segment.point();
+                    add_to_next_point = false;
+                    continue;
+                }
+            }
+            new_path.line_to(segment.point());
+            cursor = segment.point();
+            break;
+        }
+        default:
+            VERIFY_NOT_REACHED();
+        }
+    }
+
+    if (primary_path) {
+        m_primary_path = new_path;
+    } else {
+        m_secondary_path = new_path;
+    }
+
+    update();
+}
+
 void InputGridWidget::paint_event(GUI::PaintEvent& event)
 {
     GridWidget::paint_event(event);

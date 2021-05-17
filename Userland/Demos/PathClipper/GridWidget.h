@@ -51,6 +51,9 @@ public:
     InputGridWidget();
     virtual ~InputGridWidget() = default;
 
+    const Gfx::Path& primary_path() const { return m_primary_path; }
+    const Gfx::Path& secondary_path() const { return m_secondary_path; }
+
     void set_primary_path(Gfx::Path& path)
     {
         update();
@@ -62,6 +65,8 @@ public:
         update();
         m_secondary_path = path;
     }
+
+    void add_point(bool primary_path);
 
     // Called when a user drags the path
     Function<void(Gfx::Path& primary, Gfx::Path& secondary)> on_input_paths_changed;
@@ -87,6 +92,8 @@ class OutputGridWidget final : public GridWidget {
 public:
     OutputGridWidget();
     virtual ~OutputGridWidget() = default;
+
+    const Vector<Gfx::Path>& paths() const { return m_paths; }
 
     void update(Gfx::Path& primary, Gfx::Path& secondary);
 
