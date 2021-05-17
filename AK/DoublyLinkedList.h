@@ -173,7 +173,7 @@ public:
 
     [[nodiscard]] bool contains_slow(const T& value) const
     {
-        return find(value) != end();
+        return !find(value).is_end();
     }
 
     using Iterator = DoublyLinkedListIterator<DoublyLinkedList, T>;
@@ -246,14 +246,14 @@ public:
 
         auto* node = new Node(forward<U>(value));
         auto* old_prev = iterator.m_node->prev;
-        if (old_prev)
+        if (old_prev) {
             old_prev->next = node;
+        } else {
+            m_head = node;
+        }
         node->prev = old_prev;
         node->next = iterator.m_node;
         iterator.m_node->prev = node;
-
-        if (m_head == iterator.m_node)
-            m_head = node;
     }
 
     template<typename U = T>
@@ -266,14 +266,14 @@ public:
 
         auto* node = new Node(forward<U>(value));
         auto* old_next = iterator.m_node->next;
-        if (old_next)
+        if (old_next) {
             old_next->prev = node;
+        } else {
+            m_tail = node;
+        }
         node->next = old_next;
         node->prev = iterator.m_node;
         iterator.m_node->next = node;
-
-        if (m_tail == iterator.m_node)
-            m_tail = node;
     }
 
 private:
