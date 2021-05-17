@@ -22,6 +22,7 @@ public:
     PathClipperWidget();
     virtual ~PathClipperWidget() = default;
 
+    void add_toolbar();
     void initialize_menubar(GUI::Menubar&);
 
     void go_to_next_demo();

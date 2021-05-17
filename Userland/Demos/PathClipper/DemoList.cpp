@@ -56,9 +56,6 @@ void DemoList::initialize()
     VERIFY(!m_initialized);
     m_initialized = true;
 
-    // MAKE_PRIMARY_PATH({ 0, 0 }, { 100, 0 }, { 130, 80 }, { 30, 80 });
-    // MAKE_SECONDARY_PATH({ 40, 30 }, { 150, 40 }, { 160, 110 }, { 60, 110 });
-
     // Simple parallelograms
     MAKE_PRIMARY_PATH({ 2, 2 }, { 7, 2 }, { 8, 6 }, { 3, 6 });
     MAKE_SECONDARY_PATH({ 3, 4 }, { 10, 5 }, { 10, 9 }, { 5, 7 });

@@ -6,7 +6,7 @@
 
 #include <LibGfx/PathClipping.h>
 
-#define DEBUG_PATH_CLIPPING 1
+#define DEBUG_PATH_CLIPPING 0
 #define dbg(...) dbgln_if(DEBUG_PATH_CLIPPING, __VA_ARGS__)
 
 namespace Gfx {
