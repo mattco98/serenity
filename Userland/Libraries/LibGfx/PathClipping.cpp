@@ -6,7 +6,7 @@
 
 #include <LibGfx/PathClipping.h>
 
-#define DEBUG_PATH_CLIPPING 1
+#define DEBUG_PATH_CLIPPING 0
 #define dbg(...) dbgln_if(DEBUG_PATH_CLIPPING, __VA_ARGS__)
 
 namespace Gfx {
@@ -329,7 +329,7 @@ PathClipping::Polygon PathClipping::combine(const Polygon& a, const Polygon& b)
 
 PathClipping::Polygon PathClipping::clip_polygon(const Polygon& input_polygon, ClipType clip_type)
 {
-    dbgln("[clip_polygon] clipping with type {}", clip_type);
+    dbg("[clip_polygon] clipping with type {}", clip_type);
     Polygon output_polygon;
     auto clip_table = table_for_clip_type(clip_type);
 
@@ -337,7 +337,7 @@ PathClipping::Polygon PathClipping::clip_polygon(const Polygon& input_polygon, C
         auto table_index = segment_state_index(segment);
         auto state = clip_table[table_index];
 
-        dbgln("[clip_polygon]   segment {} is of state {}", segment, state);
+        dbg("[clip_polygon]   segment {} is of state {}", segment, state);
 
         if (state == State::Discard)
             continue;
@@ -390,14 +390,14 @@ Vector<Path> PathClipping::convert_to_path(Polygon& polygon)
     };
 
     for (auto& segment : polygon) {
-        dbgln("[convert_to_path] processing {}", segment);
-        dbgln("[convert_to_path] chains:");
+        dbg("[convert_to_path] processing {}", segment);
+        dbg("[convert_to_path] chains:");
         for (auto& chain : chains) {
             StringBuilder builder;
             builder.appendff("{}", chain[0]);
             for (size_t i = 1; i < chain.size(); i++)
                 builder.appendff(" --> {}", chain[i]);
-            dbgln("[convert_to_path]   {}", builder.to_string());
+            dbg("[convert_to_path]   {}", builder.to_string());
         }
 
         Optional<Match> maybe_first_match;
@@ -419,22 +419,22 @@ Vector<Path> PathClipping::convert_to_path(Polygon& polygon)
             auto& chain = chains[i];
             auto& head = chain.first();
             auto& tail = chain.last();
-            dbgln("[convert_to_path]   looping over chain {} with head={} tail={}", i, head, tail);
+            dbg("[convert_to_path]   looping over chain {} with head={} tail={}", i, head, tail);
 
             if (equivalent(head, segment.start)) {
-                dbgln("[convert_to_path]     head == segment.start");
+                dbg("[convert_to_path]     head == segment.start");
                 if (set_match(i, true, true))
                     break;
             } else if (equivalent(head, segment.end)) {
-                dbgln("[convert_to_path]     head == segment.end");
+                dbg("[convert_to_path]     head == segment.end");
                 if (set_match(i, true, false))
                     break;
             } else if (equivalent(tail, segment.start)) {
-                dbgln("[convert_to_path]     tail == segment.start");
+                dbg("[convert_to_path]     tail == segment.start");
                 if (set_match(i, false, true))
                     break;
             } else if (equivalent(tail, segment.end)) {
-                dbgln("[convert_to_path]     tail == segment.end");
+                dbg("[convert_to_path]     tail == segment.end");
                 if (set_match(i, false, false))
                     break;
             }
@@ -442,7 +442,7 @@ Vector<Path> PathClipping::convert_to_path(Polygon& polygon)
 
         if (!maybe_first_match.has_value()) {
             // No matches, make a new chain
-            dbgln("[convert_to_path]   no matches, making a new chain from {} to {}", segment.start, segment.end);
+            dbg("[convert_to_path]   no matches, making a new chain from {} to {}", segment.start, segment.end);
             Vector<FloatPoint> new_chain;
             new_chain.append(segment.start);
             new_chain.append(segment.end);
@@ -458,21 +458,21 @@ Vector<Path> PathClipping::convert_to_path(Polygon& polygon)
             auto& point_to_append = match.matches_start_of_segment ? segment.end : segment.start;
             auto opposite_point = match.matches_start_of_chain ? chain.last() : chain.first();
 
-            dbgln("[convert_to_path]   chain.first={} chain.last={}", chain.first(), chain.last());
-            dbgln("[convert_to_path]   found one match with chain {} (matches_start_of_chain={} matches_start_of_segment={})", match.index, match.matches_start_of_chain, match.matches_start_of_segment);
+            dbg("[convert_to_path]   chain.first={} chain.last={}", chain.first(), chain.last());
+            dbg("[convert_to_path]   found one match with chain {} (matches_start_of_chain={} matches_start_of_segment={})", match.index, match.matches_start_of_chain, match.matches_start_of_segment);
 
             if (match.matches_start_of_chain) {
-                dbgln("[convert_to_path]     prepending {} to chain", point_to_append);
+                dbg("[convert_to_path]     prepending {} to chain", point_to_append);
                 chain.prepend(point_to_append);
             } else {
-                dbgln("[convert_to_path]     appending {} to chain", point_to_append);
+                dbg("[convert_to_path]     appending {} to chain", point_to_append);
                 chain.append(point_to_append);
             }
 
-            dbgln("[convert_to_path]   point_to_append={} opposite_point={}", point_to_append, opposite_point);
+            dbg("[convert_to_path]   point_to_append={} opposite_point={}", point_to_append, opposite_point);
             if (equivalent(point_to_append, opposite_point)) {
                 // this chain is closing
-                dbgln("[convert_to_path]   closing this chain");
+                dbg("[convert_to_path]   closing this chain");
                 finalize_chain(match.index);
             }
 
@@ -481,7 +481,7 @@ Vector<Path> PathClipping::convert_to_path(Polygon& polygon)
 
         // Two matches, we have to join two chains
 
-        dbgln("[convert_to_path]   found two matches");
+        dbg("[convert_to_path]   found two matches");
 
         auto& first_match = maybe_first_match.value();
         auto& second_match = maybe_second_match.value();
@@ -489,42 +489,42 @@ Vector<Path> PathClipping::convert_to_path(Polygon& polygon)
         auto first_match_index = first_match.index;
         auto second_match_index = second_match.index;
 
-        dbgln("[convert_to_path]     first_match_index={}", first_match_index);
-        dbgln("[convert_to_path]     second_match_index={}", second_match_index);
+        dbg("[convert_to_path]     first_match_index={}", first_match_index);
+        dbg("[convert_to_path]     second_match_index={}", second_match_index);
 
         auto reverse_first_chain = chains[first_match_index].size() < chains[second_match_index].size();
 
-        dbgln("[convert_to_path]     reverse_first_chain={}", reverse_first_chain);
+        dbg("[convert_to_path]     reverse_first_chain={}", reverse_first_chain);
 
         if (first_match.matches_start_of_chain) {
-            dbgln("[convert_to_path]     1");
+            dbg("[convert_to_path]     1");
             if (second_match.matches_start_of_chain) {
-                dbgln("[convert_to_path]     2");
+                dbg("[convert_to_path]     2");
                 if (reverse_first_chain) {
-                    dbgln("[convert_to_path]     3");
+                    dbg("[convert_to_path]     3");
                     reverse_chain(first_match_index);
                     merge_chains(first_match_index, second_match_index);
                 } else {
-                    dbgln("[convert_to_path]     4");
+                    dbg("[convert_to_path]     4");
                     reverse_chain(second_match_index);
                     merge_chains(second_match_index, first_match_index);
                 }
             } else {
-                dbgln("[convert_to_path]     5");
+                dbg("[convert_to_path]     5");
                 merge_chains(second_match_index, first_match_index);
             }
         } else {
-            dbgln("[convert_to_path]     6");
+            dbg("[convert_to_path]     6");
             if (second_match.matches_start_of_chain) {
-                dbgln("[convert_to_path]     7");
+                dbg("[convert_to_path]     7");
                 merge_chains(first_match_index, second_match_index);
             } else {
                 if (reverse_first_chain) {
-                    dbgln("[convert_to_path]     8");
+                    dbg("[convert_to_path]     8");
                     reverse_chain(first_match_index);
                     merge_chains(second_match_index, first_match_index);
                 } else {
-                    dbgln("[convert_to_path]     9");
+                    dbg("[convert_to_path]     9");
                     reverse_chain(second_match_index);
                     merge_chains(first_match_index, second_match_index);
                 }
@@ -532,7 +532,7 @@ Vector<Path> PathClipping::convert_to_path(Polygon& polygon)
         }
     }
 
-    dbgln("chains size={}", chains.size());
+    dbg("chains size={}", chains.size());
     VERIFY(chains.is_empty());
     return paths;
 }

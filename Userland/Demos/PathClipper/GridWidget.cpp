@@ -40,7 +40,6 @@ void GridWidget::draw_path(GUI::Painter& painter, Gfx::Path& path, Color stroke_
     Gfx::IntSize point_size { 7, 7 };
 
     for (auto& split_line : split_lines) {
-        // FIXME: Draw a circle
         auto pos = split_line.from - Gfx::FloatPoint { point_size.width() / 2, point_size.height() / 2 };
         painter.fill_ellipse({ pos.to_type<int>(), point_size }, stroke_color);
     }
@@ -58,6 +57,111 @@ void InputGridWidget::paint_event(GUI::PaintEvent& event)
 
     draw_path(painter, m_primary_path, PRIMARY_STROKE_COLOR, PRIMARY_FILL_COLOR);
     draw_path(painter, m_secondary_path, SECONDARY_STROKE_COLOR, SECONDARY_FILL_COLOR);
+}
+
+void InputGridWidget::mousedown_event(GUI::MouseEvent& event)
+{
+    auto dragged_point = get_closest_grid_point_to(event.position());
+
+    for (auto& line : m_primary_path.split_lines()) {
+        if (dragged_point == line.from || dragged_point == line.to) {
+            m_point_being_dragged = dragged_point;
+            m_primary_path_being_dragged = true;
+            return;
+        }
+    }
+
+    for (auto& line : m_secondary_path.split_lines()) {
+        if (dragged_point == line.from || dragged_point == line.to) {
+            m_point_being_dragged = dragged_point;
+            m_primary_path_being_dragged = false;
+            return;
+        }
+    }
+}
+
+void InputGridWidget::mouseup_event(GUI::MouseEvent&)
+{
+    m_point_being_dragged = {};
+}
+
+void InputGridWidget::mousemove_event(GUI::MouseEvent& event)
+{
+    if (!m_point_being_dragged.has_value())
+        return;
+
+    auto dragged_point = m_point_being_dragged.value();
+    auto current_point = get_closest_grid_point_to(event.position());
+    if (current_point == dragged_point)
+        return;
+
+    // FIXME: Add a way to modify a path without essentially recreating the entire
+    // thing, because this is pretty expensive.
+
+    auto& path = m_primary_path_being_dragged ? m_primary_path : m_secondary_path;
+    // We aren't doing polygon combination, so is_primary can always be true
+    auto polygon = Gfx::PathClipping::convert_to_polygon(path, true);
+
+    for (auto& segment : polygon) {
+        if (segment.start == dragged_point) {
+            segment.start = current_point.to_type<float>();
+            continue;
+        }
+
+        if (segment.end == dragged_point)
+            segment.end = current_point.to_type<float>();
+    }
+
+    auto new_paths = Gfx::PathClipping::convert_to_path(polygon);
+    VERIFY(new_paths.size() == 1);
+    if (m_primary_path_being_dragged) {
+        m_primary_path = new_paths[0];
+    } else {
+        m_secondary_path = new_paths[0];
+    }
+
+    m_point_being_dragged = current_point;
+
+    update();
+    on_input_paths_changed(m_primary_path, m_secondary_path);
+}
+
+// static float round_to_grid_spacing(float f)
+// {
+//     if (f < 0)
+//         return 0;
+//
+//     if (f == floorf(f) && static_cast<int>(f) % GRID_SPACING == 0)
+//         return f;
+//
+//     auto r = fmodf(f, static_cast<float>(GRID_SPACING));
+//     auto left = f - r;
+//     if (r < GRID_SPACING / 2.0f)
+//         return left;
+//     return left + GRID_SPACING;
+// }
+
+static int round_to_grid_spacing(int n)
+{
+    if (n < 0)
+        return 0;
+
+    if (n % GRID_SPACING == 0)
+        return n;
+
+    auto r = n % GRID_SPACING;
+    auto left = n - r;
+    if (r < GRID_SPACING / 2)
+        return left;
+    return left + GRID_SPACING;
+}
+
+Gfx::IntPoint InputGridWidget::get_closest_grid_point_to(const Gfx::IntPoint& point) const
+{
+    return {
+        round_to_grid_spacing(point.x()),
+        round_to_grid_spacing(point.y()),
+    };
 }
 
 OutputGridWidget::OutputGridWidget()
