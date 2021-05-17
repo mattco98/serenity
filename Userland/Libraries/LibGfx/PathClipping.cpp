@@ -6,7 +6,7 @@
 
 #include <LibGfx/PathClipping.h>
 
-#define DEBUG_PATH_CLIPPING 0
+#define DEBUG_PATH_CLIPPING 1
 #define dbg(...) dbgln_if(DEBUG_PATH_CLIPPING, __VA_ARGS__)
 
 namespace Gfx {
@@ -292,11 +292,11 @@ PathClipping::Polygon PathClipping::convert_to_polygon(Path& path, bool is_prima
     PathClipping processor(false);
 
     auto split_lines = path.split_lines();
-    dbg("\033[32;1m[convert_to_polygon]\033[0m STARTING");
+    dbg("\033[36;1m[convert_to_polygon]\033[0m STARTING");
 
     for (auto& split_line : split_lines) {
         auto is_forward = split_line.from <=> split_line.to;
-        dbg("[convert_to_polygon]   split_line={} is_forward={}", split_line, is_forward);
+        dbg("\033[36;1m[convert_to_polygon]\033[0m   split_line={} is_forward={}", split_line, is_forward);
         if (is_forward == 0)
             continue;
 
@@ -308,7 +308,7 @@ PathClipping::Polygon PathClipping::convert_to_polygon(Path& path, bool is_prima
         processor.add_segment({ from, to }, is_primary);
     }
 
-    dbg("\033[32;1m[convert_to_polygon]\033[0m ENDING");
+    dbg("\033[36;1m[convert_to_polygon]\033[0m ENDING");
 
     return processor.create_polygon();
 }
@@ -554,37 +554,37 @@ PathClipping::Polygon PathClipping::create_polygon()
 
     dbg("\033[32;1m[create_polygon]\033[0m STARTING");
     dbg();
-    dbg("[create] events:");
+    dbg("\033[32;1m[create_polygon]\033[0m events:");
     size_t i = 0;
     for (auto& event : m_event_queue)
-        dbg("[create]   event{} = {}", i++, *event);
+        dbg("\033[32;1m[create_polygon]\033[0m   event{} = {}", i++, *event);
     dbg();
 
     auto do_event_intersections = [&](RefPtr<Event>& event, RefPtr<Event>& other) {
         auto result = intersect_events(event, other);
         if (result) {
-            dbg("\033[36;1m[create]\033[0m   result from do_event_intersections");
+            dbg("\033[32;1m[create_polygon]\033[0m   result from do_event_intersections");
             // event is the same as other
             if (m_is_combining_phase) {
                 result->segment.other_fill_above = event->segment.self_fill_above;
                 result->segment.other_fill_below = event->segment.self_fill_below;
-                dbg("\033[36;1m[create]\033[0m   other_fill_above={} other_fill_below={}", result->segment.other_fill_above, result->segment.other_fill_below);
+                dbg("\033[32;1m[create_polygon]\033[0m   other_fill_above={} other_fill_below={}", result->segment.other_fill_above, result->segment.other_fill_below);
                 result->update_other_segment();
             } else {
                 bool toggle;
                 if (event->segment.self_fill_below == TriState::Unknown) {
-                    dbg("\033[36;1m[create]\033[0m   (1) toggle = true");
+                    dbg("\033[32;1m[create_polygon]\033[0m   (1) toggle = true");
                     toggle = true;
                 } else {
                     toggle = event->segment.self_fill_above != event->segment.self_fill_below;
-                    dbg("\033[36;1m[create]\033[0m   (2) toggle = {}", toggle);
+                    dbg("\033[32;1m[create_polygon]\033[0m   (2) toggle = {}", toggle);
                 }
 
                 if (toggle) {
                     auto fill_above = result->segment.self_fill_above;
                     VERIFY(fill_above != TriState::Unknown);
                     result->segment.self_fill_above = fill_above == TriState::True ? TriState::False : TriState::True;
-                    dbg("\033[36;1m[create]\033[0m   Toggling self_fill_above from {} to {}", fill_above, result->segment.self_fill_above);
+                    dbg("\033[32;1m[create_polygon]\033[0m   Toggling self_fill_above from {} to {}", fill_above, result->segment.self_fill_above);
                     result->update_other_segment();
                 }
             }
@@ -602,10 +602,10 @@ PathClipping::Polygon PathClipping::create_polygon()
         auto& event = m_event_queue.first();
 
         dbg();
-        dbg("\033[34;1m[create_polygon]\033[0m status stack: [");
+        dbg("\033[32;1m[create_polygon]\033[0m status stack: [");
         for (auto& event1 : m_status_stack)
-            dbg("\033[34;1m[create_polygon]\033[0m   {}", *event1);
-        dbg("\033[34;1m[create_polygon]\033[0m ]");
+            dbg("\033[32;1m[create_polygon]\033[0m   {}", *event1);
+        dbg("\033[32;1m[create_polygon]\033[0m ]");
 
         dbg("[create] processing event {}", *event);
 
@@ -653,17 +653,17 @@ PathClipping::Polygon PathClipping::create_polygon()
                     dbg("~~~~~~~~~~ NO OTHER FILL ABOVE INFO");
                     TriState inside;
                     if (!event_after) {
-                        dbg("\033[36;1m[create]\033[0m   (1) inside = False");
+                        dbg("\033[32;1m[create_polygon]\033[0m   (1) inside = False");
                         inside = TriState::False;
                     } else if (event->is_primary == event_after->is_primary) {
                         inside = event_after->segment.other_fill_above;
                         VERIFY(inside != TriState::Unknown);
-                        dbg("\033[36;1m[create]\033[0m   (2) inside = {}", inside);
+                        dbg("\033[32;1m[create_polygon]\033[0m   (2) inside = {}", inside);
                     } else {
                         inside = event_after->segment.self_fill_above;
                         dbg("looking at event_after={}", *event_after);
                         VERIFY(inside != TriState::Unknown);
-                        dbg("\033[36;1m[create]\033[0m   (3) inside = {}", inside);
+                        dbg("\033[32;1m[create_polygon]\033[0m   (3) inside = {}", inside);
                     }
 
                     event->segment.other_fill_above = inside;
@@ -673,18 +673,18 @@ PathClipping::Polygon PathClipping::create_polygon()
             } else {
                 bool toggle;
                 if (event->segment.self_fill_below == TriState::Unknown) {
-                    dbg("\033[36;1m[create]\033[0m   toggle = true (self_fill_below == Unknown)");
+                    dbg("\033[32;1m[create_polygon]\033[0m   toggle = true (self_fill_below == Unknown)");
                     toggle = true;
                 } else {
                     toggle = event->segment.self_fill_above != event->segment.self_fill_below;
-                    dbg("\033[36;1m[create]\033[0m   toggle = {}", toggle);
+                    dbg("\033[32;1m[create_polygon]\033[0m   toggle = {}", toggle);
                 }
 
                 if (!event_after) {
-                    dbg("\033[36;1m[create]\033[0m   No event after, setting self_fill_below to false");
+                    dbg("\033[32;1m[create_polygon]\033[0m   No event after, setting self_fill_below to false");
                     event->segment.self_fill_below = TriState::False;
                 } else {
-                    dbg("\033[36;1m[create]\033[0m   Event after, setting self_fill_below to {}", event_after->segment.self_fill_above);
+                    dbg("\033[32;1m[create_polygon]\033[0m   Event after, setting self_fill_below to {}", event_after->segment.self_fill_above);
                     event->segment.self_fill_below = event_after->segment.self_fill_above;
                 }
 
@@ -692,9 +692,9 @@ PathClipping::Polygon PathClipping::create_polygon()
                     auto fill_below = event->segment.self_fill_below;
                     VERIFY(fill_below != TriState::Unknown);
                     event->segment.self_fill_above = fill_below == TriState::True ? TriState::False : TriState::True;
-                    dbg("\033[36;1m[create]\033[0m   Toggling self_fill_above to {}", event->segment.self_fill_above);
+                    dbg("\033[32;1m[create_polygon]\033[0m   Toggling self_fill_above to {}", event->segment.self_fill_above);
                 } else {
-                    dbg("\033[36;1m[create]\033[0m   Setting self_fill_above to self_fill_below ({})", event->segment.self_fill_below);
+                    dbg("\033[32;1m[create_polygon]\033[0m   Setting self_fill_above to self_fill_below ({})", event->segment.self_fill_below);
                     event->segment.self_fill_above = event->segment.self_fill_below;
                 }
 
