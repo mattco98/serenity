@@ -61,7 +61,7 @@ void DemoList::initialize()
 
     // Simple parallelograms
     MAKE_PRIMARY_PATH({ 2, 2 }, { 7, 2 }, { 8, 6 }, { 3, 6 });
-    MAKE_SECONDARY_PATH({ 4, 4 }, { 10, 5 }, { 10, 9 }, { 5, 7 });
+    MAKE_SECONDARY_PATH({ 3, 4 }, { 10, 5 }, { 10, 9 }, { 5, 7 });
 
     // Rectangles with vertical lines
     MAKE_PRIMARY_PATH({ 2, 5 }, { 9, 5 }, { 9, 10 }, { 2, 10 });
