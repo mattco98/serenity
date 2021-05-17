@@ -99,25 +99,29 @@ void InputGridWidget::mousemove_event(GUI::MouseEvent& event)
     // thing, because this is pretty expensive.
 
     auto& path = m_primary_path_being_dragged ? m_primary_path : m_secondary_path;
-    // We aren't doing polygon combination, so is_primary can always be true
-    auto polygon = Gfx::PathClipping::convert_to_polygon(path, true);
 
-    for (auto& segment : polygon) {
-        if (segment.start == dragged_point) {
-            segment.start = current_point.to_type<float>();
-            continue;
+    Gfx::Path new_path;
+    for (auto& segment : path.segments()) {
+        auto point = segment.point();
+        if (point == dragged_point)
+            point = current_point.to_type<float>();
+
+        switch (segment.type()) {
+        case Gfx::Segment::Type::MoveTo:
+            new_path.move_to(point);
+            break;
+        case Gfx::Segment::Type::LineTo:
+            new_path.line_to(point);
+            break;
+        default:
+            VERIFY_NOT_REACHED();
         }
-
-        if (segment.end == dragged_point)
-            segment.end = current_point.to_type<float>();
     }
 
-    auto new_paths = Gfx::PathClipping::convert_to_path(polygon);
-    VERIFY(new_paths.size() == 1);
     if (m_primary_path_being_dragged) {
-        m_primary_path = new_paths[0];
+        m_primary_path = new_path;
     } else {
-        m_secondary_path = new_paths[0];
+        m_secondary_path = new_path;
     }
 
     m_point_being_dragged = current_point;
@@ -192,4 +196,21 @@ void OutputGridWidget::update(Gfx::Path& primary, Gfx::Path& secondary)
     m_polygon = Gfx::PathClipping::combine(primary_poly, secondary_poly);
     m_paths = Gfx::PathClipping::select_segments(m_polygon, m_clip_type);
     GridWidget::update();
+}
+
+namespace AK {
+
+template<typename T>
+struct Formatter<Vector<T>> : Formatter<StringView> {
+    void format(FormatBuilder& format_builder, const Vector<T>& vec)
+    {
+        StringBuilder builder;
+        builder.append("[\n");
+        for (auto& el : vec)
+            builder.appendff("  {}\n", el);
+        builder.append(']');
+        return Formatter<StringView>::format(format_builder, builder.to_string());
+    }
+};
+
 }
