@@ -6,10 +6,18 @@
 
 #include <LibGfx/PathClipping.h>
 
-#define DEBUG_PATH_CLIPPING 1
-#define dbg(...) dbgln_if(DEBUG_PATH_CLIPPING, __VA_ARGS__)
+// #define DEBUG_PATH_CLIPPING 1
+// #define dbg(...) dbgln_if(DEBUG_PATH_CLIPPING, __VA_ARGS__)
 
 namespace Gfx {
+
+bool PathClipping::debug = true;
+
+#define dbg(...)                 \
+    do {                         \
+        if (PathClipping::debug) \
+            dbgln(__VA_ARGS__);  \
+    } while (0)
 
 static constexpr float EPSILON = 0.0001f;
 
@@ -390,6 +398,12 @@ Vector<Path> PathClipping::convert_to_path(Polygon& polygon)
     auto finalize_chain = [&](size_t chain_index) {
         auto chain = chains[chain_index];
         chains.remove(chain_index);
+        if (chain.size() <= 3) {
+            // This chain has no area. A chain has to have at least 4 points to contain
+            // area, since chains always end with the same point they start with. We can
+            // just ignore this chain
+            return;
+        }
         Path path;
         path.move_to(chain[0]);
         for (size_t i = 1; i < chain.size(); i++)
@@ -616,14 +630,12 @@ PathClipping::Polygon PathClipping::create_polygon()
         auto& event = m_event_queue.first();
 
         dbg();
-        dbg("\033[32;1m[create_polygon]\033[0m status stack: [");
-        for (auto& event1 : m_status_stack)
-            dbg("\033[32;1m[create_polygon]\033[0m   {}", *event1);
-        dbg("\033[32;1m[create_polygon]\033[0m ]");
-        dbg("\033[32;1m[create_polygon]\033[0m event queue: [");
-        for (auto& event1 : m_event_queue)
-            dbg("\033[32;1m[create_polygon]\033[0m   {} ({})", *event1, event1);
-        dbg("\033[32;1m[create_polygon]\033[0m ]");
+        dbg("\033[32;1m[create_polygon]\033[0m status stack:");
+        dbg("{}", m_status_stack.to_string());
+        dbg();
+        dbg("\033[32;1m[create_polygon]\033[0m event queue:");
+        dbg("{}", m_event_queue.to_string());
+        dbg();
 
         dbg("\033[32;1m[create_polygon]\033[0m processing event {} ({})", *event, event);
 
@@ -662,6 +674,7 @@ PathClipping::Polygon PathClipping::create_polygon()
             // In the case of intersection, events will have been added to the
             // event queue. They may need to be processed before this event.
             if (m_event_queue.first() != event) {
+                dbg("\033[32;1m[create_polygon]\033[0m   new first event detected, continuing... {}", *m_event_queue.first());
                 // An event has been inserted before the current event being processed
                 continue;
             }
@@ -722,12 +735,14 @@ PathClipping::Polygon PathClipping::create_polygon()
             dbg("\033[32;1m[create_polygon]\033[0m   inserting event");
             m_status_stack.insert_before(find_result, event);
         } else {
+            dbg("\033[32;1m[create_polygon]\033[0m   finding status {} ({})", *event->other_event, event->other_event);
             auto existing_status = m_status_stack.find(event->other_event);
             if (existing_status.prev() && existing_status.next()) {
                 do_event_intersections(*existing_status.prev(), *existing_status.next());
             }
 
-            dbg("\033[32;1m[create_polygon]\033[0m   removing event");
+            dbg("is_end={}", existing_status.is_end());
+            dbg("\033[32;1m[create_polygon]\033[0m   removing status {}", **existing_status);
             m_status_stack.remove(existing_status);
 
             if (m_is_combining_phase && !event->is_primary) {
@@ -892,22 +907,26 @@ void PathClipping::split_event(RefPtr<Event>& event, const FloatPoint& point_to_
 {
     dbg("[split_event] splitting {} at point {}", *event, point_to_split_at);
     // from:
-    //      (start)---------(s)----(end)
+    //      (start)----------------(end)
     // to:
     //     (start1)---------(x)----(end2)
     //
-    // s = point_to_split_at, x = end1 and start2
+    // where (x) is point_to_split_at
     //
     // Note: point_to_split_at must lie on the event segment line. This is the
     //       responsibility of the caller
+    //
+    // Note: We _must_ mutate event here instead of removing it and adding a new
+    //       event. This is because the event can currently be in the status queue,
+    //       and we don't want to have to bother with detecting whether that is the
+    //       case or not.
 
     VERIFY(event->is_start);
 
-    dbg("[split_event]   removing {}", *event->other_event);
+    dbg("[split_event]   removing {} ({})", *event->other_event, event->other_event);
+    m_event_queue.remove(event->other_event);
 
     Segment new_segment { point_to_split_at, event->segment.end, event->segment.self_fill_above, event->segment.self_fill_below };
-
-    m_event_queue.remove(event->other_event);
     event->segment.end = point_to_split_at;
     auto first_segment_end = adopt_ref(*new Event { !event->is_start, event->is_primary, event->segment, event });
     event->other_event = first_segment_end;
@@ -928,8 +947,9 @@ void PathClipping::add_event(const RefPtr<Event>& event, const FloatPoint& other
         return r < 0;
     });
 
-    dbg("\033[35;1m[add_event]\033[0m adding {} ({}) @ {}", *event, event, insertion_location.is_end() ? "<end>" : String::number(offset));
     m_event_queue.insert_before(insertion_location, event);
+
+    dbg("\033[35;1m[add_event]\033[0m adding {} ({}) @ {}", *event, event, insertion_location.is_end() ? "<end>" : String::number(offset));
 }
 
 }

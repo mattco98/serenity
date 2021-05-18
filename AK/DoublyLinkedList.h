@@ -6,6 +6,9 @@
 
 #pragma once
 
+#include <AK/RefPtr.h>
+#include <AK/Format.h>
+#include <AK/String.h>
 #include <AK/Assertions.h>
 #include <AK/Find.h>
 #include <AK/StdLibExtras.h>
@@ -16,6 +19,11 @@ template<typename ListType, typename ElementType>
 class DoublyLinkedListIterator {
 public:
     DoublyLinkedListIterator() = default;
+
+    DoublyLinkedListIterator(const DoublyLinkedListIterator& other)
+        : m_node(other.m_node)
+    {
+    }
 
     bool operator!=(const DoublyLinkedListIterator& other) const { return m_node != other.m_node; }
 
@@ -32,6 +40,8 @@ public:
 
     DoublyLinkedListIterator prev() const { return DoublyLinkedListIterator(m_node ? m_node->prev : nullptr); }
     DoublyLinkedListIterator next() const { return DoublyLinkedListIterator(m_node ? m_node->next : nullptr); }
+
+    auto node() const { return m_node; }
 
     [[nodiscard]] bool is_end() const { return !m_node; }
     [[nodiscard]] bool is_begin() const { return m_node && !m_node->prev; }
@@ -50,7 +60,7 @@ class DoublyLinkedList {
 private:
     struct Node {
         explicit Node(T&& v)
-            : value(move<T>(v))
+            : value(move(v))
         {
         }
 
@@ -89,6 +99,20 @@ public:
         return size;
     }
 
+    [[nodiscard]] Optional<T> head() const
+    {
+        if (m_head)
+            return m_head->value;
+        return {};
+    }
+
+    [[nodiscard]] Optional<T> tail() const
+    {
+        if (m_tail)
+            return m_tail->value;
+        return {};
+    }
+
     [[nodiscard]] T& first()
     {
         VERIFY(m_head);
@@ -115,9 +139,12 @@ public:
         VERIFY(m_head);
         auto* prev_head = m_head;
         T value = move(first());
-        if (m_tail == m_head)
-            m_tail = nullptr;
         m_head = m_head->next;
+        if (!m_head) {
+            m_tail = nullptr;
+        } else {
+            m_head->prev = nullptr;
+        }
         delete prev_head;
         return value;
     }
@@ -127,9 +154,12 @@ public:
         VERIFY(m_tail);
         auto* prev_tail = m_tail;
         T value = move(last());
-        if (m_head == m_tail)
-            m_head = nullptr;
         m_tail = m_tail->prev;
+        if (!m_tail) {
+            m_head = nullptr;
+        } else {
+            m_tail->next = nullptr;
+        }
         delete prev_tail;
         return value;
     }
@@ -273,6 +303,21 @@ public:
         node->next = old_next;
         node->prev = iterator.m_node;
         iterator.m_node->next = node;
+    }
+
+    String to_string()
+    {
+        StringBuilder builder;
+        builder.append("[\n");
+        for (auto node = m_head; node; node = node->next) {
+            auto prev = node->prev ? String::formatted("{}", node->prev) : "nullptr";
+            auto next = node->next ? String::formatted("{}", node->next) : "nullptr";
+            builder.appendff("  Node {} (prev={} next={}) {{\n", node, prev, next);
+            builder.appendff("    {}\n", *node->value);
+            builder.append("  }}\n");
+        }
+        builder.append("]");
+        return builder.to_string();
     }
 
 private:
