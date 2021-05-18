@@ -631,10 +631,12 @@ PathClipping::Polygon PathClipping::create_polygon()
 
         dbg();
         dbg("\033[32;1m[create_polygon]\033[0m status stack:");
-        dbg("{}", m_status_stack.to_string());
+        for (auto& line : m_status_stack.to_string().split('\n'))
+            dbg("{}", line);
         dbg();
         dbg("\033[32;1m[create_polygon]\033[0m event queue:");
-        dbg("{}", m_event_queue.to_string());
+        for (auto& line : m_event_queue.to_string().split('\n'))
+            dbg("{}", line);
         dbg();
 
         dbg("\033[32;1m[create_polygon]\033[0m processing event {} ({})", *event, event);
@@ -821,12 +823,16 @@ DoublyLinkedList<RefPtr<PathClipping::Event>>::Iterator PathClipping::find_trans
 RefPtr<PathClipping::Event> PathClipping::intersect_events(RefPtr<Event>& a, RefPtr<Event>& b)
 {
     dbg("[intersect_event] intersecting {} and {}", *a, *b);
-    auto share_points = equivalent(a->point(), b->point())
-        || equivalent(a->point(), b->other_point())
-        || equivalent(a->other_point(), b->point())
-        || equivalent(a->other_point(), b->other_point());
 
-    if (share_points) {
+    auto share_point = equivalent(a->point(), b->point());
+    auto share_other_point = equivalent(a->other_point(), b->other_point());
+
+    if (share_point && share_other_point) {
+        dbg("[intersect_event]   segments are the same!");
+        return b;
+    }
+
+    if (share_point || share_other_point || equivalent(a->point(), b->other_point()) || equivalent(a->other_point(), b->point())) {
         // The segments are joined at one end, so we just ignore this and process
         // them as two normal segments
         dbg("[intersect_event]   segments are joined at ends");
@@ -839,9 +845,8 @@ RefPtr<PathClipping::Event> PathClipping::intersect_events(RefPtr<Event>& a, Ref
     if (intersection_result.type == IntersectionResult::Intersects) {
         auto split_point = intersection_result.point;
 
-        // Use <=> to take some epsilon into account
-        auto split_a = (split_point <=> a->point()) != 0 && (split_point <=> a->other_point()) != 0;
-        auto split_b = (split_point <=> b->point()) != 0 && (split_point <=> b->other_point()) != 0;
+        auto split_a = !equivalent(split_point, a->point()) && !equivalent(split_point, a->other_point());
+        auto split_b = !equivalent(split_point, b->point()) && !equivalent(split_point, b->other_point());
 
         dbg("[intersect_event]   split_a={} split_b={}", split_a, split_b);
 
@@ -851,8 +856,8 @@ RefPtr<PathClipping::Event> PathClipping::intersect_events(RefPtr<Event>& a, Ref
         if (split_b)
             split_event(b, split_point);
     } else if (intersection_result.type == IntersectionResult::Coincident) {
-        auto a1_eq_b1 = (a->point() <=> b->point()) == 0;
-        auto a2_eq_b2 = (a->other_point() <=> b->other_point()) == 0;
+        auto a1_eq_b1 = equivalent(a->point(), b->point());
+        auto a2_eq_b2 = equivalent(a->other_point(), b->other_point());
 
         dbg("[intersect_event]   a1_eq_b1={} a2_eq_b2={}", a1_eq_b1, a2_eq_b2);
 
