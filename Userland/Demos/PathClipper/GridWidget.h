@@ -102,7 +102,7 @@ public:
 private:
     virtual void paint_event(GUI::PaintEvent&) override;
 
-    Gfx::ClipType m_clip_type { Gfx::ClipType::Intersection };
+    Gfx::ClipType m_clip_type { Gfx::ClipType::Xor };
     Gfx::PathClipping::Polygon m_polygon;
     Vector<Gfx::Path> m_paths;
 };

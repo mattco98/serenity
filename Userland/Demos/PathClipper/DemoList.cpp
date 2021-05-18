@@ -56,7 +56,15 @@ void DemoList::initialize()
     VERIFY(!m_initialized);
     m_initialized = true;
 
-    // // Simple parallelograms
+    // Simple non-overlapping rectangles with a coincident edge
+    // MAKE_PRIMARY_PATH({ 40, 120 }, { 300, 120 }, { 300, 200 }, { 40, 200 });
+    // MAKE_SECONDARY_PATH({ 100, 60 }, { 240, 60 }, { 240, 120 }, { 100, 120 });
+
+    // Self-intersecting secondary shape with shared edge
+    MAKE_PRIMARY_PATH({ 20, 120 }, { 180, 120 }, { 180, 200 }, { 20, 200 });
+    MAKE_SECONDARY_PATH({ 180, 120 }, { 140, 40 }, { 80, 80 }, { 260, 200 }, { 180, 200 });
+
+    // // // Simple parallelograms
     // MAKE_PRIMARY_PATH({ 40, 40 }, { 140, 40 }, { 160, 120 }, { 60, 120 });
     // MAKE_SECONDARY_PATH({ 60, 80 }, { 200, 100 }, { 200, 180 }, { 100, 140 });
     //
@@ -65,8 +73,8 @@ void DemoList::initialize()
     // MAKE_SECONDARY_PATH({ 60, 120 }, { 10, 120 }, { 200, 220 }, { 60, 220 });
 
     // Rectangles with a shared left edge (secondary side fully enclosed in primary side)
-    MAKE_PRIMARY_PATH({ 40, 100 }, { 180, 100 }, { 180, 200 }, { 40, 200 });
-    MAKE_SECONDARY_PATH({ 40, 120 }, { 160, 120 }, { 160, 180 }, { 40, 180 });
+    // MAKE_PRIMARY_PATH({ 40, 100 }, { 180, 100 }, { 180, 200 }, { 40, 200 });
+    // MAKE_SECONDARY_PATH({ 40, 120 }, { 160, 120 }, { 160, 180 }, { 40, 180 });
 
     VERIFY(m_primary_paths.size() == m_secondary_paths.size());
 }

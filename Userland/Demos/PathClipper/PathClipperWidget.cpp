@@ -42,6 +42,36 @@ void PathClipperWidget::add_toolbar()
     }));
 }
 
+static String dump_path(const Gfx::Path& path, bool is_primary)
+{
+    StringBuilder builder;
+    builder.appendff("MAKE_{}_PATH(", is_primary ? "PRIMARY" : "SECONDARY");
+    bool first = true;
+    auto& segments = path.segments();
+
+    // Skip the last point because it is the same as the first
+    for (size_t i = 0; i < segments.size() - 1; i++) {
+        auto& segment = segments[i];
+
+        if (!first)
+            builder.append(", ");
+        first = false;
+
+        switch (segment.type()) {
+        case Gfx::Segment::Type::MoveTo:
+        case Gfx::Segment::Type::LineTo:
+            builder.appendff("{{ {}, {} }}", segment.point().x(), segment.point().y());
+            break;
+        default:
+            VERIFY_NOT_REACHED();
+        }
+    }
+
+    builder.append(");");
+
+    return builder.to_string();
+}
+
 void PathClipperWidget::initialize_menubar(GUI::Menubar& menubar)
 {
     auto& file_menu = menubar.add_menu("&File");
@@ -94,12 +124,17 @@ void PathClipperWidget::initialize_menubar(GUI::Menubar& menubar)
         m_input_grid->add_point(false);
     }));
 
-    shapes_menu.add_action(GUI::Action::create("&Dump Current Positions", [&](auto&) {
-        dbgln("Primary path: {}", m_input_grid->primary_path());
-        dbgln("Secondary path: {}", m_input_grid->secondary_path());
-        dbgln("Output paths: ");
-        for (auto& path : m_output_grid->paths())
-            dbgln("  {}", path);
+    shapes_menu.add_action(GUI::Action::create("&Dump Input Path Macros", [&](auto&) {
+        dbgln("{}", dump_path(m_input_grid->primary_path(), true));
+        dbgln("{}", dump_path(m_input_grid->secondary_path(), false));
+    }));
+
+    shapes_menu.add_separator();
+    shapes_menu.add_action(GUI::Action::create("Enable Debug", [](auto&) {
+        Gfx::PathClipping::debug = true;
+    }));
+    shapes_menu.add_action(GUI::Action::create("Disable Debug", [](auto&) {
+        Gfx::PathClipping::debug = false;
     }));
 }
 
