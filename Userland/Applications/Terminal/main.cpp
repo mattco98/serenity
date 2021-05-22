@@ -5,6 +5,7 @@
  */
 
 #include <AK/URL.h>
+#include <AK/FloatingPointToString.h>
 #include <Applications/Terminal/TerminalSettingsWindowGML.h>
 #include <LibCore/ArgsParser.h>
 #include <LibCore/ConfigFile.h>
@@ -229,6 +230,8 @@ static RefPtr<GUI::Window> create_find_window(VT::TerminalWidget& terminal)
 
 int main(int argc, char** argv)
 {
+    // dbgln("{}", format_f64(9.364e301));
+
     if (pledge("stdio tty rpath cpath wpath recvfd sendfd proc exec unix sigaction", nullptr) < 0) {
         perror("pledge");
         return 1;

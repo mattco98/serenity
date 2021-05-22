@@ -6,6 +6,7 @@
  */
 
 #include <AK/ExtraMathConstants.h>
+#include <AK/FloatExtractor.h>
 #include <AK/Platform.h>
 #include <AK/StdLibExtras.h>
 #include <LibC/assert.h>
@@ -49,57 +50,6 @@ enum class RoundingMode {
     ToEven = FE_TONEAREST
 };
 
-template<typename T>
-union FloatExtractor;
-
-#if ARCH(I386) || ARCH(X86_64)
-// This assumes long double is 80 bits, which is true with GCC on Intel platforms
-template<>
-union FloatExtractor<long double> {
-    static const int mantissa_bits = 64;
-    static const unsigned long long mantissa_max = ~0u;
-    static const int exponent_bias = 16383;
-    static const int exponent_bits = 15;
-    static const unsigned exponent_max = 32767;
-    struct {
-        unsigned long long mantissa;
-        unsigned exponent : 15;
-        unsigned sign : 1;
-    };
-    long double d;
-};
-#endif
-
-template<>
-union FloatExtractor<double> {
-    static const int mantissa_bits = 52;
-    static const unsigned long long mantissa_max = (1ull << 52) - 1;
-    static const int exponent_bias = 1023;
-    static const int exponent_bits = 11;
-    static const unsigned exponent_max = 2047;
-    struct {
-        unsigned long long mantissa : 52;
-        unsigned exponent : 11;
-        unsigned sign : 1;
-    };
-    double d;
-};
-
-template<>
-union FloatExtractor<float> {
-    static const int mantissa_bits = 23;
-    static const unsigned mantissa_max = (1 << 23) - 1;
-    static const int exponent_bias = 127;
-    static const int exponent_bits = 8;
-    static const unsigned exponent_max = 255;
-    struct {
-        unsigned long long mantissa : 23;
-        unsigned exponent : 8;
-        unsigned sign : 1;
-    };
-    float d;
-};
-
 // This is much branchier than it really needs to be
 template<typename FloatType>
 static FloatType internal_to_integer(FloatType x, RoundingMode rounding_mode)
@@ -108,7 +58,7 @@ static FloatType internal_to_integer(FloatType x, RoundingMode rounding_mode)
         return x;
     using Extractor = FloatExtractor<decltype(x)>;
     Extractor extractor;
-    extractor.d = x;
+    extractor.number = x;
     auto unbiased_exponent = extractor.exponent - Extractor::exponent_bias;
     bool round = false;
     bool guard = false;
@@ -153,12 +103,12 @@ static FloatType internal_to_integer(FloatType x, RoundingMode rounding_mode)
         // We could do this ourselves, but this saves us from manually
         // handling overflow.
         if (extractor.sign)
-            extractor.d -= static_cast<FloatType>(1.0);
+            extractor.number -= static_cast<FloatType>(1.0);
         else
-            extractor.d += static_cast<FloatType>(1.0);
+            extractor.number += static_cast<FloatType>(1.0);
     }
 
-    return extractor.d;
+    return extractor.number;
 }
 
 // This is much branchier than it really needs to be
@@ -169,21 +119,21 @@ static FloatType internal_nextafter(FloatType x, bool up)
         return x;
     using Extractor = FloatExtractor<decltype(x)>;
     Extractor extractor;
-    extractor.d = x;
+    extractor.number = x;
     if (x == 0) {
         if (!extractor.sign) {
             extractor.mantissa = 1;
             extractor.sign = !up;
-            return extractor.d;
+            return extractor.number;
         }
         if (up) {
             extractor.sign = false;
             extractor.mantissa = 1;
-            return extractor.d;
+            return extractor.number;
         }
         extractor.mantissa = 1;
         extractor.sign = up != extractor.sign;
-        return extractor.d;
+        return extractor.number;
     }
     if (up != extractor.sign) {
         extractor.mantissa++;
@@ -196,7 +146,7 @@ static FloatType internal_nextafter(FloatType x, bool up)
                 extractor.mantissa = Extractor::mantissa_max;
             }
         }
-        return extractor.d;
+        return extractor.number;
     }
 
     if (!extractor.mantissa) {
@@ -204,14 +154,14 @@ static FloatType internal_nextafter(FloatType x, bool up)
             extractor.exponent--;
             extractor.mantissa = Extractor::mantissa_max;
         } else {
-            extractor.d = 0;
+            extractor.number = 0;
         }
-        return extractor.d;
+        return extractor.number;
     }
 
     extractor.mantissa--;
     if (extractor.mantissa != Extractor::mantissa_max)
-        return extractor.d;
+        return extractor.number;
     if (extractor.exponent) {
         extractor.exponent--;
         // normalize
@@ -223,7 +173,7 @@ static FloatType internal_nextafter(FloatType x, bool up)
             extractor.exponent = Extractor::exponent_max;
         }
     }
-    return extractor.d;
+    return extractor.number;
 }
 
 template<typename FloatT>
@@ -241,7 +191,7 @@ static int internal_ilogb(FloatT x) NOEXCEPT
     using Extractor = FloatExtractor<FloatT>;
 
     Extractor extractor;
-    extractor.d = x;
+    extractor.number = x;
 
     return (int)extractor.exponent - Extractor::exponent_bias;
 }
@@ -265,11 +215,11 @@ static FloatT internal_scalbn(FloatT x, int exponent) NOEXCEPT
 
     using Extractor = FloatExtractor<FloatT>;
     Extractor extractor;
-    extractor.d = x;
+    extractor.number = x;
 
     if (extractor.exponent != 0) {
         extractor.exponent = clamp((int)extractor.exponent + exponent, 0, (int)Extractor::exponent_max);
-        return extractor.d;
+        return extractor.number;
     }
 
     unsigned leading_mantissa_zeroes = extractor.mantissa == 0 ? 32 : __builtin_clz(extractor.mantissa);
@@ -279,7 +229,7 @@ static FloatT internal_scalbn(FloatT x, int exponent) NOEXCEPT
     extractor.exponent <<= shift;
     extractor.exponent = exponent + 1;
 
-    return extractor.d;
+    return extractor.number;
 }
 
 template<typename FloatT>
@@ -287,10 +237,10 @@ static FloatT internal_copysign(FloatT x, FloatT y) NOEXCEPT
 {
     using Extractor = FloatExtractor<FloatT>;
     Extractor ex, ey;
-    ex.d = x;
-    ey.d = y;
+    ex.number = x;
+    ey.number = y;
     ex.sign = ey.sign;
-    return ex.d;
+    return ex.number;
 }
 
 template<typename FloatT>
