@@ -24,8 +24,8 @@ static NonnullRefPtr<T> make_object(Args... args) requires(IsBaseOf<Object, T>)
 
 Vector<Command> Parser::parse_graphics_commands(const ReadonlyBytes& bytes)
 {
-    Parser parser(bytes);
-    return parser.parse_graphics_commands();
+    auto parser = adopt_ref(*new Parser(bytes));
+    return parser->parse_graphics_commands();
 }
 
 Parser::Parser(Badge<Document>, const ReadonlyBytes& bytes)
@@ -43,26 +43,34 @@ bool Parser::perform_validation()
     return !sloppy_is_linearized() && parse_header();
 }
 
-Parser::XRefTableAndTrailer Parser::parse_last_xref_table_and_trailer()
+Optional<Parser::XRefTableAndTrailer> Parser::parse_last_xref_table_and_trailer()
 {
     m_reader.move_to(m_reader.bytes().size() - 1);
-    VERIFY(navigate_to_before_eof_marker());
-    navigate_to_after_startxref();
-    VERIFY(!m_reader.done());
+    if (!navigate_to_before_eof_marker())
+        return {};
+    if (!navigate_to_after_startxref())
+        return {};
+    if (m_reader.done())
+        return {};
 
     m_reader.set_reading_forwards();
     auto xref_offset_value = parse_number();
-    VERIFY(xref_offset_value.is_int());
+    if (!xref_offset_value.is_int())
+        return {};
     auto xref_offset = xref_offset_value.as_int();
 
     m_reader.move_to(xref_offset);
     auto xref_table = parse_xref_table();
+    if (!xref_table.has_value())
+        return {};
     auto trailer = parse_file_trailer();
+    if (!trailer)
+        return {};
 
-    return { xref_table, trailer };
+    return XRefTableAndTrailer { xref_table.value(), trailer.release_nonnull() };
 }
 
-NonnullRefPtr<IndirectValue> Parser::parse_indirect_value_at_offset(size_t offset)
+RefPtr<IndirectValue> Parser::parse_indirect_value_at_offset(size_t offset)
 {
     m_reader.set_reading_forwards();
     m_reader.move_to(offset);
@@ -103,9 +111,10 @@ bool Parser::parse_header()
     return true;
 }
 
-XRefTable Parser::parse_xref_table()
+Optional<XRefTable> Parser::parse_xref_table()
 {
-    VERIFY(m_reader.matches("xref"));
+    if (!m_reader.matches("xref"))
+        return {};
     m_reader.move_by(4);
     consume_eol();
 
@@ -125,23 +134,28 @@ XRefTable Parser::parse_xref_table()
         for (int i = 0; i < object_count; i++) {
             auto offset_string = String(m_reader.bytes().slice(m_reader.offset(), 10));
             m_reader.move_by(10);
-            consume(' ');
+            if (!consume(' '))
+                return {};
 
             auto generation_string = String(m_reader.bytes().slice(m_reader.offset(), 5));
             m_reader.move_by(5);
-            consume(' ');
+            if (!consume(' '))
+                return {};
 
             auto letter = m_reader.read();
-            VERIFY(letter == 'n' || letter == 'f');
+            if (letter != 'n' && letter != 'f')
+                return {};
 
             // The line ending sequence can be one of the following:
             // SP CR, SP LF, or CR LF
             if (m_reader.matches(' ')) {
                 consume();
                 auto ch = consume();
-                VERIFY(ch == '\r' || ch == '\n');
+                if (ch != '\r' && ch != '\n')
+                    return {};
             } else {
-                VERIFY(m_reader.matches("\r\n"));
+                if (!m_reader.matches("\r\n"))
+                    return {};
                 m_reader.move_by(2);
             }
 
@@ -157,23 +171,27 @@ XRefTable Parser::parse_xref_table()
     return table;
 }
 
-NonnullRefPtr<DictObject> Parser::parse_file_trailer()
+RefPtr<DictObject> Parser::parse_file_trailer()
 {
-    VERIFY(m_reader.matches("trailer"));
+    if (!m_reader.matches("trailer"))
+        return {};
     m_reader.move_by(7);
     consume_whitespace();
     auto dict = parse_dict();
+    if (!dict)
+        return {};
 
-    VERIFY(m_reader.matches("startxref"));
+    if (!m_reader.matches("startxref"))
+        return {};
     m_reader.move_by(9);
     consume_whitespace();
 
     m_reader.move_until([&](auto) { return matches_eol(); });
     consume_eol();
-    VERIFY(m_reader.matches("%%EOF"));
+    if (!m_reader.matches("%%EOF"))
+        return {};
     m_reader.move_by(5);
     consume_whitespace();
-    VERIFY(m_reader.done());
 
     return dict;
 }
@@ -291,8 +309,10 @@ Value Parser::parse_value()
 
     if (m_reader.matches("<<")) {
         auto dict = parse_dict();
+        if (!dict)
+            return {};
         if (m_reader.matches("stream\n"))
-            return parse_stream(dict);
+            return parse_stream(dict.release_nonnull());
         return dict;
     }
 
@@ -335,23 +355,28 @@ Value Parser::parse_possible_indirect_value_or_ref()
     return first_number;
 }
 
-NonnullRefPtr<IndirectValue> Parser::parse_indirect_value(int index, int generation)
+RefPtr<IndirectValue> Parser::parse_indirect_value(int index, int generation)
 {
-    VERIFY(m_reader.matches("obj"));
+    if (!m_reader.matches("obj"))
+        return {};
     m_reader.move_by(3);
     if (matches_eol())
         consume_eol();
     auto value = parse_value();
-    VERIFY(m_reader.matches("endobj"));
+    if (!m_reader.matches("endobj"))
+        return {};
 
     return make_object<IndirectValue>(index, generation, value);
 }
 
-NonnullRefPtr<IndirectValue> Parser::parse_indirect_value()
+RefPtr<IndirectValue> Parser::parse_indirect_value()
 {
     auto first_number = parse_number();
+    if (!first_number.is_int())
+        return {};
     auto second_number = parse_number();
-    VERIFY(first_number.is_int() && second_number.is_int());
+    if (!second_number.is_int())
+        return {};
     return parse_indirect_value(first_number.as_int(), second_number.as_int());
 }
 
@@ -387,9 +412,10 @@ Value Parser::parse_number()
     return Value(static_cast<int>(f));
 }
 
-NonnullRefPtr<NameObject> Parser::parse_name()
+RefPtr<NameObject> Parser::parse_name()
 {
-    consume('/');
+    if (!consume('/'))
+        return {};
     StringBuilder builder;
 
     while (true) {
@@ -400,7 +426,8 @@ NonnullRefPtr<NameObject> Parser::parse_name()
             int hex_value = 0;
             for (int i = 0; i < 2; i++) {
                 auto ch = consume();
-                VERIFY(isxdigit(ch));
+                if (!isxdigit(ch))
+                    return {};
                 hex_value *= 16;
                 if (ch <= '9') {
                     hex_value += ch - '0';
@@ -420,7 +447,7 @@ NonnullRefPtr<NameObject> Parser::parse_name()
     return make_object<NameObject>(builder.to_string());
 }
 
-NonnullRefPtr<StringObject> Parser::parse_string()
+RefPtr<StringObject> Parser::parse_string()
 {
     ScopeGuard guard([&] { consume_whitespace(); });
 
@@ -434,6 +461,9 @@ NonnullRefPtr<StringObject> Parser::parse_string()
         string = parse_hex_string();
         is_binary_string = true;
     }
+
+    if (string.is_null())
+        return {};
 
     if (string.bytes().starts_with(Array<u8, 2> { 0xfe, 0xff })) {
         // The string is encoded in UTF16-BE
@@ -449,7 +479,8 @@ NonnullRefPtr<StringObject> Parser::parse_string()
 
 String Parser::parse_literal_string()
 {
-    consume('(');
+    if (!consume('('))
+        return {};
     StringBuilder builder;
     auto opened_parens = 0;
 
@@ -470,7 +501,9 @@ String Parser::parse_literal_string()
                 continue;
             }
 
-            VERIFY(!m_reader.done());
+            if (m_reader.done())
+                return {};
+
             auto ch = consume();
             switch (ch) {
             case 'n':
@@ -520,13 +553,16 @@ String Parser::parse_literal_string()
         }
     }
 
-    VERIFY(opened_parens == 0);
+    if (opened_parens != 0)
+        return {};
+
     return builder.to_string();
 }
 
 String Parser::parse_hex_string()
 {
-    consume('<');
+    if (!consume('<'))
+        return {};
     StringBuilder builder;
 
     while (true) {
@@ -546,7 +582,9 @@ String Parser::parse_hex_string()
                     builder.append(static_cast<char>(hex_value));
                     return builder.to_string();
                 }
-                VERIFY(isxdigit(ch));
+
+                if (!isxdigit(ch))
+                    return {};
 
                 hex_value *= 16;
                 if (ch <= '9') {
@@ -561,25 +599,31 @@ String Parser::parse_hex_string()
     }
 }
 
-NonnullRefPtr<ArrayObject> Parser::parse_array()
+RefPtr<ArrayObject> Parser::parse_array()
 {
-    consume('[');
+    if (!consume('['))
+        return {};
     consume_whitespace();
     Vector<Value> values;
 
-    while (!m_reader.matches(']'))
-        values.append(parse_value());
+    while (!m_reader.matches(']')) {
+        auto value = parse_value();
+        if (!value)
+            return {};
+        values.append(value);
+    }
 
-    consume(']');
+    if (!consume(']'))
+        return {};
     consume_whitespace();
 
     return make_object<ArrayObject>(values);
 }
 
-NonnullRefPtr<DictObject> Parser::parse_dict()
+RefPtr<DictObject> Parser::parse_dict()
 {
-    consume('<');
-    consume('<');
+    if (!consume('<') || !consume('<'))
+        return {};
     consume_whitespace();
     HashMap<FlyString, Value> map;
 
@@ -587,28 +631,38 @@ NonnullRefPtr<DictObject> Parser::parse_dict()
         if (m_reader.matches(">>"))
             break;
         auto name = parse_name();
+        if (!name)
+            return {};
         auto value = parse_value();
+        if (!value)
+            return {};
         map.set(name->name(), value);
     }
 
-    consume('>');
-    consume('>');
+    if (!consume('>') || !consume('>'))
+        return {};
     consume_whitespace();
 
     return make_object<DictObject>(map);
 }
 
-RefPtr<DictObject> Parser::conditionally_parse_page_tree_node_at_offset(size_t offset)
+RefPtr<DictObject> Parser::conditionally_parse_page_tree_node_at_offset(size_t offset, bool& ok)
 {
+    ok = true;
+
     m_reader.move_to(offset);
     parse_number();
     parse_number();
-    VERIFY(m_reader.matches("obj"));
+    if (!m_reader.matches("obj")) {
+        ok = false;
+        return {};
+    }
+
     m_reader.move_by(3);
     consume_whitespace();
 
-    consume('<');
-    consume('<');
+    if (!consume('<') || !consume('<'))
+        return {};
     consume_whitespace();
     HashMap<FlyString, Value> map;
 
@@ -616,12 +670,21 @@ RefPtr<DictObject> Parser::conditionally_parse_page_tree_node_at_offset(size_t o
         if (m_reader.matches(">>"))
             break;
         auto name = parse_name();
+        if (!name) {
+            ok = false;
+            return {};
+        }
+
         auto name_string = name->name();
         if (!name_string.is_one_of(CommonNames::Type, CommonNames::Parent, CommonNames::Kids, CommonNames::Count)) {
             // This is a page, not a page tree node
             return {};
         }
         auto value = parse_value();
+        if (!value) {
+            ok = false;
+            return {};
+        }
         if (name_string == CommonNames::Type) {
             if (!value.is_object())
                 return {};
@@ -635,16 +698,17 @@ RefPtr<DictObject> Parser::conditionally_parse_page_tree_node_at_offset(size_t o
         map.set(name->name(), value);
     }
 
-    consume('>');
-    consume('>');
+    if (!consume('>') || !consume('>'))
+        return {};
     consume_whitespace();
 
     return make_object<DictObject>(map);
 }
 
-NonnullRefPtr<StreamObject> Parser::parse_stream(NonnullRefPtr<DictObject> dict)
+RefPtr<StreamObject> Parser::parse_stream(NonnullRefPtr<DictObject> dict)
 {
-    VERIFY(m_reader.matches("stream"));
+    if (!m_reader.matches("stream"))
+        return {};
     m_reader.move_by(6);
     consume_eol();
 
@@ -682,7 +746,8 @@ NonnullRefPtr<StreamObject> Parser::parse_stream(NonnullRefPtr<DictObject> dict)
         auto filter_type = dict->get_name(m_document, CommonNames::Filter)->name();
         auto maybe_bytes = Filter::decode(bytes, filter_type);
         // FIXME: Handle error condition
-        VERIFY(maybe_bytes.has_value());
+        if (!maybe_bytes.has_value())
+            return {};
         return make_object<EncodedStreamObject>(dict, move(maybe_bytes.value()));
     }
 
@@ -777,9 +842,15 @@ char Parser::consume()
     return m_reader.read();
 }
 
-void Parser::consume(char ch)
+void Parser::consume(int amount)
 {
-    VERIFY(consume() == ch);
+    for (size_t i = 0; i < static_cast<size_t>(amount); i++)
+        consume();
+}
+
+bool Parser::consume(char ch)
+{
+    return consume() == ch;
 }
 
 }
