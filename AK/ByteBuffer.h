@@ -169,6 +169,11 @@ public:
         m_size = new_size;
     }
 
+    void append(const ReadonlyBytes& bytes)
+    {
+        append(bytes.data(), bytes.size());
+    }
+
     void append(void const* data, size_t data_size)
     {
         if (data_size == 0)
