@@ -12,7 +12,9 @@
     V(ASCII85Decode)              \
     V(ASCIIHexDecode)             \
     V(BaseFont)                   \
+    V(BlackPoint)                 \
     V(C)                          \
+    V(CalRGB)                     \
     V(CCITTFaxDecode)             \
     V(ColorSpace)                 \
     V(Contents)                   \
@@ -21,6 +23,9 @@
     V(Crypt)                      \
     V(DCTDecode)                  \
     V(Dest)                       \
+    V(DeviceCMYK)                 \
+    V(DeviceGray)                 \
+    V(DeviceRGB)                  \
     V(E)                          \
     V(F)                          \
     V(Filter)                     \
@@ -34,6 +39,7 @@
     V(FitV)                       \
     V(FlateDecode)                \
     V(Font)                       \
+    V(Gamma)                      \
     V(H)                          \
     V(JBIG2Decode)                \
     V(JPXDecode)                  \
@@ -43,6 +49,7 @@
     V(Last)                       \
     V(Length)                     \
     V(Linearized)                 \
+    V(Matrix)                     \
     V(MediaBox)                   \
     V(N)                          \
     V(Next)                       \
@@ -51,6 +58,7 @@
     V(P)                          \
     V(Pages)                      \
     V(Parent)                     \
+    V(Pattern)                    \
     V(Prev)                       \
     V(Resources)                  \
     V(Root)                       \
@@ -60,6 +68,7 @@
     V(Title)                      \
     V(Type)                       \
     V(UserUnit)                   \
+    V(WhitePoint)                 \
     V(XYZ)
 
 namespace PDF {
