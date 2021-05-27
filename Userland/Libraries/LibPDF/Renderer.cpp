@@ -7,8 +7,6 @@
 #include <AK/Utf8View.h>
 #include <LibPDF/CommonNames.h>
 #include <LibPDF/Renderer.h>
-#include <ctype.h>
-#include <math.h>
 
 #define RENDERER_HANDLER(name) \
     void Renderer::handle_##name([[maybe_unused]] const Vector<Value>& args)
@@ -21,58 +19,6 @@
     }
 
 namespace PDF {
-
-Optional<ColorSpace::Type> ColorSpace::color_space_from_string(const FlyString& str)
-{
-#define ENUM(name)    \
-    if (str == #name) \
-        return ColorSpace::Type::name;
-    ENUMERATE_COLOR_SPACES(ENUM)
-#undef ENUM
-
-    return {};
-}
-
-Color ColorSpace::default_color_for_color_space(ColorSpace::Type color_space)
-{
-    switch (color_space) {
-    case Type::DeviceGray:
-    case Type::DeviceRGB:
-        return Color::NamedColor::Black;
-    case Type::DeviceCMYK:
-        return Color::from_cmyk(1.0f, 1.0f, 1.0f, 0.0f);
-    default:
-        TODO();
-    }
-}
-
-Color ColorSpace::color_from_parameters(ColorSpace::Type color_space, const Vector<Value>& args)
-{
-    switch (color_space) {
-    case Type::DeviceGray: {
-        VERIFY(args.size() == 1);
-        auto gray = static_cast<u8>(args[0].to_float() * 255.0f);
-        return Color(gray, gray, gray);
-    }
-    case Type::DeviceRGB: {
-        VERIFY(args.size() == 3);
-        auto r = static_cast<u8>(args[0].to_float() * 255.0f);
-        auto g = static_cast<u8>(args[1].to_float() * 255.0f);
-        auto b = static_cast<u8>(args[2].to_float() * 255.0f);
-        return Color(r, g, b);
-    }
-    case Type::DeviceCMYK: {
-        VERIFY(args.size() == 4);
-        auto c = args[0].to_float();
-        auto m = args[1].to_float();
-        auto y = args[2].to_float();
-        auto k = args[3].to_float();
-        return Color::from_cmyk(c, m, y, k);
-    }
-    default:
-        TODO();
-    }
-}
 
 void Renderer::render(Document& document, const Page& page, RefPtr<Gfx::Bitmap> bitmap)
 {
@@ -438,25 +384,25 @@ RENDERER_TODO(type3_font_set_glyph_width_and_bbox);
 RENDERER_HANDLER(set_stroking_space)
 {
     state().stroke_color_space = get_color_space(args[0]);
-    state().stroke_color = ColorSpace::default_color_for_color_space(state().stroke_color_space);
+    state().stroke_color = state().stroke_color_space.default_color();
 }
 
 RENDERER_HANDLER(set_painting_space)
 {
     state().paint_color_space = get_color_space(args[0]);
-    state().paint_color = ColorSpace::default_color_for_color_space(state().paint_color_space);
+    state().paint_color = state().paint_color_space.default_color();
 }
 
 RENDERER_HANDLER(set_stroking_color)
 {
-    state().stroke_color = ColorSpace::color_from_parameters(state().stroke_color_space, args);
+    state().stroke_color = state().stroke_color_space.color(args);
 }
 
 RENDERER_TODO(set_stroking_color_extended);
 
 RENDERER_HANDLER(set_painting_color)
 {
-    state().paint_color = ColorSpace::color_from_parameters(state().paint_color_space, args);
+    state().paint_color = state().paint_color_space.color(args);
 }
 
 RENDERER_TODO(set_painting_color_extended);
@@ -464,37 +410,37 @@ RENDERER_TODO(set_painting_color_extended);
 RENDERER_HANDLER(set_stroking_color_and_space_to_gray)
 {
     state().stroke_color_space = ColorSpace::Type::DeviceGray;
-    state().stroke_color = ColorSpace::color_from_parameters(ColorSpace::Type::DeviceGray, args);
+    state().stroke_color = state().stroke_color_space.color(args);
 }
 
 RENDERER_HANDLER(set_painting_color_and_space_to_gray)
 {
     state().paint_color_space = ColorSpace::Type::DeviceGray;
-    state().paint_color = ColorSpace::color_from_parameters(ColorSpace::Type::DeviceGray, args);
+    state().paint_color = state().paint_color_space.color(args);
 }
 
 RENDERER_HANDLER(set_stroking_color_and_space_to_rgb)
 {
     state().stroke_color_space = ColorSpace::Type::DeviceRGB;
-    state().stroke_color = ColorSpace::color_from_parameters(ColorSpace::Type::DeviceRGB, args);
+    state().stroke_color = state().stroke_color_space.color(args);
 }
 
 RENDERER_HANDLER(set_painting_color_and_space_to_rgb)
 {
     state().paint_color_space = ColorSpace::Type::DeviceRGB;
-    state().paint_color = ColorSpace::color_from_parameters(ColorSpace::Type::DeviceRGB, args);
+    state().paint_color = state().paint_color_space.color(args);
 }
 
 RENDERER_HANDLER(set_stroking_color_and_space_to_cmyk)
 {
     state().stroke_color_space = ColorSpace::Type::DeviceCMYK;
-    state().stroke_color = ColorSpace::color_from_parameters(ColorSpace::Type::DeviceCMYK, args);
+    state().stroke_color = state().stroke_color_space.color(args);
 }
 
 RENDERER_HANDLER(set_painting_color_and_space_to_cmyk)
 {
     state().paint_color_space = ColorSpace::Type::DeviceCMYK;
-    state().paint_color = ColorSpace::color_from_parameters(ColorSpace::Type::DeviceCMYK, args);
+    state().paint_color = state().paint_color_space.color(args);
 }
 
 RENDERER_TODO(shade);
@@ -560,16 +506,31 @@ void Renderer::show_text(const String& string, int shift)
     }
 }
 
-ColorSpace::Type Renderer::get_color_space(const Value& value)
+ColorSpace Renderer::get_color_space(const Value& value)
 {
     auto name = object_cast<NameObject>(value.as_object())->name();
+    dbgln("color space {}", name);
     auto color_space_opt = ColorSpace::color_space_from_string(name);
-    if (!color_space_opt.has_value()) {
-        // The name is probably a key into the resource dictionary
-        TODO();
-    }
+    if (color_space_opt.has_value())
+        return color_space_opt.value();
 
-    return color_space_opt.value();
+    // The name is probably a key into the resource dictionary
+    auto color_space_resource_dict = m_page.resources->get_dict(m_document, CommonNames::ColorSpace);
+    if (!color_space_resource_dict->contains(name))
+        TODO();
+
+    auto color_space_array = color_space_resource_dict->get_array(m_document, name);
+    name = color_space_array->get_name_at(m_document, 0)->name();
+    color_space_opt = ColorSpace::color_space_from_string(name);
+    if (!color_space_opt.has_value())
+        TODO();
+
+    Vector<Value> parameters;
+    parameters.ensure_capacity(color_space_array->size() - 1);
+    for (size_t i = 1; i < color_space_array->size(); i++)
+        parameters.unchecked_append(color_space_array->at(i - 1));
+
+    return ColorSpace(color_space_opt.value(), move(parameters));
 }
 
 const Gfx::AffineTransform& Renderer::calculate_text_rendering_matrix()

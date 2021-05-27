@@ -16,8 +16,10 @@
 #include <LibGfx/Point.h>
 #include <LibGfx/Rect.h>
 #include <LibGfx/Size.h>
+#include <LibPDF/Test.h>
 #include <LibPDF/Document.h>
 #include <LibPDF/Object.h>
+#include <LibPDF/Value.h>
 
 #define ENUMERATE_COLOR_SPACES(V) \
     V(DeviceGray)                 \
@@ -33,6 +35,87 @@
     V(DeviceN)
 
 namespace PDF {
+
+class ColorSpace {
+public:
+    enum class Type {
+#define ENUM(name) name,
+        ENUMERATE_COLOR_SPACES(ENUM)
+#undef ENUM
+    };
+
+    static Optional<ColorSpace::Type> color_space_from_string(const FlyString& str)
+    {
+#define ENUM(name)    \
+    if (str == #name) \
+        return ColorSpace::Type::name;
+        ENUMERATE_COLOR_SPACES(ENUM)
+#undef ENUM
+
+        return {};
+    }
+
+    ColorSpace(ColorSpace::Type type)
+        : ColorSpace(type, {})
+    {
+    }
+
+    ColorSpace(ColorSpace::Type type, Vector<Value> parameters)
+        : m_type(type)
+        , m_parameters(move(parameters))
+    {
+    }
+
+    ALWAYS_INLINE ColorSpace::Type type() const { return m_type; }
+    ALWAYS_INLINE const Vector<Value>& parameters() const { return m_parameters; }
+
+    Color default_color() const
+    {
+        switch (m_type) {
+        case Type::DeviceGray:
+        case Type::DeviceRGB:
+            return Color::NamedColor::Black;
+        case Type::DeviceCMYK:
+            return Color::from_cmyk(1.0f, 1.0f, 1.0f, 0.0f);
+        case Type::CalRGB:
+
+        default:
+                TODO();
+        }
+    }
+
+    Color color(const Vector<Value>& arguments) const
+    {
+        switch (m_type) {
+        case Type::DeviceGray: {
+                VERIFY(arguments.size() == 1);
+            auto gray = static_cast<u8>(arguments[0].to_float() * 255.0f);
+            return Color(gray, gray, gray);
+        }
+        case Type::DeviceRGB: {
+                VERIFY(arguments.size() == 3);
+            auto r = static_cast<u8>(arguments[0].to_float() * 255.0f);
+            auto g = static_cast<u8>(arguments[1].to_float() * 255.0f);
+            auto b = static_cast<u8>(arguments[2].to_float() * 255.0f);
+            return Color(r, g, b);
+        }
+        case Type::DeviceCMYK: {
+                VERIFY(arguments.size() == 4);
+            auto c = arguments[0].to_float();
+            auto m = arguments[1].to_float();
+            auto y = arguments[2].to_float();
+            auto k = arguments[3].to_float();
+            return Color::from_cmyk(c, m, y, k);
+        }
+        default:
+                TODO();
+        }
+    }
+
+private:
+    ColorSpace::Type m_type;
+    Vector<Value> m_parameters;
+};
 
 enum class LineCapStyle : u8 {
     ButtCap = 0,
@@ -73,23 +156,10 @@ struct TextState {
     bool knockout { true };
 };
 
-class ColorSpace {
-public:
-    enum class Type {
-#define ENUM(name) name,
-        ENUMERATE_COLOR_SPACES(ENUM)
-#undef ENUM
-    };
-
-    static Optional<ColorSpace::Type> color_space_from_string(const FlyString&);
-    static Color default_color_for_color_space(ColorSpace::Type);
-    static Color color_from_parameters(ColorSpace::Type color_space, const Vector<Value>& args);
-};
-
 struct GraphicsState {
     Gfx::AffineTransform ctm;
-    ColorSpace::Type stroke_color_space { ColorSpace::Type::DeviceGray };
-    ColorSpace::Type paint_color_space { ColorSpace::Type::DeviceGray };
+    ColorSpace stroke_color_space { ColorSpace::Type::DeviceGray };
+    ColorSpace paint_color_space { ColorSpace::Type::DeviceGray };
     Gfx::Color stroke_color { Gfx::Color::NamedColor::Black };
     Gfx::Color paint_color { Gfx::Color::NamedColor::Black };
     float line_width { 1.0f };
@@ -119,7 +189,7 @@ private:
 
     // shift is the manual advance given in the TJ command array
     void show_text(const String&, int shift = 0);
-    ColorSpace::Type get_color_space(const Value&);
+    ColorSpace get_color_space(const Value&);
 
     ALWAYS_INLINE const GraphicsState& state() const { return m_graphics_state_stack.last(); }
     ALWAYS_INLINE GraphicsState& state() { return m_graphics_state_stack.last(); }

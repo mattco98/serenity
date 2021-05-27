@@ -14,6 +14,7 @@
     V(BaseFont)                   \
     V(C)                          \
     V(CCITTFaxDecode)             \
+    V(ColorSpace)                 \
     V(Contents)                   \
     V(Count)                      \
     V(CropBox)                    \
