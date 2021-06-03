@@ -8,6 +8,7 @@
 #include <AK/GenericLexer.h>
 #include <AK/String.h>
 #include <AK/StringBuilder.h>
+#include <AK/Utf.h>
 #include <AK/kstdio.h>
 #include <ctype.h>
 
@@ -491,13 +492,26 @@ template<typename T>
 void Formatter<T, typename EnableIf<IsIntegral<T>>::Type>::format(FormatBuilder& builder, T value)
 {
     if (m_mode == Mode::Character) {
-        // FIXME: We just support ASCII for now, in the future maybe unicode?
-        VERIFY(value >= 0 && value <= 127);
+        VERIFY(value >= 0);
 
         m_mode = Mode::String;
 
         Formatter<StringView> formatter { *this };
-        return formatter.format(builder, StringView { reinterpret_cast<const char*>(&value), 1 });
+
+        if (value <= 127) {
+            formatter.format(builder, StringView { reinterpret_cast<const char*>(&value), 1 });
+        } else {
+            Array<u8, 4> array { 0, 0, 0, 0 };
+            size_t i = 0;
+
+            for_each_char_in_code_point(value, [&](char ch) {
+                array.at(i++) = ch;
+            });
+
+            formatter.format(builder, StringView { array.data(), code_point_length(value) });
+        }
+
+        return;
     }
 
     if (m_precision.has_value())

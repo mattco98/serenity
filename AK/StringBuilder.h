@@ -10,6 +10,7 @@
 #include <AK/Format.h>
 #include <AK/Forward.h>
 #include <AK/StringView.h>
+#include <AK/Utf.h>
 #include <stdarg.h>
 
 namespace AK {
@@ -24,9 +25,13 @@ public:
     void append(const StringView&);
     void append(const Utf32View&);
     void append(char);
-    void append_code_point(u32);
     void append(const char*, size_t);
     void appendvf(const char*, va_list);
+
+    ALWAYS_INLINE void append_code_point(u32 code_point)
+    {
+        for_each_char_in_code_point(code_point, [&](char ch) { append(ch); });
+    }
 
     void append_as_lowercase(char);
     void append_escaped_for_json(const StringView&);
