@@ -9,6 +9,7 @@
 #include <AK/String.h>
 #include <AK/StringBuilder.h>
 #include <AK/Utf.h>
+#include <AK/Utf8View.h>
 #include <AK/kstdio.h>
 #include <ctype.h>
 
@@ -194,7 +195,19 @@ void FormatBuilder::put_string(
     size_t max_width,
     char fill)
 {
-    const auto used_by_string = min(max_width, value.length());
+    Utf8View utf8_value { value };
+    bool is_utf8 = utf8_value.validate();
+
+    size_t used_by_string;
+
+    if (is_utf8) {
+        used_by_string = min(max_width, utf8_value.length());
+        if (used_by_string < utf8_value.length())
+            value = utf8_value.unicode_substring_view(0, used_by_string).as_string();
+    } else {
+        used_by_string = min(max_width, value.length());
+    }
+
     const auto used_by_padding = max(min_width, used_by_string) - used_by_string;
 
     if (used_by_string < value.length())

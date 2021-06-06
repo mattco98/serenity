@@ -234,6 +234,15 @@ int main(int argc, char** argv)
         return 1;
     }
 
+    dbgln();
+    dbgln();
+    dbgln();
+    dbgln("    {:c}", 0x1f602);
+    dbgln("    {:c}", 65);
+    dbgln();
+    dbgln();
+    dbgln();
+
     struct sigaction act;
     memset(&act, 0, sizeof(act));
     act.sa_flags = SA_NOCLDWAIT;

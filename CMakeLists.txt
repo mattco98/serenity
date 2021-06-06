@@ -1,12 +1,12 @@
 cmake_minimum_required(VERSION 3.16)
 project(SerenityOS C CXX ASM)
 
-if(NOT "${CMAKE_BUILD_TYPE}" STREQUAL "")
-  message(FATAL_ERROR
-    ": Don't use CMAKE_BUILD_TYPE when building serenity.\n"
-    "The default build type is optimized with debug info and asserts enabled,\n"
-    "and that's all there is.")
-endif()
+#if(NOT "${CMAKE_BUILD_TYPE}" STREQUAL "")
+#  message(FATAL_ERROR
+#    ": Don't use CMAKE_BUILD_TYPE when building serenity.\n"
+#    "The default build type is optimized with debug info and asserts enabled,\n"
+#    "and that's all there is.")
+#endif()
 
 if (CMAKE_COMPILER_IS_GNUCXX AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 10.2)
   message(FATAL_ERROR
@@ -262,7 +262,7 @@ endif()
 add_subdirectory(AK)
 add_subdirectory(Kernel)
 add_subdirectory(Userland)
-add_subdirectory(Tests)
+#add_subdirectory(Tests)
 
 set(PCI_IDS_GZ_URL https://pci-ids.ucw.cz/v2.2/pci.ids.gz)
 set(PCI_IDS_GZ_PATH ${CMAKE_BINARY_DIR}/pci.ids.gz)
