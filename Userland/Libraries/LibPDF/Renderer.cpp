@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
+#include <AK/Checked.h>
 #include <AK/Utf8View.h>
 #include <LibPDF/CommonNames.h>
 #include <LibPDF/Renderer.h>
@@ -32,6 +33,12 @@ Renderer::Renderer(RefPtr<Document> document, Page const& page, RefPtr<Gfx::Bitm
     , m_painter(*bitmap)
 {
     auto media_box = m_page.media_box;
+
+Checked<int> a = 10;
+a *= 20;
+if (a.has_overflow()) {
+    // ...
+}
 
     Gfx::AffineTransform userspace_matrix;
     userspace_matrix.translate(media_box.lower_left_x, media_box.lower_left_y);
@@ -113,7 +120,6 @@ RENDERER_HANDLER(concatenate_matrix)
         args[5].to_float());
 
     state().ctm.multiply(new_transform);
-    m_text_rendering_matrix_is_dirty = true;
 }
 
 RENDERER_HANDLER(set_line_width)
@@ -283,7 +289,6 @@ RENDERER_HANDLER(text_set_word_space)
 
 RENDERER_HANDLER(text_set_horizontal_scale)
 {
-    m_text_rendering_matrix_is_dirty = true;
     text_state().horizontal_scaling = args[0].to_float() / 100.0f;
 }
 
@@ -320,8 +325,6 @@ RENDERER_HANDLER(text_set_font)
 
     text_state().font_size = args[1].to_float();
     text_state().font_variant = font_variant;
-
-    m_text_rendering_matrix_is_dirty = true;
 }
 
 RENDERER_HANDLER(text_set_rendering_mode)
@@ -331,7 +334,6 @@ RENDERER_HANDLER(text_set_rendering_mode)
 
 RENDERER_HANDLER(text_set_rise)
 {
-    m_text_rendering_matrix_is_dirty = true;
     text_state().rise = args[0].to_float();
 }
 
@@ -341,7 +343,6 @@ RENDERER_HANDLER(text_next_line_offset)
     transform.multiply(m_text_line_matrix);
     m_text_matrix = transform;
     m_text_line_matrix = transform;
-    m_text_rendering_matrix_is_dirty = true;
 }
 
 RENDERER_HANDLER(text_next_line_and_set_leading)
@@ -361,7 +362,6 @@ RENDERER_HANDLER(text_set_matrix_and_line_matrix)
         args[5].to_float());
     m_text_line_matrix = new_transform;
     m_text_matrix = new_transform;
-    m_text_rendering_matrix_is_dirty = true;
 }
 
 RENDERER_HANDLER(text_next_line)
@@ -522,14 +522,21 @@ void Renderer::set_graphics_state_from_dict(NonnullRefPtr<DictObject> dict)
 void Renderer::show_text(String const& string, float shift)
 {
     auto utf = Utf8View(string);
+    auto print = string == "Thi";
 
-    auto& text_rendering_matrix = calculate_text_rendering_matrix();
+    // The font size can be specified in the rendering matrix or the font size entry in the graphics state
+    auto font_size = static_cast<int>(roundf(m_text_matrix.x_scale() * text_state().font_size * state().ctm.x_scale()));
+    if (print) {
+        dbgln("font_size={}", font_size);
+    }
 
-    auto font_size = static_cast<int>(text_rendering_matrix.x_scale() * text_state().font_size);
     auto font = Gfx::FontDatabase::the().get(text_state().font_family, text_state().font_variant, font_size);
     VERIFY(font);
 
-    auto glyph_position = text_rendering_matrix.map(Gfx::FloatPoint { 0.0f, 0.0f });
+    auto glyph_position = state().ctm.map(m_text_matrix.translation());
+    if (print) {
+        dbgln("glyph_position={}", glyph_position);
+    }
     // Reverse the Y axis
     glyph_position.set_y(static_cast<float>(m_bitmap->height()) - glyph_position.y());
     // Account for the reversed font baseline
@@ -554,9 +561,11 @@ void Renderer::show_text(String const& string, float shift)
     }
 
     // Update text matrix
-    auto delta_x = glyph_position.x() - original_position.x();
-    m_text_rendering_matrix_is_dirty = true;
-    m_text_matrix = Gfx::AffineTransform(1, 0, 0, 1, delta_x, 0).multiply(m_text_matrix);
+    auto delta_x = (glyph_position.x() - original_position.x()) / state().ctm.x_scale();
+    auto translation = m_text_matrix.translation();
+    translation.set_x(translation.x() + delta_x);
+    m_text_matrix.set_translation(translation);
+    // m_text_matrix = Gfx::AffineTransform(1, 0, 0, 1, delta_x, 0).multiply(m_text_matrix);
 }
 
 RefPtr<ColorSpace> Renderer::get_color_space(Value const& value)
@@ -591,23 +600,6 @@ RefPtr<ColorSpace> Renderer::get_color_space(Value const& value)
         return CalRGBColorSpace::create(m_document, move(parameters));
 
     TODO();
-}
-
-Gfx::AffineTransform const& Renderer::calculate_text_rendering_matrix()
-{
-    if (m_text_rendering_matrix_is_dirty) {
-        m_text_rendering_matrix = Gfx::AffineTransform(
-            text_state().horizontal_scaling,
-            0.0f,
-            0.0f,
-            1.0f,
-            0.0f,
-            text_state().rise);
-        m_text_rendering_matrix.multiply(m_text_matrix);
-        m_text_rendering_matrix.multiply(state().ctm);
-        m_text_rendering_matrix_is_dirty = false;
-    }
-    return m_text_rendering_matrix;
 }
 
 }

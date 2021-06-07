@@ -113,8 +113,6 @@ private:
     template<typename T>
     ALWAYS_INLINE Gfx::Rect<T> map(Gfx::Rect<T>) const;
 
-    Gfx::AffineTransform const& calculate_text_rendering_matrix();
-
     RefPtr<Document> m_document;
     RefPtr<Gfx::Bitmap> m_bitmap;
     Page const& m_page;
@@ -124,9 +122,6 @@ private:
     Vector<GraphicsState> m_graphics_state_stack;
     Gfx::AffineTransform m_text_matrix;
     Gfx::AffineTransform m_text_line_matrix;
-
-    bool m_text_rendering_matrix_is_dirty { true };
-    Gfx::AffineTransform m_text_rendering_matrix;
 };
 
 }
