@@ -183,12 +183,15 @@ void NullLiteral::generate_bytecode(Bytecode::Generator& generator) const
 
 void BigIntLiteral::generate_bytecode(Bytecode::Generator& generator) const
 {
-    generator.emit<Bytecode::Op::NewBigInt>(Crypto::SignedBigInteger::from_base10(m_value.substring(0, m_value.length() - 1)));
+    auto big_int = Crypto::SignedBigInteger::from_base10(m_value.substring(0, m_value.length() - 1));
+    auto constant_pool_entry = generator.add_constant(big_int);
+    generator.emit<Bytecode::Op::NewBigInt>(constant_pool_entry);
 }
 
 void StringLiteral::generate_bytecode(Bytecode::Generator& generator) const
 {
-    generator.emit<Bytecode::Op::NewString>(m_value);
+    auto constant_pool_entry = generator.add_constant(m_value);
+    generator.emit<Bytecode::Op::NewString>(constant_pool_entry);
 }
 
 void Identifier::generate_bytecode(Bytecode::Generator& generator) const
@@ -269,7 +272,9 @@ void AssignmentExpression::generate_bytecode(Bytecode::Generator& generator) con
         } else {
             VERIFY(is<Identifier>(expression.property()));
             m_rhs->generate_bytecode(generator);
-            generator.emit<Bytecode::Op::PutById>(object_reg, static_cast<Identifier const&>(expression.property()).string());
+            auto identifier = static_cast<Identifier const&>(expression.property()).string();
+            auto constant_pool_entry = generator.add_constant(identifier);
+            generator.emit<Bytecode::Op::PutById>(object_reg, constant_pool_entry);
             return;
         }
     }
@@ -338,7 +343,9 @@ void MemberExpression::generate_bytecode(Bytecode::Generator& generator) const
         TODO();
     } else {
         VERIFY(is<Identifier>(property()));
-        generator.emit<Bytecode::Op::GetById>(static_cast<Identifier const&>(property()).string());
+        auto identifier = static_cast<Identifier const&>(property()).string();
+        auto constant_pool_entry = generator.add_constant(identifier);
+        generator.emit<Bytecode::Op::GetById>(constant_pool_entry);
     }
 }
 

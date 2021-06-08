@@ -37,6 +37,8 @@ Value Interpreter::run(Bytecode::Block const& block)
 {
     dbgln_if(JS_BYTECODE_DEBUG, "Bytecode::Interpreter will run block {:p}", &block);
 
+    m_constant_pool = &block.constant_pool();
+
     CallFrame global_call_frame;
     if (vm().call_stack().is_empty()) {
         global_call_frame.this_value = &global_object();
@@ -91,7 +93,15 @@ Value Interpreter::run(Bytecode::Block const& block)
     if (vm().call_stack().size() == 1)
         vm().pop_call_frame();
 
+    m_constant_pool = nullptr;
+
     return return_value;
+}
+
+ConstantPool const& Interpreter::constant_pool() const
+{
+    VERIFY(m_constant_pool);
+    return *m_constant_pool;
 }
 
 }

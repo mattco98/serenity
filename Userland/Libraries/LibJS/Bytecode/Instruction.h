@@ -12,6 +12,7 @@
 #define ENUMERATE_BYTECODE_OPS(O) \
     O(Load)                       \
     O(LoadImmediate)              \
+    O(LoadConstant)               \
     O(Store)                      \
     O(Add)                        \
     O(Sub)                        \

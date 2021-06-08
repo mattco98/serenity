@@ -44,6 +44,8 @@ public:
 
     Label nearest_continuable_scope() const;
 
+    ConstantPoolEntry add_constant(Value const& value);
+
 private:
     Generator();
     ~Generator();
@@ -54,6 +56,7 @@ private:
     OwnPtr<Block> m_block;
     u32 m_next_register { 1 };
     Vector<Label> m_continuable_scopes;
+    ConstantPoolBuilder m_constant_pool_builder;
 };
 
 }

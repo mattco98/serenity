@@ -11,6 +11,7 @@
 #include <LibJS/Bytecode/Instruction.h>
 #include <LibJS/Bytecode/Register.h>
 #include <LibJS/Forward.h>
+#include <LibJS/Runtime/Value.h>
 
 namespace JS::Bytecode {
 
@@ -28,6 +29,7 @@ OwnPtr<Block> Generator::generate(ASTNode const& node)
     Generator generator;
     node.generate_bytecode(generator);
     generator.m_block->set_register_count({}, generator.m_next_register);
+    generator.m_block->set_constant_pool(generator.m_constant_pool_builder.build());
     generator.m_block->seal();
     return move(generator.m_block);
 }
@@ -66,6 +68,12 @@ void Generator::begin_continuable_scope()
 void Generator::end_continuable_scope()
 {
     m_continuable_scopes.take_last();
+}
+
+ConstantPoolEntry Generator::add_constant(Value const& value)
+{
+    VERIFY(value.is_string() || value.is_bigint());
+    return m_constant_pool_builder.add(value);
 }
 
 }

@@ -9,6 +9,7 @@
 
 #include <AK/FlyString.h>
 #include <LibCrypto/BigInt/SignedBigInteger.h>
+#include <LibJS/Bytecode/ConstantPool.h>
 #include <LibJS/Bytecode/Instruction.h>
 #include <LibJS/Bytecode/Label.h>
 #include <LibJS/Bytecode/Register.h>
@@ -45,6 +46,21 @@ public:
 
 private:
     Value m_value;
+};
+
+class LoadConstant final : public Instruction {
+public:
+    LoadConstant(ConstantPoolEntry entry)
+        : Instruction(Type::LoadConstant)
+        , m_entry(entry)
+    {
+    }
+
+    void execute(Bytecode::Interpreter&) const;
+    String to_string() const;
+
+private:
+    ConstantPoolEntry m_entry;
 };
 
 class Store final : public Instruction {
@@ -129,9 +145,9 @@ JS_ENUMERATE_COMMON_UNARY_OPS(JS_DECLARE_COMMON_UNARY_OP)
 
 class NewString final : public Instruction {
 public:
-    NewString(String string)
+    NewString(ConstantPoolEntry const& string_entry)
         : Instruction(Type::NewString)
-        , m_string(move(string))
+        , m_string_entry(string_entry)
     {
     }
 
@@ -139,7 +155,7 @@ public:
     String to_string() const;
 
 private:
-    String m_string;
+    ConstantPoolEntry m_string_entry;
 };
 
 class NewObject final : public Instruction {
@@ -155,9 +171,9 @@ public:
 
 class NewBigInt final : public Instruction {
 public:
-    explicit NewBigInt(Crypto::SignedBigInteger bigint)
+    explicit NewBigInt(ConstantPoolEntry const& bigint_entry)
         : Instruction(Type::NewBigInt)
-        , m_bigint(move(bigint))
+        , m_bigint_entry(bigint_entry)
     {
     }
 
@@ -165,7 +181,7 @@ public:
     String to_string() const;
 
 private:
-    Crypto::SignedBigInteger m_bigint;
+    ConstantPoolEntry m_bigint_entry;
 };
 
 class ConcatString final : public Instruction {
@@ -215,9 +231,9 @@ private:
 
 class GetById final : public Instruction {
 public:
-    GetById(FlyString property)
+    GetById(ConstantPoolEntry const& property_entry)
         : Instruction(Type::GetById)
-        , m_property(move(property))
+        , m_property_entry(property_entry)
     {
     }
 
@@ -225,15 +241,15 @@ public:
     String to_string() const;
 
 private:
-    FlyString m_property;
+    ConstantPoolEntry m_property_entry;
 };
 
 class PutById final : public Instruction {
 public:
-    PutById(Register base, FlyString property)
+    PutById(Register base, ConstantPoolEntry const& property_entry)
         : Instruction(Type::PutById)
         , m_base(base)
-        , m_property(move(property))
+        , m_property_entry(property_entry)
     {
     }
 
@@ -242,7 +258,7 @@ public:
 
 private:
     Register m_base;
-    FlyString m_property;
+    ConstantPoolEntry m_property_entry;
 };
 
 class Jump : public Instruction {

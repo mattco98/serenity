@@ -7,6 +7,7 @@
 #pragma once
 
 #include <AK/NonnullOwnPtrVector.h>
+#include <LibJS/Bytecode/ConstantPool.h>
 #include <LibJS/Bytecode/Label.h>
 #include <LibJS/Bytecode/Register.h>
 #include <LibJS/Forward.h>
@@ -32,6 +33,7 @@ public:
 
     ALWAYS_INLINE Value& accumulator() { return reg(Register::accumulator()); }
     Value& reg(Register const& r) { return registers()[r.index()]; }
+    ConstantPool const& constant_pool() const;
 
     void jump(Label const& label) { m_pending_jump = label.address(); }
     void do_return(Value return_value) { m_return_value = return_value; }
@@ -42,6 +44,7 @@ private:
     VM& m_vm;
     GlobalObject& m_global_object;
     NonnullOwnPtrVector<RegisterWindow> m_register_windows;
+    ConstantPool const* m_constant_pool { nullptr };
     Optional<size_t> m_pending_jump;
     Value m_return_value;
 };

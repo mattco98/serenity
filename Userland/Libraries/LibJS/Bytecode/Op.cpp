@@ -59,6 +59,11 @@ void LoadImmediate::execute(Bytecode::Interpreter& interpreter) const
     interpreter.accumulator() = m_value;
 }
 
+void LoadConstant::execute(Bytecode::Interpreter& interpreter) const
+{
+    interpreter.accumulator() = interpreter.constant_pool().value_at(m_entry);
+}
+
 void Store::execute(Bytecode::Interpreter& interpreter) const
 {
     interpreter.reg(m_dst) = interpreter.accumulator();
@@ -122,12 +127,14 @@ JS_ENUMERATE_COMMON_UNARY_OPS(JS_DEFINE_COMMON_UNARY_OP)
 
 void NewBigInt::execute(Bytecode::Interpreter& interpreter) const
 {
-    interpreter.accumulator() = js_bigint(interpreter.vm().heap(), m_bigint);
+    auto& bigint = interpreter.constant_pool().bigint_at(m_bigint_entry);
+    interpreter.accumulator() = js_bigint(interpreter.vm().heap(), bigint);
 }
 
 void NewString::execute(Bytecode::Interpreter& interpreter) const
 {
-    interpreter.accumulator() = js_string(interpreter.vm(), m_string);
+    auto& string = interpreter.constant_pool().string_at(m_string_entry);
+    interpreter.accumulator() = js_string(interpreter.vm(), string);
 }
 
 void NewObject::execute(Bytecode::Interpreter& interpreter) const
@@ -152,14 +159,18 @@ void SetVariable::execute(Bytecode::Interpreter& interpreter) const
 
 void GetById::execute(Bytecode::Interpreter& interpreter) const
 {
-    if (auto* object = interpreter.accumulator().to_object(interpreter.global_object()))
-        interpreter.accumulator() = object->get(m_property);
+    if (auto* object = interpreter.accumulator().to_object(interpreter.global_object())) {
+        auto property = interpreter.constant_pool().string_at(m_property_entry);
+        interpreter.accumulator() = object->get(property);
+    }
 }
 
 void PutById::execute(Bytecode::Interpreter& interpreter) const
 {
-    if (auto* object = interpreter.reg(m_base).to_object(interpreter.global_object()))
-        object->put(m_property, interpreter.accumulator());
+    if (auto* object = interpreter.reg(m_base).to_object(interpreter.global_object())) {
+        auto property = interpreter.constant_pool().string_at(m_property_entry);
+        object->put(property, interpreter.accumulator());
+    }
 }
 
 void Jump::execute(Bytecode::Interpreter& interpreter) const
@@ -255,12 +266,12 @@ String Store::to_string() const
 
 String NewBigInt::to_string() const
 {
-    return String::formatted("NewBigInt bigint:\"{}\"", m_bigint.to_base10());
+    return String::formatted("NewBigInt entry:\"{}\"", m_bigint_entry);
 }
 
 String NewString::to_string() const
 {
-    return String::formatted("NewString string:\"{}\"", m_string);
+    return String::formatted("NewString entry:\"{}\"", m_string_entry);
 }
 
 String NewObject::to_string() const
@@ -285,12 +296,12 @@ String SetVariable::to_string() const
 
 String PutById::to_string() const
 {
-    return String::formatted("PutById base:{}, property:{}", m_base, m_property);
+    return String::formatted("PutById base:{}, id_entry:{}", m_base, m_property_entry);
 }
 
 String GetById::to_string() const
 {
-    return String::formatted("GetById property:{}", m_property);
+    return String::formatted("GetById id_entry:{}", m_property_entry);
 }
 
 String Jump::to_string() const

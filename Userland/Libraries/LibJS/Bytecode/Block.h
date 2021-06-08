@@ -8,6 +8,7 @@
 
 #include <AK/Badge.h>
 #include <AK/NonnullOwnPtrVector.h>
+#include <LibJS/Bytecode/ConstantPool.h>
 #include <LibJS/Forward.h>
 
 namespace JS::Bytecode {
@@ -48,8 +49,10 @@ public:
     ReadonlyBytes instruction_stream() const { return ReadonlyBytes { m_buffer, m_buffer_size }; }
 
     size_t register_count() const { return m_register_count; }
-
     void set_register_count(Badge<Bytecode::Generator>, size_t count) { m_register_count = count; }
+
+    ConstantPool const& constant_pool() const { return m_constant_pool; }
+    void set_constant_pool(ConstantPool const& pool) { m_constant_pool = pool; }
 
     void* next_slot() { return m_buffer + m_buffer_size; }
     void grow(size_t additional_size);
@@ -61,6 +64,7 @@ private:
     u8* m_buffer { nullptr };
     size_t m_buffer_capacity { 0 };
     size_t m_buffer_size { 0 };
+    ConstantPool m_constant_pool;
 };
 
 }
