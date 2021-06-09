@@ -27,7 +27,7 @@ void ConstantTable::dump() const
 {
     outln("String Table:");
     for (size_t i = 0; i < m_strings.size(); i++)
-        outln("{}: {}", i, m_strings[i]);
+        outln("  {}: {}", i, m_strings[i]);
 }
 
 }

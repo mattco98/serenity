@@ -521,6 +521,7 @@ static bool parse_and_run(JS::Interpreter& interpreter, const StringView& source
                 outln();
                 unit.constant_table->dump();
             }
+            outln();
         }
 
         if (s_run_bytecode) {
