@@ -293,7 +293,7 @@ String NewArray::to_string(Bytecode::Executable const&) const
 
 String NewString::to_string(Bytecode::Executable const& executable) const
 {
-    return String::formatted("NewString {} (\"{}\")", m_string, executable.string_table->get(m_string));
+    return String::formatted("NewString {} (\"{}\")", m_string, executable.get_string(m_string));
 }
 
 String NewObject::to_string(Bytecode::Executable const&) const
@@ -308,22 +308,22 @@ String ConcatString::to_string(Bytecode::Executable const&) const
 
 String GetVariable::to_string(Bytecode::Executable const& executable) const
 {
-    return String::formatted("GetVariable {} ({})", m_identifier, executable.string_table->get(m_identifier));
+    return String::formatted("GetVariable {} ({})", m_identifier, executable.get_string(m_identifier));
 }
 
 String SetVariable::to_string(Bytecode::Executable const& executable) const
 {
-    return String::formatted("SetVariable {} ({})", m_identifier, executable.string_table->get(m_identifier));
+    return String::formatted("SetVariable {} ({})", m_identifier, executable.get_string(m_identifier));
 }
 
 String PutById::to_string(Bytecode::Executable const& executable) const
 {
-    return String::formatted("PutById base:{}, property:{} ({})", m_base, m_property, executable.string_table->get(m_property));
+    return String::formatted("PutById base:{}, property:{} ({})", m_base, m_property, executable.get_string(m_property));
 }
 
 String GetById::to_string(Bytecode::Executable const& executable) const
 {
-    return String::formatted("GetById {} ({})", m_property, executable.string_table->get(m_property));
+    return String::formatted("GetById {} ({})", m_property, executable.get_string(m_property));
 }
 
 String Jump::to_string(Bytecode::Executable const&) const

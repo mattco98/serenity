@@ -4,11 +4,11 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-#include <LibJS/Bytecode/StringTable.h>
+#include <LibJS/Bytecode/ConstantTable.h>
 
 namespace JS::Bytecode {
 
-StringTableIndex StringTable::insert(StringView string)
+ConstantTableIndex ConstantTable::insert(StringView string)
 {
     for (size_t i = 0; i < m_strings.size(); i++) {
         if (m_strings[i] == string)
@@ -18,12 +18,12 @@ StringTableIndex StringTable::insert(StringView string)
     return m_strings.size() - 1;
 }
 
-String const& StringTable::get(StringTableIndex index) const
+String const& ConstantTable::get_string(ConstantTableIndex index) const
 {
     return m_strings[index.value()];
 }
 
-void StringTable::dump() const
+void ConstantTable::dump() const
 {
     outln("String Table:");
     for (size_t i = 0; i < m_strings.size(); i++)

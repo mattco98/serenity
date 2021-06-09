@@ -8,10 +8,10 @@
 #pragma once
 
 #include <LibCrypto/BigInt/SignedBigInteger.h>
+#include <LibJS/Bytecode/ConstantTable.h>
 #include <LibJS/Bytecode/Instruction.h>
 #include <LibJS/Bytecode/Label.h>
 #include <LibJS/Bytecode/Register.h>
-#include <LibJS/Bytecode/StringTable.h>
 #include <LibJS/Heap/Cell.h>
 #include <LibJS/Runtime/Value.h>
 
@@ -129,7 +129,7 @@ JS_ENUMERATE_COMMON_UNARY_OPS(JS_DECLARE_COMMON_UNARY_OP)
 
 class NewString final : public Instruction {
 public:
-    NewString(StringTableIndex string)
+    NewString(ConstantTableIndex string)
         : Instruction(Type::NewString)
         , m_string(move(string))
     {
@@ -139,7 +139,7 @@ public:
     String to_string(Bytecode::Executable const&) const;
 
 private:
-    StringTableIndex m_string;
+    ConstantTableIndex m_string;
 };
 
 class NewObject final : public Instruction {
@@ -206,7 +206,7 @@ private:
 
 class SetVariable final : public Instruction {
 public:
-    SetVariable(StringTableIndex identifier)
+    SetVariable(ConstantTableIndex identifier)
         : Instruction(Type::SetVariable)
         , m_identifier(move(identifier))
     {
@@ -216,12 +216,12 @@ public:
     String to_string(Bytecode::Executable const&) const;
 
 private:
-    StringTableIndex m_identifier;
+    ConstantTableIndex m_identifier;
 };
 
 class GetVariable final : public Instruction {
 public:
-    GetVariable(StringTableIndex identifier)
+    GetVariable(ConstantTableIndex identifier)
         : Instruction(Type::GetVariable)
         , m_identifier(move(identifier))
     {
@@ -231,12 +231,12 @@ public:
     String to_string(Bytecode::Executable const&) const;
 
 private:
-    StringTableIndex m_identifier;
+    ConstantTableIndex m_identifier;
 };
 
 class GetById final : public Instruction {
 public:
-    GetById(StringTableIndex property)
+    GetById(ConstantTableIndex property)
         : Instruction(Type::GetById)
         , m_property(move(property))
     {
@@ -246,12 +246,12 @@ public:
     String to_string(Bytecode::Executable const&) const;
 
 private:
-    StringTableIndex m_property;
+    ConstantTableIndex m_property;
 };
 
 class PutById final : public Instruction {
 public:
-    PutById(Register base, StringTableIndex property)
+    PutById(Register base, ConstantTableIndex property)
         : Instruction(Type::PutById)
         , m_base(base)
         , m_property(move(property))
@@ -263,7 +263,7 @@ public:
 
 private:
     Register m_base;
-    StringTableIndex m_property;
+    ConstantTableIndex m_property;
 };
 
 class Jump : public Instruction {

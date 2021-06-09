@@ -12,17 +12,19 @@
 
 namespace JS::Bytecode {
 
-TYPEDEF_DISTINCT_NUMERIC_GENERAL(size_t, false, true, false, false, false, false, StringTableIndex);
+TYPEDEF_DISTINCT_NUMERIC_GENERAL(size_t, false, true, false, false, false, false, ConstantTableIndex);
 
-class StringTable {
-    AK_MAKE_NONMOVABLE(StringTable);
-    AK_MAKE_NONCOPYABLE(StringTable);
+class ConstantTable {
+    AK_MAKE_NONMOVABLE(ConstantTable);
+    AK_MAKE_NONCOPYABLE(ConstantTable);
 
 public:
-    StringTable() = default;
+    ConstantTable() = default;
 
-    StringTableIndex insert(StringView string);
-    String const& get(StringTableIndex) const;
+    ConstantTableIndex insert(StringView string);
+
+    String const& get_string(ConstantTableIndex) const;
+
     void dump() const;
     bool is_empty() const { return m_strings.is_empty(); }
 

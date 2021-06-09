@@ -14,7 +14,7 @@
 namespace JS::Bytecode {
 
 Generator::Generator()
-    : m_string_table(make<StringTable>())
+    : m_constant_table(make<ConstantTable>())
 {
 }
 
@@ -27,7 +27,7 @@ Executable Generator::generate(ASTNode const& node)
     Generator generator;
     generator.switch_to_basic_block(generator.make_block());
     node.generate_bytecode(generator);
-    return { move(generator.m_root_basic_blocks), move(generator.m_string_table), generator.m_next_register };
+    return { move(generator.m_root_basic_blocks), move(generator.m_constant_table), generator.m_next_register };
 }
 
 void Generator::grow(size_t additional_size)

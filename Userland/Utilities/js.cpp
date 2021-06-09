@@ -517,9 +517,9 @@ static bool parse_and_run(JS::Interpreter& interpreter, const StringView& source
         if (s_dump_bytecode) {
             for (auto& block : unit.basic_blocks)
                 block.dump(unit);
-            if (!unit.string_table->is_empty()) {
+            if (!unit.constant_table->is_empty()) {
                 outln();
-                unit.string_table->dump();
+                unit.constant_table->dump();
             }
         }
 
