@@ -28,8 +28,9 @@
     O(TypedInequals)              \
     O(TypedEquals)                \
     O(NewBigInt)                  \
-    O(NewArray)                   \
     O(NewString)                  \
+    O(NewArray)                   \
+    O(NewEmptyObject)             \
     O(NewObject)                  \
     O(GetVariable)                \
     O(SetVariable)                \

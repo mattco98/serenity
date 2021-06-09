@@ -142,15 +142,30 @@ private:
     ConstantTableIndex m_string;
 };
 
-class NewObject final : public Instruction {
+class NewEmptyObject final : public Instruction {
 public:
-    NewObject()
-        : Instruction(Type::NewObject)
+    NewEmptyObject()
+        : Instruction(Type::NewEmptyObject)
     {
     }
 
     void execute(Bytecode::Interpreter&) const;
     String to_string(Bytecode::Executable const&) const;
+};
+
+class NewObject final : public Instruction {
+public:
+    explicit NewObject(ConstantTableIndex literal_descriptor)
+        : Instruction(Type::NewObject)
+        , m_literal_descriptor(literal_descriptor)
+    {
+    }
+
+    void execute(Bytecode::Interpreter&) const;
+    String to_string(Bytecode::Executable const&) const;
+
+private:
+    ConstantTableIndex m_literal_descriptor;
 };
 
 class NewBigInt final : public Instruction {

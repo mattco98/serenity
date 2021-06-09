@@ -125,9 +125,25 @@ void NewString::execute(Bytecode::Interpreter& interpreter) const
     interpreter.accumulator() = js_string(interpreter.vm(), interpreter.current_executable().get_string(m_string));
 }
 
-void NewObject::execute(Bytecode::Interpreter& interpreter) const
+void NewEmptyObject::execute(Bytecode::Interpreter& interpreter) const
 {
     interpreter.accumulator() = Object::create_empty(interpreter.global_object());
+}
+
+void NewObject::execute(Bytecode::Interpreter& interpreter) const
+{
+    auto object = Object::create_empty(interpreter.global_object());
+    auto descriptor = interpreter.current_executable().get_object_literal_descriptor(m_literal_descriptor);
+
+    for (size_t i = 0; i < descriptor.size(); i++) {
+        auto name_index = descriptor.name(i);
+        auto name = interpreter.current_executable().get_string(name_index);
+        auto value = descriptor.value(i);
+
+        object->define_property(name, value, default_attributes, false);
+    }
+
+    interpreter.accumulator() = object;
 }
 
 void ConcatString::execute(Bytecode::Interpreter& interpreter) const
@@ -296,9 +312,14 @@ String NewString::to_string(Bytecode::Executable const& executable) const
     return String::formatted("NewString {} (\"{}\")", m_string, executable.get_string(m_string));
 }
 
+String NewEmptyObject::to_string(Bytecode::Executable const&) const
+{
+    return "NewEmptyObject";
+}
+
 String NewObject::to_string(Bytecode::Executable const&) const
 {
-    return "NewObject";
+    return String::formatted("NewObject {}", m_literal_descriptor);
 }
 
 String ConcatString::to_string(Bytecode::Executable const&) const

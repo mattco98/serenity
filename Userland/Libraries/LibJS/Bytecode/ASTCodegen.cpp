@@ -453,10 +453,26 @@ void ForStatement::generate_bytecode(Bytecode::Generator& generator) const
 
 void ObjectExpression::generate_bytecode(Bytecode::Generator& generator) const
 {
-    generator.emit<Bytecode::Op::NewObject>();
+    if (m_properties.is_empty()) {
+        generator.emit<Bytecode::Op::NewEmptyObject>();
+        return;
+    }
 
-    if (!m_properties.is_empty())
-        TODO();
+    Bytecode::ObjectLiteralDescriptor descriptor(m_properties.size());
+
+    for (size_t i = 0; i < m_properties.size(); i++) {
+        auto& property = m_properties[i];
+        if (property.type() != ObjectProperty::Type::KeyValue)
+            TODO();
+
+        auto& key = property.key();
+        auto& value = property.value();
+
+        // FIXME: Better constant evaluation
+        if (is<NumericLiteral>(value)) {
+            descriptor.set_name_value(i, key, downcast<NumericLiteral>(value).m_value)
+        }
+    }
 }
 
 void ArrayExpression::generate_bytecode(Bytecode::Generator& generator) const

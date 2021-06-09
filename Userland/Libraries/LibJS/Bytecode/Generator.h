@@ -23,6 +23,10 @@ struct Executable {
     size_t number_of_registers { 0 };
 
     String const& get_string(ConstantTableIndex index) const { return constant_table->get_string(index); }
+    ObjectLiteralDescriptor const& get_object_literal_descriptor(ConstantTableIndex index) const
+    {
+        return constant_table->get_object_literal_descriptor(index);
+    }
 };
 
 class Generator {
