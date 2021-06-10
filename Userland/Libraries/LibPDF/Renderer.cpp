@@ -339,10 +339,19 @@ RENDERER_HANDLER(text_set_rise)
 
 RENDERER_HANDLER(text_next_line_offset)
 {
-    Gfx::AffineTransform transform(1.0f, 0.0f, 0.0f, 1.0f, args[0].to_float(), args[1].to_float());
-    transform.multiply(m_text_line_matrix);
-    m_text_matrix = transform;
-    m_text_line_matrix = transform;
+    auto delta_x = m_text_matrix.x_scale() * state().ctm.x_scale() * args[0].to_float();
+    auto delta_y = m_text_matrix.y_scale() * state().ctm.y_scale() * args[1].to_float();
+    auto translation = m_text_line_matrix.translation();
+    dbgln("translation={}", Gfx::FloatPoint { delta_x, delta_y });
+    translation += Gfx::FloatPoint { delta_x, delta_y };
+    m_text_line_matrix.set_translation(translation);
+    m_text_matrix = m_text_line_matrix;
+    // Gfx::AffineTransform transform(1.0f, 0.0f, 0.0f, 1.0f, args[0].to_float(), args[1].to_float());
+    // dbgln("before={}", m_text_matrix.y_translation());
+    // transform.multiply(m_text_line_matrix);
+    // m_text_matrix = transform;
+    // m_text_line_matrix = transform;
+    // dbgln("after={}", m_text_matrix.y_translation());
 }
 
 RENDERER_HANDLER(text_next_line_and_set_leading)
