@@ -151,7 +151,7 @@ void SetVariable::execute(Bytecode::Interpreter& interpreter) const
 void GetById::execute(Bytecode::Interpreter& interpreter) const
 {
     if (auto* object = interpreter.accumulator().to_object(interpreter.global_object()))
-        interpreter.accumulator() = object->get(interpreter.current_executable().get_string(m_property));
+        interpreter.accumulator() = object->get(interpreter.current_executable().get_string(m_property)).value_or(js_undefined());
 }
 
 void PutById::execute(Bytecode::Interpreter& interpreter) const
@@ -308,7 +308,7 @@ void GetByValue::execute(Bytecode::Interpreter& interpreter) const
         auto property_key = interpreter.accumulator().to_property_key(interpreter.global_object());
         if (interpreter.vm().exception())
             return;
-        interpreter.accumulator() = object->get(property_key);
+        interpreter.accumulator() = object->get(property_key).value_or(js_undefined());
     }
 }
 
