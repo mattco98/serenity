@@ -643,12 +643,53 @@ void VariableDeclaration::generate_bytecode(Bytecode::Generator& generator) cons
             declarator.init()->generate_bytecode(generator);
         else
             generator.emit<Bytecode::Op::LoadImmediate>(js_undefined());
+
         declarator.target().visit(
-            [&](const NonnullRefPtr<Identifier>& id) {
+            [&](NonnullRefPtr<Identifier> const& id) {
                 generator.emit<Bytecode::Op::SetVariable>(generator.intern_string(id->string()));
             },
-            [&](const NonnullRefPtr<BindingPattern>&) {
-                TODO();
+            [&](NonnullRefPtr<BindingPattern> const& pattern) {
+                if (pattern->kind == BindingPattern::Kind::Array)
+                    TODO();
+
+                auto object_reg = generator.allocate_register();
+                generator.emit<Bytecode::Op::Store>(object_reg);
+
+                auto& properties = pattern->properties;
+
+                for (size_t i = 0; i < properties.size(); i++) {
+                    auto& property = properties[i];
+                    if (property.pattern || property.is_rest)
+                        TODO();
+
+                    auto& name = property.name;
+                    auto& alias = property.alias ? *property.alias : name;
+                    auto name_index = generator.intern_string(name->string());
+
+                    if (i != 0)
+                        generator.emit<Bytecode::Op::Load>(object_reg);
+                    generator.emit<Bytecode::Op::GetById>(name_index);
+
+                    if (property.initializer) {
+                        auto& if_undefined_block = generator.make_block();
+                        auto& if_not_undefined_block = generator.make_block();
+
+                        generator.emit<Bytecode::Op::JumpUndefined>().set_targets(
+                            Bytecode::Label { if_undefined_block },
+                            Bytecode::Label { if_not_undefined_block });
+
+                        generator.switch_to_basic_block(if_undefined_block);
+                        property.initializer->generate_bytecode(generator);
+
+                        generator.emit<Bytecode::Op::Jump>().set_targets(
+                            Bytecode::Label { if_not_undefined_block },
+                            {});
+
+                        generator.switch_to_basic_block(if_not_undefined_block);
+                    }
+
+                    generator.emit<Bytecode::Op::SetVariable>(name_index);
+                }
             });
     }
 }
