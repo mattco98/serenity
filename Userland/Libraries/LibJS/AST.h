@@ -896,8 +896,10 @@ public:
         : Expression(move(source_range))
     {
     }
+
     virtual Value execute(Interpreter&, GlobalObject&) const override;
     virtual void dump(int indent) const override;
+    virtual void generate_bytecode(Bytecode::Generator&) const override;
 };
 
 class CallExpression : public Expression {

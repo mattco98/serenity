@@ -12,6 +12,8 @@
 #define ENUMERATE_BYTECODE_OPS(O) \
     O(Load)                       \
     O(LoadImmediate)              \
+    O(LoadArgument)               \
+    O(LoadThis)                   \
     O(Store)                      \
     O(Add)                        \
     O(Sub)                        \
@@ -61,7 +63,6 @@
     O(Decrement)                  \
     O(Throw)                      \
     O(PushLexicalEnvironment)     \
-    O(LoadArgument)               \
     O(EnterUnwindContext)         \
     O(LeaveUnwindContext)         \
     O(ContinuePendingUnwind)      \

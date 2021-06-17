@@ -656,6 +656,11 @@ void VariableDeclaration::generate_bytecode(Bytecode::Generator& generator) cons
     }
 }
 
+void ThisExpression::generate_bytecode(Bytecode::Generator& generator) const
+{
+    generator.emit<Bytecode::Op::LoadThis>();
+}
+
 void CallExpression::generate_bytecode(Bytecode::Generator& generator) const
 {
     auto callee_reg = generator.allocate_register();

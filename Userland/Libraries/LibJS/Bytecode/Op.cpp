@@ -48,6 +48,16 @@ void LoadImmediate::execute_impl(Bytecode::Interpreter& interpreter) const
     interpreter.accumulator() = m_value;
 }
 
+void LoadArgument::execute_impl(Bytecode::Interpreter& interpreter) const
+{
+    interpreter.accumulator() = interpreter.vm().argument(m_index);
+}
+
+void LoadThis::execute_impl(Bytecode::Interpreter& interpreter) const
+{
+    interpreter.accumulator() = interpreter.vm().this_value(interpreter.global_object());
+}
+
 void Store::execute_impl(Bytecode::Interpreter& interpreter) const
 {
     interpreter.reg(m_dst) = interpreter.accumulator();
@@ -342,11 +352,6 @@ void PutByValue::execute_impl(Bytecode::Interpreter& interpreter) const
     }
 }
 
-void LoadArgument::execute_impl(Bytecode::Interpreter& interpreter) const
-{
-    interpreter.accumulator() = interpreter.vm().argument(m_index);
-}
-
 String Load::to_string_impl(Bytecode::Executable const&) const
 {
     return String::formatted("Load {}", m_src);
@@ -355,6 +360,16 @@ String Load::to_string_impl(Bytecode::Executable const&) const
 String LoadImmediate::to_string_impl(Bytecode::Executable const&) const
 {
     return String::formatted("LoadImmediate {}", m_value);
+}
+
+String LoadArgument::to_string_impl(const Bytecode::Executable&) const
+{
+    return String::formatted("LoadArgument {}", m_index);
+}
+
+String LoadThis::to_string_impl(const Bytecode::Executable&) const
+{
+    return "LoadThis";
 }
 
 String Store::to_string_impl(Bytecode::Executable const&) const
@@ -527,11 +542,6 @@ String GetByValue::to_string_impl(const Bytecode::Executable&) const
 String PutByValue::to_string_impl(const Bytecode::Executable&) const
 {
     return String::formatted("PutByValue base:{}, property:{}", m_base, m_property);
-}
-
-String LoadArgument::to_string_impl(const Bytecode::Executable&) const
-{
-    return String::formatted("LoadArgument {}", m_index);
 }
 
 }
