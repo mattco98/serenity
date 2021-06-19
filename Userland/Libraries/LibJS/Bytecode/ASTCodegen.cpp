@@ -650,11 +650,11 @@ static void generate_object_binding_pattern_bytecode(Bytecode::Generator& genera
 
     for (auto& [name, alias, initializer, is_rest] : pattern.entries) {
         if (is_rest) {
-            VERIFY(name.has<NonnullRefPtr<Identifier>>());
+            VERIFY(is<Identifier>(*name));
             VERIFY(alias.has<Empty>());
             VERIFY(!initializer);
 
-            auto identifier = name.get<NonnullRefPtr<Identifier>>()->string();
+            auto identifier = static_cast<Identifier const&>(*name).string();
             auto interned_identifier = generator.intern_string(identifier);
 
             generator.emit_with_extra_register_slots<Bytecode::Op::CopyObjectExcludingProperties>(excluded_property_names.size(), value_reg, excluded_property_names);
@@ -665,8 +665,8 @@ static void generate_object_binding_pattern_bytecode(Bytecode::Generator& genera
 
         Bytecode::StringTableIndex name_index;
 
-        if (name.has<NonnullRefPtr<Identifier>>()) {
-            auto identifier = name.get<NonnullRefPtr<Identifier>>()->string();
+        if (name && is<Identifier>(*name)) {
+            auto identifier = static_cast<Identifier const&>(*name).string();
             name_index = generator.intern_string(identifier);
 
             if (has_rest) {
@@ -679,8 +679,7 @@ static void generate_object_binding_pattern_bytecode(Bytecode::Generator& genera
             generator.emit<Bytecode::Op::Load>(value_reg);
             generator.emit<Bytecode::Op::GetById>(name_index);
         } else {
-            auto expression = name.get<NonnullRefPtr<Expression>>();
-            expression->generate_bytecode(generator);
+            name->generate_bytecode(generator);
 
             if (has_rest) {
                 auto excluded_name_reg = generator.allocate_register();
@@ -714,7 +713,7 @@ static void generate_object_binding_pattern_bytecode(Bytecode::Generator& genera
             generator.emit<Bytecode::Op::Store>(nested_value_reg);
             generate_binding_pattern_bytecode(generator, binding_pattern, nested_value_reg);
         } else if (alias.has<Empty>()) {
-            if (name.has<NonnullRefPtr<Expression>>()) {
+            if (name && !is<Identifier>(*name)) {
                 // This needs some sort of SetVariableByValue opcode, as it's a runtime binding
                 TODO();
             }
@@ -778,7 +777,7 @@ static void generate_array_binding_pattern_bytecode(Bytecode::Generator& generat
     };
 
     for (auto& [name, alias, initializer, is_rest] : pattern.entries) {
-        VERIFY(name.has<Empty>());
+        VERIFY(!name);
 
         if (is_rest) {
             if (first) {

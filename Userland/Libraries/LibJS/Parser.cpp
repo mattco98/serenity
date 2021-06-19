@@ -1561,7 +1561,7 @@ RefPtr<BindingPattern> Parser::parse_binding_pattern()
             is_rest = true;
         }
 
-        decltype(BindingPattern::BindingEntry::name) name = Empty {};
+        RefPtr<Expression> name;
         decltype(BindingPattern::BindingEntry::alias) alias = Empty {};
         RefPtr<Expression> initializer = {};
 

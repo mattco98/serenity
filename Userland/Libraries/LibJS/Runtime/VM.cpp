@@ -288,8 +288,8 @@ void VM::assign(const NonnullRefPtr<BindingPattern>& target, Value value, Global
             PropertyName assignment_name;
             JS::Value value_to_assign;
             if (property.is_rest) {
-                VERIFY(property.name.has<NonnullRefPtr<Identifier>>());
-                assignment_name = property.name.get<NonnullRefPtr<Identifier>>()->string();
+                VERIFY(is<Identifier>(*property.name));
+                assignment_name = static_cast<Identifier const&>(*property.name).string();
 
                 auto* rest_object = Object::create(global_object, global_object.object_prototype());
                 for (auto& object_property : object->shape().property_table()) {
@@ -304,20 +304,17 @@ void VM::assign(const NonnullRefPtr<BindingPattern>& target, Value value, Global
 
                 value_to_assign = rest_object;
             } else {
-                property.name.visit(
-                    [&](Empty) { VERIFY_NOT_REACHED(); },
-                    [&](NonnullRefPtr<Identifier> const& identifier) {
-                        assignment_name = identifier->string();
-                    },
-                    [&](NonnullRefPtr<Expression> const& expression) {
-                        auto result = expression->execute(interpreter(), global_object);
-                        if (exception())
-                            return;
-                        assignment_name = result.to_property_key(global_object);
-                    });
-
-                if (exception())
-                    break;
+                VERIFY(property.name);
+                if (is<Identifier>(*property.name)) {
+                    assignment_name = static_cast<Identifier const&>(*property.name).string();
+                } else {
+                    auto result = property.name->execute(interpreter(), global_object);
+                    if (exception())
+                        return;
+                    assignment_name = result.to_property_key(global_object);
+                    if (exception())
+                        return;
+                }
 
                 value_to_assign = object->get(assignment_name);
             }

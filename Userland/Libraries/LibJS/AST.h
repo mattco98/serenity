@@ -218,12 +218,12 @@ struct BindingPattern : RefCounted<BindingPattern> {
     // This covers both BindingProperty and BindingElement, hence the more generic name
     struct BindingEntry {
         // If this entry represents a BindingElement, then name will be Empty
-        Variant<NonnullRefPtr<Identifier>, NonnullRefPtr<Expression>, Empty> name { Empty {} };
+        RefPtr<Expression> name {};
         Variant<NonnullRefPtr<Identifier>, NonnullRefPtr<BindingPattern>, Empty> alias { Empty {} };
         RefPtr<Expression> initializer {};
         bool is_rest { false };
 
-        bool is_elision() const { return name.has<Empty>() && alias.has<Empty>(); }
+        bool is_elision() const { return !name && alias.has<Empty>(); }
     };
 
     enum class Kind {

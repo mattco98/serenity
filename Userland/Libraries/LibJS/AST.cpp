@@ -1141,11 +1141,7 @@ void BindingPattern::dump(int indent) const
         if (kind == Kind::Object) {
             print_indent(indent + 2);
             outln("(Identifier)");
-            if (entry.name.has<NonnullRefPtr<Identifier>>()) {
-                entry.name.get<NonnullRefPtr<Identifier>>()->dump(indent + 3);
-            } else {
-                entry.name.get<NonnullRefPtr<Expression>>()->dump(indent + 3);
-            }
+            entry.name->dump(indent + 3);
         } else if (entry.is_elision()) {
             print_indent(indent + 2);
             outln("(Elision)");
