@@ -525,7 +525,7 @@ Value ForOfStatement::execute(Interpreter& interpreter, GlobalObject& global_obj
     bool has_declaration = is<VariableDeclaration>(*m_lhs);
     if (!has_declaration && !is<Identifier>(*m_lhs)) {
         // FIXME: Implement "for (foo.bar of baz)", "for (foo[0] of bar)"
-        VERIFY_NOT_REACHED();
+        TODO();
     }
     RefPtr<BlockStatement> wrapper;
     auto target = variable_from_for_declaration(interpreter, global_object, m_lhs, wrapper);

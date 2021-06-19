@@ -567,6 +567,53 @@ void ForStatement::generate_bytecode(Bytecode::Generator& generator) const
     }
 }
 
+void ForOfStatement::generate_bytecode(Bytecode::Generator& generator) const
+{
+    m_rhs->generate_bytecode(generator);
+
+    auto iterator_register = generator.allocate_register();
+    auto iterator_result_register = generator.allocate_register();
+
+    generator.emit<Bytecode::Op::GetIterator>();
+    generator.emit<Bytecode::Op::Store>(iterator_register);
+
+    auto& head_block = generator.make_block();
+    auto& iterator_is_not_exhausted_block = generator.make_block();
+    auto& final_block = generator.make_block();
+    generator.emit<Bytecode::Op::Jump>().set_targets(
+        Bytecode::Label { head_block },
+        {});
+
+    generator.switch_to_basic_block(head_block);
+    generator.emit<Bytecode::Op::Load>(iterator_register);
+    generator.emit<Bytecode::Op::IteratorNext>();
+    generator.emit<Bytecode::Op::Store>(iterator_result_register);
+    generator.emit<Bytecode::Op::IteratorResultDone>();
+
+    generator.emit<Bytecode::Op::JumpConditional>().set_targets(
+        Bytecode::Label { final_block },
+        Bytecode::Label { iterator_is_not_exhausted_block });
+
+    generator.switch_to_basic_block(iterator_is_not_exhausted_block);
+
+    generator.emit<Bytecode::Op::Load>(iterator_result_register);
+    generator.emit<Bytecode::Op::IteratorResultValue>();
+
+    if (is<Identifier>(*m_lhs)) {
+        auto interned_identifier = generator.intern_string(static_cast<Identifier const&>(*m_lhs).string());
+        generator.emit<Bytecode::Op::SetVariable>(interned_identifier);
+    } else {
+        // TODO();
+    }
+
+    m_body->generate_bytecode(generator);
+    generator.emit<Bytecode::Op::Jump>().set_targets(
+        Bytecode::Label { head_block },
+        {});
+
+    generator.switch_to_basic_block(final_block);
+}
+
 void ObjectExpression::generate_bytecode(Bytecode::Generator& generator) const
 {
     generator.emit<Bytecode::Op::NewObject>();
