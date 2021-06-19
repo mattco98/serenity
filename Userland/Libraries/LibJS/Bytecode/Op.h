@@ -651,6 +651,18 @@ private:
     HashMap<u32, Variable> m_variables;
 };
 
+class PopLexicalEnvironment final : public Instruction {
+public:
+    PopLexicalEnvironment()
+        : Instruction(Type::PopLexicalEnvironment)
+    {
+    }
+
+    void execute_impl(Bytecode::Interpreter&) const;
+    String to_string_impl(Bytecode::Executable const&) const;
+    void replace_references_impl(BasicBlock const&, BasicBlock const&) { }
+};
+
 class LoadArgument final : public Instruction {
 public:
     explicit LoadArgument(size_t index)

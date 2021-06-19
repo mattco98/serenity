@@ -62,15 +62,18 @@ void ScopeNode::generate_bytecode(Bytecode::Generator& generator) const
         }
     }
 
-    if (!scope_variables_with_declaration_kind.is_empty()) {
+    bool has_scoped_declarations = !scope_variables_with_declaration_kind.is_empty();
+    if (has_scoped_declarations)
         generator.emit<Bytecode::Op::PushLexicalEnvironment>(move(scope_variables_with_declaration_kind));
-    }
 
     for (auto& child : children()) {
         child.generate_bytecode(generator);
         if (generator.is_current_block_terminated())
             break;
     }
+
+    if (has_scoped_declarations)
+        generator.emit<Bytecode::Op::PopLexicalEnvironment>();
 }
 
 void EmptyStatement::generate_bytecode(Bytecode::Generator&) const

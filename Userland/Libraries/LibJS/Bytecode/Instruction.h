@@ -65,6 +65,7 @@
     O(Decrement)                     \
     O(Throw)                         \
     O(PushLexicalEnvironment)        \
+    O(PopLexicalEnvironment)         \
     O(LoadArgument)                  \
     O(EnterUnwindContext)            \
     O(LeaveUnwindContext)            \

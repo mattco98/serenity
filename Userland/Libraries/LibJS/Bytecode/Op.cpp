@@ -390,6 +390,13 @@ void PushLexicalEnvironment::execute_impl(Bytecode::Interpreter& interpreter) co
     interpreter.vm().call_frame().scope = block_lexical_environment;
 }
 
+void PopLexicalEnvironment::execute_impl(Bytecode::Interpreter& interpreter) const
+{
+    auto* current_scope = interpreter.vm().current_scope();
+    VERIFY(current_scope);
+    interpreter.vm().call_frame().scope = current_scope->parent();
+}
+
 void Yield::execute_impl(Bytecode::Interpreter& interpreter) const
 {
     auto yielded_value = interpreter.accumulator().value_or(js_undefined());
@@ -652,6 +659,11 @@ String PushLexicalEnvironment::to_string_impl(const Bytecode::Executable& execut
         builder.append("}");
     }
     return builder.to_string();
+}
+
+String PopLexicalEnvironment::to_string_impl(const Bytecode::Executable&) const
+{
+    return "PopLexicalEnvironment";
 }
 
 String Yield::to_string_impl(Bytecode::Executable const&) const
