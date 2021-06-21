@@ -35,7 +35,7 @@ static ScriptFunction* typed_this(VM& vm, GlobalObject& global_object)
     return static_cast<ScriptFunction*>(this_object);
 }
 
-ScriptFunction* ScriptFunction::create(GlobalObject& global_object, const FlyString& name, const Statement& body, Vector<FunctionNode::Parameter> parameters, i32 m_function_length, EnvironmentRecord* parent_scope, FunctionKind kind, bool is_strict, bool is_arrow_function)
+ScriptFunction* ScriptFunction::create(GlobalObject& global_object, const FlyString& name, const Statement& body, Vector<FunctionNode::Parameter> parameters, const String& source, i32 m_function_length, EnvironmentRecord* parent_scope, FunctionKind kind, bool is_strict, bool is_arrow_function)
 {
     Object* prototype = nullptr;
     switch (kind) {
@@ -46,14 +46,15 @@ ScriptFunction* ScriptFunction::create(GlobalObject& global_object, const FlyStr
         prototype = global_object.generator_function_prototype();
         break;
     }
-    return global_object.heap().allocate<ScriptFunction>(global_object, global_object, name, body, move(parameters), m_function_length, parent_scope, *prototype, kind, is_strict, is_arrow_function);
+    return global_object.heap().allocate<ScriptFunction>(global_object, global_object, name, body, move(parameters), source, m_function_length, parent_scope, *prototype, kind, is_strict, is_arrow_function);
 }
 
-ScriptFunction::ScriptFunction(GlobalObject& global_object, const FlyString& name, const Statement& body, Vector<FunctionNode::Parameter> parameters, i32 m_function_length, EnvironmentRecord* parent_scope, Object& prototype, FunctionKind kind, bool is_strict, bool is_arrow_function)
+ScriptFunction::ScriptFunction(GlobalObject& global_object, const FlyString& name, const Statement& body, Vector<FunctionNode::Parameter> parameters, const String& source, i32 m_function_length, EnvironmentRecord* parent_scope, Object& prototype, FunctionKind kind, bool is_strict, bool is_arrow_function)
     : Function(is_arrow_function ? vm().this_value(global_object) : Value(), {}, prototype)
     , m_name(name)
     , m_body(body)
     , m_parameters(move(parameters))
+    , m_source(source)
     , m_parent_scope(parent_scope)
     , m_function_length(m_function_length)
     , m_kind(kind)

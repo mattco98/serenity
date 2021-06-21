@@ -22,6 +22,7 @@ public:
 
     const StringView& source() const { return m_source; };
     const StringView& filename() const { return m_filename; };
+    size_t position() const { return m_position; }
 
 private:
     void consume();

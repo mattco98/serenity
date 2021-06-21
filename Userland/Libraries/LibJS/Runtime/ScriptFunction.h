@@ -16,14 +16,15 @@ class ScriptFunction final : public Function {
     JS_OBJECT(ScriptFunction, Function);
 
 public:
-    static ScriptFunction* create(GlobalObject&, const FlyString& name, const Statement& body, Vector<FunctionNode::Parameter> parameters, i32 m_function_length, EnvironmentRecord* parent_scope, FunctionKind, bool is_strict, bool is_arrow_function = false);
+    static ScriptFunction* create(GlobalObject&, const FlyString& name, const Statement& body, Vector<FunctionNode::Parameter> parameters, const String& source, i32 m_function_length, EnvironmentRecord* parent_scope, FunctionKind, bool is_strict, bool is_arrow_function = false);
 
-    ScriptFunction(GlobalObject&, const FlyString& name, const Statement& body, Vector<FunctionNode::Parameter> parameters, i32 m_function_length, EnvironmentRecord* parent_scope, Object& prototype, FunctionKind, bool is_strict, bool is_arrow_function = false);
+ScriptFunction(GlobalObject&, const FlyString& name, const Statement& body, Vector<FunctionNode::Parameter> parameters, const String& source, i32 m_function_length, EnvironmentRecord* parent_scope, Object& prototype, FunctionKind, bool is_strict, bool is_arrow_function = false);
     virtual void initialize(GlobalObject&) override;
     virtual ~ScriptFunction();
 
     const Statement& body() const { return m_body; }
     const Vector<FunctionNode::Parameter>& parameters() const { return m_parameters; };
+    const String& source() const { return m_source; }
 
     virtual Value call() override;
     virtual Value construct(Function& new_target) override;
@@ -50,6 +51,7 @@ private:
     FlyString m_name;
     NonnullRefPtr<Statement> m_body;
     const Vector<FunctionNode::Parameter> m_parameters;
+    String m_source;
     Optional<Bytecode::Executable> m_bytecode_executable;
     EnvironmentRecord* m_parent_scope { nullptr };
     i32 m_function_length { 0 };

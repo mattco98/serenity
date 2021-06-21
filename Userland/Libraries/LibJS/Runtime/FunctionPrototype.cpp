@@ -116,47 +116,20 @@ JS_DEFINE_NATIVE_FUNCTION(FunctionPrototype::to_string)
         vm.throw_exception<TypeError>(global_object, ErrorType::NotA, "Function");
         return {};
     }
-    String function_name;
-    String function_parameters;
-    String function_body;
 
     if (is<ScriptFunction>(this_object)) {
         auto& script_function = static_cast<ScriptFunction&>(*this_object);
-        StringBuilder parameters_builder;
-        auto first = true;
-        for (auto& parameter : script_function.parameters()) {
-            // FIXME: Also stringify binding patterns.
-            if (auto* name_ptr = parameter.binding.get_pointer<FlyString>()) {
-                if (!first)
-                    parameters_builder.append(", ");
-                first = false;
-                parameters_builder.append(*name_ptr);
-                if (parameter.default_value) {
-                    // FIXME: See note below
-                    parameters_builder.append(" = TODO");
-                }
-            }
-        }
-        function_name = script_function.name();
-        function_parameters = parameters_builder.build();
-        // FIXME: ASTNodes should be able to dump themselves to source strings - something like this:
-        // auto& body = static_cast<ScriptFunction*>(this_object)->body();
-        // function_body = body.to_source();
-        function_body = "  ???";
-    } else {
-        // This is "implementation-defined" - other engines don't include a name for
-        // ProxyObject and BoundFunction, only NativeFunction - let's do the same here.
-        if (is<NativeFunction>(this_object))
-            function_name = static_cast<NativeFunction&>(*this_object).name();
-        function_body = "  [native code]";
+        return js_string(vm, script_function.source());
     }
 
-    auto function_source = String::formatted(
-        "function {}({}) {{\n{}\n}}",
-        function_name.is_null() ? "" : function_name,
-        function_parameters.is_null() ? "" : function_parameters,
-        function_body);
-    return js_string(vm, function_source);
+    String function_name;
+
+    // This is "implementation-defined" - other engines don't include a name for
+    // ProxyObject and BoundFunction, only NativeFunction - let's do the same here.
+    if (is<NativeFunction>(this_object))
+        function_name = static_cast<NativeFunction&>(*this_object).name();
+
+    return js_string(vm, String::formatted("function {}() {{\n  [native code]\n}}", function_name.is_null() ? "" : function_name));
 }
 
 // 20.2.3.6 Function.prototype [ @@hasInstance ] ( V ), https://tc39.es/ecma262/#sec-function.prototype-@@hasinstance

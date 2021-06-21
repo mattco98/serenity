@@ -346,6 +346,7 @@ RefPtr<FunctionExpression> Parser::try_parse_arrow_function_expression(bool expe
     save_state();
     m_state.var_scopes.append(NonnullRefPtrVector<VariableDeclaration>());
     auto rule_start = push_start();
+    auto start_position = m_state.current_token.source_index_start();
 
     ArmedScopeGuard state_rollback_guard = [&] {
         load_state();
@@ -420,9 +421,13 @@ RefPtr<FunctionExpression> Parser::try_parse_arrow_function_expression(bool expe
         state_rollback_guard.disarm();
         discard_saved_state();
         auto body = function_body_result.release_nonnull();
+
+        auto end_position = m_state.current_token.source_index_end();
+        auto source = m_state.lexer.source().substring_view(start_position, end_position - start_position).to_string();
+
         return create_ast_node<FunctionExpression>(
             { m_state.current_token.filename(), rule_start.position(), position() }, "", move(body),
-            move(parameters), function_length, m_state.var_scopes.take_last(), FunctionKind::Regular, is_strict, true);
+            move(parameters), move(source), function_length, m_state.var_scopes.take_last(), FunctionKind::Regular, is_strict, true);
     }
 
     return nullptr;
@@ -484,6 +489,8 @@ NonnullRefPtr<ClassDeclaration> Parser::parse_class_declaration()
 NonnullRefPtr<ClassExpression> Parser::parse_class_expression(bool expect_class_name)
 {
     auto rule_start = push_start();
+    auto start_position = m_state.current_token.source_index_start();
+
     // Classes are always in strict mode.
     TemporaryChange strict_mode_rollback(m_state.strict_mode, true);
 
@@ -592,6 +599,10 @@ NonnullRefPtr<ClassExpression> Parser::parse_class_expression(bool expect_class_
 
     if (constructor.is_null()) {
         auto constructor_body = create_ast_node<BlockStatement>({ m_state.current_token.filename(), rule_start.position(), position() });
+
+        auto end_position = m_state.current_token.source_index_end();
+        auto source = m_state.lexer.source().substring_view(start_position, end_position - start_position).to_string();
+
         if (!super_class.is_null()) {
             // Set constructor to the result of parsing the source text
             // constructor(... args){ super (...args);}
@@ -604,11 +615,11 @@ NonnullRefPtr<ClassExpression> Parser::parse_class_expression(bool expect_class_
 
             constructor = create_ast_node<FunctionExpression>(
                 { m_state.current_token.filename(), rule_start.position(), position() }, class_name, move(constructor_body),
-                Vector { FunctionNode::Parameter { FlyString { "args" }, nullptr, true } }, 0, NonnullRefPtrVector<VariableDeclaration>(), FunctionKind::Regular, true);
+                Vector { FunctionNode::Parameter { FlyString { "args" }, nullptr, true } }, move(source), 0, NonnullRefPtrVector<VariableDeclaration>(), FunctionKind::Regular, true);
         } else {
             constructor = create_ast_node<FunctionExpression>(
                 { m_state.current_token.filename(), rule_start.position(), position() }, class_name, move(constructor_body),
-                Vector<FunctionNode::Parameter> {}, 0, NonnullRefPtrVector<VariableDeclaration>(), FunctionKind::Regular, true);
+                Vector<FunctionNode::Parameter> {}, move(source), 0, NonnullRefPtrVector<VariableDeclaration>(), FunctionKind::Regular, true);
         }
     }
 
@@ -1406,6 +1417,7 @@ template<typename FunctionNodeType>
 NonnullRefPtr<FunctionNodeType> Parser::parse_function_node(u8 parse_options)
 {
     auto rule_start = push_start();
+    auto start_position = m_state.current_token.source_index_start();
     VERIFY(!(parse_options & FunctionNodeParseOptions::IsGetterFunction && parse_options & FunctionNodeParseOptions::IsSetterFunction));
 
     TemporaryChange super_property_access_rollback(m_state.allow_super_property_lookup, !!(parse_options & FunctionNodeParseOptions::AllowSuperPropertyLookup));
@@ -1452,9 +1464,13 @@ NonnullRefPtr<FunctionNodeType> Parser::parse_function_node(u8 parse_options)
 
     body->add_variables(m_state.var_scopes.last());
     body->add_functions(m_state.function_scopes.last());
+
+    auto end_position = m_state.current_token.source_index_end();
+    auto source = m_state.lexer.source().substring_view(start_position, end_position - start_position).to_string();
+
     return create_ast_node<FunctionNodeType>(
         { m_state.current_token.filename(), rule_start.position(), position() },
-        name, move(body), move(parameters), function_length, NonnullRefPtrVector<VariableDeclaration>(),
+        name, move(body), move(parameters), move(source), function_length, NonnullRefPtrVector<VariableDeclaration>(),
         is_generator ? FunctionKind::Generator : FunctionKind::Regular, is_strict);
 }
 
