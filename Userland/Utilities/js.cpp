@@ -170,6 +170,9 @@ static String read_next_piece()
         }
     } while (s_repl_line_level + line_level_delta_for_next_line > 0);
 
+    // Remove last trailing newline
+    piece.trim(1);
+
     return piece.to_string();
 }
 
