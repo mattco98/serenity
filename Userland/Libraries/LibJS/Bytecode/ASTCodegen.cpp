@@ -605,8 +605,23 @@ void ForOfStatement::generate_bytecode(Bytecode::Generator& generator) const
     if (is<Identifier>(*m_lhs)) {
         auto interned_identifier = generator.intern_string(static_cast<Identifier const&>(*m_lhs).string());
         generator.emit<Bytecode::Op::SetVariable>(interned_identifier);
+    } else if (is<VariableDeclaration>(*m_lhs)) {
+        auto& variable_decl = static_cast<VariableDeclaration const&>(*m_lhs);
+        VERIFY(variable_decl.declarations().size() == 1);
+        auto& declaration = variable_decl.declarations()[0];
+
+        if (declaration.target().has<NonnullRefPtr<BindingPattern>>())
+            TODO();
+
+        bool is_lexical = variable_decl.declaration_kind() != DeclarationKind::Var;
+        if (is_lexical) {
+            HashMap<u32, Variable> lexical_variables;
+            generator.emit<Bytecode::Op::PushLexicalEnvironment>()
+        } else {
+
+        }
     } else {
-        // TODO();
+        TODO();
     }
 
     m_body->generate_bytecode(generator);
