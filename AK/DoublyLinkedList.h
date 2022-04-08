@@ -15,25 +15,55 @@ namespace AK {
 template<typename ListType, typename ElementType>
 class DoublyLinkedListIterator {
 public:
+    using NodeType = typename ListType::Node;
+
+    DoublyLinkedListIterator() = default;
+
+    [[nodiscard]] bool is_end() const { return !m_node; }
+    [[nodiscard]] auto prev() const { return DoublyLinkedListIterator(m_node ? m_node->prev : nullptr); }
+    [[nodiscard]] auto next() const { return DoublyLinkedListIterator(m_node ? m_node->next : nullptr); }
+
+    void remove(ListType& list)
+    {
+        m_removed = true;
+        list.remove(*this);
+    }
+
+    operator bool() const { return !is_end(); }
     bool operator!=(DoublyLinkedListIterator const& other) const { return m_node != other.m_node; }
     bool operator==(DoublyLinkedListIterator const& other) const { return m_node == other.m_node; }
+
     DoublyLinkedListIterator& operator++()
     {
-        m_node = m_node->next;
+        if (m_removed)
+            m_removed = false;
+        if (m_node)
+            m_node = m_node->next;
         return *this;
     }
-    ElementType& operator*() { return m_node->value; }
-    ElementType* operator->() { return &m_node->value; }
-    [[nodiscard]] bool is_end() const { return !m_node; }
-    static DoublyLinkedListIterator universal_end() { return DoublyLinkedListIterator(nullptr); }
+
+    ElementType& operator*()
+    {
+        VERIFY(!m_removed);
+        return m_node->value;
+    }
+
+    ElementType* operator->()
+    {
+        VERIFY(!m_removed);
+        return &m_node->value;
+    }
 
 private:
     friend ListType;
-    explicit DoublyLinkedListIterator(typename ListType::Node* node)
+
+    explicit DoublyLinkedListIterator(NodeType* node)
         : m_node(node)
     {
     }
-    typename ListType::Node* m_node;
+
+    NodeType* m_node;
+    bool m_removed { false };
 };
 
 template<typename T>
@@ -54,9 +84,29 @@ private:
 
 public:
     DoublyLinkedList() = default;
+    DoublyLinkedList(DoublyLinkedList const& other) = delete;
+    DoublyLinkedList(DoublyLinkedList&& other)
+        : m_head(other.m_head)
+        , m_tail(other.m_tail)
+    {
+        other.m_head = nullptr;
+        other.m_tail = nullptr;
+    }
+
     ~DoublyLinkedList() { clear(); }
 
+    DoublyLinkedList& operator=(DoublyLinkedList const& other) = delete;
+    DoublyLinkedList& operator=(DoublyLinkedList&&) = delete;
+
     [[nodiscard]] bool is_empty() const { return !m_head; }
+
+    inline size_t size_slow() const
+    {
+        size_t size = 0;
+        for (auto* node = m_head; node; node = node->next)
+            ++size;
+        return size;
+    }
 
     void clear()
     {
@@ -74,23 +124,47 @@ public:
         VERIFY(m_head);
         return m_head->value;
     }
-    [[nodiscard]] const T& first() const
+    [[nodiscard]] T const& first() const
     {
         VERIFY(m_head);
         return m_head->value;
     }
     [[nodiscard]] T& last()
     {
-        VERIFY(m_head);
+        VERIFY(m_tail);
         return m_tail->value;
     }
-    [[nodiscard]] const T& last() const
+    [[nodiscard]] T const& last() const
     {
-        VERIFY(m_head);
+        VERIFY(m_tail);
         return m_tail->value;
     }
 
-    template<typename U>
+    T take_first()
+    {
+        VERIFY(m_head);
+        auto* prev_head = m_head;
+        T value = move(first());
+        if (m_tail == m_head)
+            m_tail = nullptr;
+        m_head = m_head->next;
+        delete prev_head;
+        return value;
+    }
+
+    T take_last()
+    {
+        VERIFY(m_tail);
+        auto* prev_tail = m_tail;
+        T value = move(last());
+        if (m_head == m_tail)
+            m_head = nullptr;
+        m_tail = m_tail->prev;
+        delete prev_tail;
+        return value;
+    }
+
+    template<typename U = T>
     void append(U&& value)
     {
         static_assert(
@@ -103,16 +177,16 @@ public:
             return;
         }
         VERIFY(m_tail);
-        VERIFY(!node->next);
         m_tail->next = node;
         node->prev = m_tail;
         m_tail = node;
     }
 
-    template<typename U>
+    template<typename U = T>
     void prepend(U&& value)
     {
-        static_assert(IsSame<T, U>);
+        static_assert(
+            requires { T(value); }, "Conversion operator is missing.");
         auto* node = new Node(forward<U>(value));
         if (!m_head) {
             VERIFY(!m_tail);
@@ -121,13 +195,12 @@ public:
             return;
         }
         VERIFY(m_tail);
-        VERIFY(!node->prev);
         m_head->prev = node;
         node->next = m_head;
         m_head = node;
     }
 
-    [[nodiscard]] bool contains_slow(const T& value) const
+    [[nodiscard]] bool contains_slow(T const& value) const
     {
         return find(value) != end();
     }
@@ -135,21 +208,88 @@ public:
     using Iterator = DoublyLinkedListIterator<DoublyLinkedList, T>;
     friend Iterator;
     Iterator begin() { return Iterator(m_head); }
-    Iterator end() { return Iterator::universal_end(); }
+    Iterator end() { return {}; }
 
     using ConstIterator = DoublyLinkedListIterator<const DoublyLinkedList, const T>;
     friend ConstIterator;
     ConstIterator begin() const { return ConstIterator(m_head); }
-    ConstIterator end() const { return ConstIterator::universal_end(); }
+    ConstIterator end() const { return {}; }
 
-    ConstIterator find(const T& value) const
+    ConstIterator find(T const& value) const
     {
         return AK::find(begin(), end(), value);
     }
 
-    Iterator find(const T& value)
+    Iterator find(T const& value)
     {
         return AK::find(begin(), end(), value);
+    }
+
+    template<typename TUnaryPredicate>
+    ConstIterator find_if(TUnaryPredicate&& pred) const
+    {
+        return AK::find_if(begin(), end(), forward<TUnaryPredicate>(pred));
+    }
+
+    template<typename TUnaryPredicate>
+    Iterator find_if(TUnaryPredicate&& pred)
+    {
+        return AK::find_if(begin(), end(), forward<TUnaryPredicate>(pred));
+    }
+
+    template<typename U = T>
+    void insert_before(Iterator iterator, U&& value)
+    {
+        static_assert(
+            requires { T(value); }, "Conversion operator is missing.");
+
+        if (iterator.is_end()) {
+            append(value);
+            return;
+        }
+
+        auto* node = new Node(forward<U>(value));
+        auto* old_prev = iterator.m_node->prev;
+        if (old_prev) {
+            VERIFY(iterator.m_node != m_head);
+            old_prev->next = node;
+        } else {
+            VERIFY(iterator.m_node == m_head);
+            m_head = node;
+        }
+        node->prev = old_prev;
+        node->next = iterator.m_node;
+        iterator.m_node->prev = node;
+    }
+
+    template<typename U = T>
+    void insert_after(Iterator iterator, U&& value)
+    {
+        static_assert(
+            requires { T(value); }, "Conversion operator is missing.");
+
+        if (iterator.is_end()) {
+            append(value);
+            return;
+        }
+
+        auto* node = new Node(forward<U>(value));
+        auto* old_next = iterator.m_node->next;
+        if (old_next) {
+            old_next->prev = node;
+        } else {
+            m_tail = node;
+        }
+        node->next = old_next;
+        node->prev = iterator.m_node;
+        iterator.m_node->next = node;
+    }
+
+    void remove(T const& value)
+    {
+        auto it = find(value);
+        if (!it.is_end())
+            remove(it);
     }
 
     void remove(Iterator it)

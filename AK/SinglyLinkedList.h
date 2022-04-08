@@ -17,48 +17,57 @@ namespace AK {
 template<typename ListType, typename ElementType>
 class SinglyLinkedListIterator {
 public:
+    using NodeType = typename ListType::Node;
+
     SinglyLinkedListIterator() = default;
-    bool operator!=(SinglyLinkedListIterator const& other) const { return m_node != other.m_node; }
-    SinglyLinkedListIterator& operator++()
-    {
-        if (m_removed)
-            m_removed = false;
-        else
-            m_prev = m_node;
-        m_node = m_next;
-        if (m_next)
-            m_next = m_next->next;
-        return *this;
-    }
-    ElementType& operator*()
-    {
-        VERIFY(!m_removed);
-        return m_node->value;
-    }
-    ElementType* operator->()
-    {
-        VERIFY(!m_removed);
-        return &m_node->value;
-    }
-    bool is_end() const { return !m_node; }
-    bool is_begin() const { return !m_prev; }
+
+    [[nodiscard]] bool is_end() const { return !m_node; }
+    [[nodiscard]] auto next() const { return SinglyLinkedListIterator(m_node ? m_node->next : nullptr, m_node); }
+
     void remove(ListType& list)
     {
         m_removed = true;
         list.remove(*this);
     };
 
+    operator bool() const { return !is_end(); }
+    bool operator==(SinglyLinkedListIterator const& other) const { return m_node == other.m_node; }
+    bool operator!=(SinglyLinkedListIterator const& other) const { return m_node != other.m_node; }
+
+    SinglyLinkedListIterator& operator++()
+    {
+        if (m_removed)
+            m_removed = false;
+        else
+            m_prev = m_node;
+        if (m_node)
+            m_node = m_node->next;
+        return *this;
+    }
+
+    ElementType& operator*()
+    {
+        VERIFY(!m_removed);
+        return m_node->value;
+    }
+
+    ElementType* operator->()
+    {
+        VERIFY(!m_removed);
+        return &m_node->value;
+    }
+
 private:
     friend ListType;
-    explicit SinglyLinkedListIterator(typename ListType::Node* node, typename ListType::Node* prev = nullptr)
+
+    explicit SinglyLinkedListIterator(NodeType* node, NodeType* prev = nullptr)
         : m_node(node)
         , m_prev(prev)
-        , m_next(node ? node->next : nullptr)
     {
     }
-    typename ListType::Node* m_node { nullptr };
-    typename ListType::Node* m_prev { nullptr };
-    typename ListType::Node* m_next { nullptr };
+
+    NodeType* m_node { nullptr };
+    NodeType* m_prev { nullptr };
     bool m_removed { false };
 };
 
@@ -88,12 +97,13 @@ public:
         other.m_head = nullptr;
         other.m_tail = nullptr;
     }
-    SinglyLinkedList& operator=(SinglyLinkedList const& other) = delete;
-    SinglyLinkedList& operator=(SinglyLinkedList&&) = delete;
 
     ~SinglyLinkedList() { clear(); }
 
-    bool is_empty() const { return !head(); }
+    SinglyLinkedList& operator=(SinglyLinkedList const& other) = delete;
+    SinglyLinkedList& operator=(SinglyLinkedList&&) = delete;
+
+    [[nodiscard]] bool is_empty() const { return !m_head; }
 
     inline size_t size_slow() const
     {
@@ -114,25 +124,25 @@ public:
         m_tail = nullptr;
     }
 
-    T& first()
+    [[nodiscard]] T& first()
     {
-        VERIFY(head());
-        return head()->value;
+        VERIFY(m_head);
+        return m_head->value;
     }
-    const T& first() const
+    [[nodiscard]] T const& first() const
     {
-        VERIFY(head());
-        return head()->value;
+        VERIFY(m_head);
+        return m_head->value;
     }
-    T& last()
+    [[nodiscard]] T& last()
     {
-        VERIFY(head());
-        return tail()->value;
+        VERIFY(m_head);
+        return m_tail->value;
     }
-    const T& last() const
+    [[nodiscard]] T const& last() const
     {
-        VERIFY(head());
-        return tail()->value;
+        VERIFY(m_head);
+        return m_tail->value;
     }
 
     T take_first()
@@ -152,15 +162,17 @@ public:
     {
         auto* node = new Node(forward<U>(value));
         if (!m_head) {
+            VERIFY(!m_tail);
             m_head = node;
             m_tail = node;
             return;
         }
+        VERIFY(m_tail);
         m_tail->next = node;
         m_tail = node;
     }
 
-    bool contains_slow(const T& value) const
+    [[nodiscard]] bool contains_slow(T const& value) const
     {
         return find(value) != end();
     }
@@ -175,6 +187,16 @@ public:
     ConstIterator begin() const { return ConstIterator(m_head); }
     ConstIterator end() const { return {}; }
 
+    ConstIterator find(T const& value) const
+    {
+        return AK::find(begin(), end(), value);
+    }
+
+    Iterator find(T const& value)
+    {
+        return AK::find(begin(), end(), value);
+    }
+
     template<typename TUnaryPredicate>
     ConstIterator find_if(TUnaryPredicate&& pred) const
     {
@@ -187,19 +209,17 @@ public:
         return AK::find_if(begin(), end(), forward<TUnaryPredicate>(pred));
     }
 
-    ConstIterator find(const T& value) const
-    {
-        return find_if([&](auto& other) { return Traits<T>::equals(value, other); });
-    }
-
-    Iterator find(const T& value)
-    {
-        return find_if([&](auto& other) { return Traits<T>::equals(value, other); });
-    }
-
     template<typename U = T>
     void insert_before(Iterator iterator, U&& value)
     {
+        static_assert(
+            requires { T(value); }, "Conversion operator is missing.");
+
+        if (iterator.is_end()) {
+            append(value);
+            return;
+        }
+
         auto* node = new Node(forward<U>(value));
         node->next = iterator.m_node;
         if (m_head == iterator.m_node)
@@ -211,6 +231,9 @@ public:
     template<typename U = T>
     void insert_after(Iterator iterator, U&& value)
     {
+        static_assert(
+            requires { T(value); }, "Conversion operator is missing.");
+
         if (iterator.is_end()) {
             append(value);
             return;
@@ -223,6 +246,13 @@ public:
 
         if (m_tail == iterator.m_node)
             m_tail = node;
+    }
+
+    void remove(T const& value)
+    {
+        auto it = find(value);
+        if (!it.is_end())
+            remove(it);
     }
 
     void remove(Iterator& iterator)
@@ -238,12 +268,6 @@ public:
     }
 
 private:
-    Node* head() { return m_head; }
-    Node const* head() const { return m_head; }
-
-    Node* tail() { return m_tail; }
-    Node const* tail() const { return m_tail; }
-
     Node* m_head { nullptr };
     Node* m_tail { nullptr };
 };
