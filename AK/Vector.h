@@ -481,6 +481,17 @@ public:
         return take_last();
     }
 
+    Vector<T> reversed() const
+    {
+        Vector<T, inline_capacity> new_vec;
+        new_vec.ensure_capacity(capacity());
+
+        for (ssize_t i = size() - 1; i >= 0; i--)
+            new_vec.append(at(i));
+
+        return new_vec;
+    }
+
     template<typename U = T>
     ErrorOr<void> try_insert(size_t index, U&& value) requires(CanBePlacedInsideVector<U>)
     {
