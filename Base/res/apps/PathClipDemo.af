@@ -1,0 +1,4 @@
+[App]
+Name=PathClipDemo
+Executable=/bin/PathClipper
+Category=Demos

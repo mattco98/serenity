@@ -360,8 +360,7 @@ PathClipping::Polygon PathClipping::clip_polygon(Polygon const& input_polygon, C
             Annotation {
                 state == State::FillAbove ? IsInside::Yes : IsInside::No,
                 state == State::FillBelow ? IsInside::Yes : IsInside::No,
-            }
-        });
+            } });
     }
 
     return output_polygon;
@@ -559,6 +558,7 @@ PathClipping::Polygon PathClipping::create_polygon()
                 }
             }
 
+            dbgln("removing {}", event);
             m_event_queue.remove(event);
             m_event_queue.remove(event->other_event);
 
@@ -663,7 +663,7 @@ PathClipping::Polygon PathClipping::create_polygon()
             polygon.append(event->segment);
         }
 
-        m_event_queue.take_first();
+        (void)m_event_queue.take_first();
     }
 
     return polygon;
@@ -812,7 +812,7 @@ void PathClipping::split_event(RefPtr<Event>& event, FloatPoint const& point_to_
 void PathClipping::add_event(RefPtr<Event> const& event)
 {
     auto insertion_location = m_event_queue.find_if([&](RefPtr<Event> const& a) {
-        return event < a;
+        return *event < *a;
     });
 
     m_event_queue.insert_before(insertion_location, event);
@@ -836,6 +836,8 @@ struct Formatter<Gfx::PathClipping::Segment> : Formatter<StringView> {
 
         auto str = String::formatted("{{ [{}, {}] self={} other={} }}", segment.start, segment.end, self, other);
         TRY(Formatter<StringView>::format(builder, str));
+
+        return {};
     }
 };
 
@@ -857,6 +859,7 @@ struct Formatter<Gfx::IntersectionResult> : Formatter<StringView> {
         }
 
         TRY(Formatter<StringView>::format(builder, String::formatted("{{ type={} point={} }}", type, result.point)));
+        return {};
     }
 };
 
@@ -881,6 +884,8 @@ struct Formatter<Gfx::PathClipping::ClipType> : Formatter<StringView> {
             TRY(Formatter<StringView>::format(builder, "Xor"));
             break;
         }
+
+        return {};
     }
 };
 
@@ -888,7 +893,8 @@ template<>
 struct Formatter<Gfx::PathClipping::Event> : Formatter<StringView> {
     ErrorOr<void> format(FormatBuilder& builder, Gfx::PathClipping::Event const& event)
     {
-        TRY(Formatter<StringView>::format(builder, String::formatted("{{ segment={} start={} primary={} }}", event.segment, event.is_start, event.is_primary)));
+        TRY(Formatter<StringView>::format(builder, String::formatted("{{ segment={}{}{} }}", event.segment, event.is_start ? ", start" : "", event.is_primary ? ", primary" : "")));
+        return {};
     }
 };
 
@@ -909,6 +915,8 @@ struct Formatter<Gfx::IsInside> : Formatter<StringView> {
         default:
             VERIFY_NOT_REACHED();
         }
+
+        return {};
     }
 };
 
