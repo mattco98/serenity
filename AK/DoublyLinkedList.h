@@ -145,9 +145,12 @@ public:
         VERIFY(m_head);
         auto* prev_head = m_head;
         T value = move(first());
-        if (m_tail == m_head)
-            m_tail = nullptr;
         m_head = m_head->next;
+        if (!m_head) {
+            m_tail = nullptr;
+        } else {
+            m_head->prev = nullptr;
+        }
         delete prev_head;
         return value;
     }
@@ -157,9 +160,12 @@ public:
         VERIFY(m_tail);
         auto* prev_tail = m_tail;
         T value = move(last());
-        if (m_head == m_tail)
-            m_head = nullptr;
         m_tail = m_tail->prev;
+        if (!m_tail) {
+            m_head = nullptr;
+        } else {
+            m_tail->next = nullptr;
+        }
         delete prev_tail;
         return value;
     }
@@ -240,9 +246,6 @@ public:
     template<typename U = T>
     void insert_before(Iterator iterator, U&& value)
     {
-        static_assert(
-            requires { T(value); }, "Conversion operator is missing.");
-
         if (iterator.is_end()) {
             append(value);
             return;
@@ -251,10 +254,8 @@ public:
         auto* node = new Node(forward<U>(value));
         auto* old_prev = iterator.m_node->prev;
         if (old_prev) {
-            VERIFY(iterator.m_node != m_head);
             old_prev->next = node;
         } else {
-            VERIFY(iterator.m_node == m_head);
             m_head = node;
         }
         node->prev = old_prev;
@@ -265,9 +266,6 @@ public:
     template<typename U = T>
     void insert_after(Iterator iterator, U&& value)
     {
-        static_assert(
-            requires { T(value); }, "Conversion operator is missing.");
-
         if (iterator.is_end()) {
             append(value);
             return;
@@ -287,8 +285,7 @@ public:
 
     void remove(T const& value)
     {
-        auto it = find(value);
-        if (!it.is_end())
+        if (auto it = find(value))
             remove(it);
     }
 
