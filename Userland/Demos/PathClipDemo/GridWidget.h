@@ -102,7 +102,14 @@ public:
 private:
    virtual void paint_event(GUI::PaintEvent&) override;
 
-   Gfx::PathClipping::ClipType m_clip_type { Gfx::PathClipping::ClipType::Intersection };
+   Gfx::PathClipping::ClipType m_clip_type { Gfx::PathClipping::ClipType::Union };
    Gfx::PathClipping::Polygon m_polygon;
    Vector<Gfx::Path> m_paths;
 };
+
+namespace AK {
+
+template<typename T>
+struct Formatter<Vector<T>>;
+
+}

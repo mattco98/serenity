@@ -57,12 +57,12 @@ void DemoList::initialize()
    m_initialized = true;
 
    // Simple non-overlapping rectangles with a coincident edge
-   // MAKE_PRIMARY_PATH({ 40, 120 }, { 300, 120 }, { 300, 200 }, { 40, 200 });
-   // MAKE_SECONDARY_PATH({ 100, 60 }, { 240, 60 }, { 240, 120 }, { 100, 120 });
+   MAKE_PRIMARY_PATH({ 40, 120 }, { 300, 120 }, { 300, 200 }, { 40, 200 });
+   MAKE_SECONDARY_PATH({ 100, 60 }, { 240, 60 }, { 240, 120 }, { 100, 120 });
 
    // Self-intersecting secondary shape with shared edge
-   MAKE_PRIMARY_PATH({ 20, 120 }, { 180, 120 }, { 180, 200 }, { 20, 200 });
-   MAKE_SECONDARY_PATH({ 180, 120 }, { 140, 40 }, { 80, 80 }, { 260, 200 }, { 180, 200 });
+   // MAKE_PRIMARY_PATH({ 20, 120 }, { 180, 120 }, { 180, 200 }, { 20, 200 });
+   // MAKE_SECONDARY_PATH({ 180, 120 }, { 140, 40 }, { 80, 80 }, { 260, 200 }, { 180, 200 });
 
    // Simple parallelograms
    // MAKE_PRIMARY_PATH({ 40, 40 }, { 140, 40 }, { 160, 120 }, { 60, 120 });

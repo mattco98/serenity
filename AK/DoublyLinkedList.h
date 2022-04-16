@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <AK/Format.h>
 #include <AK/Assertions.h>
 #include <AK/Find.h>
 #include <AK/StdLibExtras.h>
@@ -54,7 +55,6 @@ public:
         return &m_node->value;
     }
 
-private:
     friend ListType;
 
     explicit DoublyLinkedListIterator(NodeType* node)
@@ -65,6 +65,14 @@ private:
     NodeType* m_node;
     bool m_removed { false };
 };
+
+#ifndef KERNEL
+// #define dbg(...)
+//     dbgln(__VA_ARGS__);
+#define dbg(...)
+#else
+#define dbg(...)
+#endif
 
 template<typename T>
 class DoublyLinkedList {
@@ -142,6 +150,7 @@ public:
 
     T take_first()
     {
+        dbg("[{:p}] take_first {}", this, m_head->value)
         VERIFY(m_head);
         auto* prev_head = m_head;
         T value = move(first());
@@ -157,6 +166,7 @@ public:
 
     T take_last()
     {
+        dbg("[{:p}] take_last {}", this, m_head->value);
         VERIFY(m_tail);
         auto* prev_tail = m_tail;
         T value = move(last());
@@ -173,6 +183,7 @@ public:
     template<typename U = T>
     void append(U&& value)
     {
+        dbg("[{:p}] append {}", this, value);
         static_assert(
             requires { T(value); }, "Conversion operator is missing.");
         auto* node = new Node(forward<U>(value));
@@ -191,6 +202,7 @@ public:
     template<typename U = T>
     void prepend(U&& value)
     {
+        dbg("[{:p}] prepend {}", this, value);
         static_assert(
             requires { T(value); }, "Conversion operator is missing.");
         auto* node = new Node(forward<U>(value));
@@ -246,6 +258,11 @@ public:
     template<typename U = T>
     void insert_before(Iterator iterator, U&& value)
     {
+        if (iterator) {
+            dbg("[{:p}] remove it {}", this, *iterator);
+        } else {
+            dbg("[{:p}] remove it <null>", this);
+        }
         if (iterator.is_end()) {
             append(value);
             return;
@@ -266,6 +283,11 @@ public:
     template<typename U = T>
     void insert_after(Iterator iterator, U&& value)
     {
+        if (iterator) {
+            dbg("[{:p}] remove it {}", this, *iterator);
+        } else {
+            dbg("[{:p}] remove it <null>", this);
+        }
         if (iterator.is_end()) {
             append(value);
             return;
@@ -285,12 +307,16 @@ public:
 
     void remove(T const& value)
     {
-        if (auto it = find(value))
-            remove(it);
+        remove(find(value));
     }
 
     void remove(Iterator it)
     {
+        if (it) {
+            dbg("[{:p}] remove {}", this, *it);
+        } else {
+            dbg("[{:p}] remove <null>", this);
+        }
         VERIFY(it.m_node);
         auto* node = it.m_node;
         if (node->prev) {
@@ -318,3 +344,5 @@ private:
 }
 
 using AK::DoublyLinkedList;
+
+#undef dbg

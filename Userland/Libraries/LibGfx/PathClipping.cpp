@@ -244,56 +244,42 @@ static IntersectionResult line_intersection(FloatPoint const& a1, FloatPoint con
     return IntersectionResult { IntersectionResult::Intersects, { x, y } };
 }
 
-struct PathClipping::Event : public RefCounted<PathClipping::Event> {
-    bool is_start;
-    bool is_primary;
-    PathClipping::Segment segment;
-    RefPtr<Event> other_event;
+PathClipping::Event::Event(bool is_start, bool is_primary, PathClipping::Segment const& segment, RefPtr<Event> const& other_event)
+    : is_start(is_start)
+    , is_primary(is_primary)
+    , segment(segment)
+    , other_event(other_event)
+{
+}
 
-    Event(bool is_start, bool is_primary, PathClipping::Segment const& segment, RefPtr<Event> const& other_event)
-        : is_start(is_start)
-        , is_primary(is_primary)
-        , segment(segment)
-        , other_event(other_event)
-    {
+int PathClipping::Event::operator<=>(PathClipping::Event const& event) const
+{
+    auto comp = point() <=> event.point();
+    if (comp != 0) {
+        // Different target points makes this easy, whichever event has the left-mose
+        // starting point should be processed first.
+        return comp;
     }
 
-    FloatPoint const& point() const { return is_start ? segment.start : segment.end; }
-    FloatPoint const& other_point() const { return is_start ? segment.end : segment.start; }
-
-    void update_other_segment() { other_event->segment = segment; }
-
-    // Determines the ordering of this event in the status queue relative to another event,
-    // i.e., which event should be processed first.
-    int operator<=>(Event const& event) const
-    {
-        auto comp = point() <=> event.point();
-        if (comp != 0) {
-            // Different target points makes this easy, whichever event has the left-mose
-            // starting point should be processed first.
-            return comp;
-        }
-
-        if (other_point() == event.other_point()) {
-            // Both ends of both events are the same, so it doesn't matter. These events
-            // will eventually be combined to produce a single segment.
-            return 0;
-        }
-
-        if (is_start != event.is_start) {
-            // Prefer sorting end events first
-            return is_start ? 1 : -1;
-        }
-
-        // Determine which event line is above the event
-        return point_above_or_on_line(
-                   other_point(),
-                   event.is_start ? event.point() : event.other_point(),
-                   event.is_start ? event.other_point() : event.point())
-            ? 1
-            : -1;
+    if (other_point() == event.other_point()) {
+        // Both ends of both events are the same, so it doesn't matter. These events
+        // will eventually be combined to produce a single segment.
+        return 0;
     }
-};
+
+    if (is_start != event.is_start) {
+        // Prefer sorting end events first
+        return is_start ? 1 : -1;
+    }
+
+    // Determine which event line is above the event
+    return point_above_or_on_line(
+               other_point(),
+               event.is_start ? event.point() : event.other_point(),
+               event.is_start ? event.other_point() : event.point())
+        ? 1
+        : -1;
+}
 
 Vector<Path> PathClipping::clip(Path& a, Path& b, PathClipping::ClipType clip_type)
 {
@@ -330,10 +316,19 @@ PathClipping::Polygon PathClipping::convert_to_polygon(Path& path, bool is_prima
 
     return processor.create_polygon();
 }
+
 PathClipping::Polygon PathClipping::combine(Polygon const& a, Polygon const& b)
 {
     PathClipping processor(true);
 
+    dbgln("[combine] a:");
+    for (auto const& segment : a)
+        dbgln("    {}", segment);
+    dbgln("[combine] b:");
+    for (auto const& segment : b)
+        dbgln("    {}", segment);
+
+    dbgln("[combine] creating polygon...");
     for (auto& segment : a)
         processor.add_segment(segment, true);
     for (auto& segment : b)
@@ -522,6 +517,9 @@ Vector<Path> PathClipping::convert_to_path(Polygon& polygon)
 Vector<Path> PathClipping::select_segments(Polygon const& input_polygon, ClipType clip_type)
 {
     auto output_polygon = clip_polygon(input_polygon, clip_type);
+    dbgln("clipped polygon:");
+    for (auto const& e : output_polygon)
+        dbgln("    {}", e);
     return convert_to_path(output_polygon);
 }
 
@@ -536,64 +534,67 @@ PathClipping::Polygon PathClipping::create_polygon()
 
     auto do_event_intersections = [&](RefPtr<Event>& event, RefPtr<Event>& other) {
         auto result = intersect_events(event, other);
-        if (result) {
-            // event is the same as other
-            if (m_is_combining_phase) {
-                result->segment.other.above = event->segment.self.above;
-                result->segment.other.below = event->segment.self.below;
-                result->update_other_segment();
-            } else {
-                bool toggle;
-                if (event->segment.self.below == IsInside::Unknown) {
-                    toggle = true;
-                } else {
-                    toggle = event->segment.self.above != event->segment.self.below;
-                }
+        if (!result)
+            return false;
 
-                if (toggle) {
-                    auto fill_above = result->segment.self.above;
-                    VERIFY(fill_above != IsInside::Unknown);
-                    result->segment.self.above = fill_above == IsInside::Yes ? IsInside::No : IsInside::Yes;
-                    result->update_other_segment();
-                }
+        // event is the same as other
+        if (m_is_combining_phase) {
+            result->segment.other.above = event->segment.self.above;
+            result->segment.other.below = event->segment.self.below;
+            result->update_other_segment();
+        } else {
+            bool toggle;
+            if (event->segment.self.below == IsInside::Unknown) {
+                toggle = true;
+            } else {
+                toggle = event->segment.self.above != event->segment.self.below;
             }
 
-            dbgln("removing {}", event);
-            m_event_queue.remove(event);
-            m_event_queue.remove(event->other_event);
-
-            return true;
+            if (toggle) {
+                auto fill_above = result->segment.self.above;
+                VERIFY(fill_above != IsInside::Unknown);
+                result->segment.self.above = fill_above == IsInside::Yes ? IsInside::No : IsInside::Yes;
+                result->update_other_segment();
+            }
         }
 
-        return false;
+        dbgln("    removing {:p} and {:p} (not {:p} and {:p})", event, event->other_event, other, other->other_event);
+        m_event_queue.remove(event->other_event);
+        m_event_queue.remove(event);
+
+        return true;
     };
+
+    size_t iter = 0;
+
+    for (auto const& event : m_event_queue)
+        dbgln("\033[34m[{:p}]\033[0m {}", event, *event);
 
     while (!m_event_queue.is_empty()) {
         auto& event = m_event_queue.first();
+        dbgln("\033[32mIteration {}: \033[34m[{:p}]\033[0m {}", iter++, event, *event);
 
         if (event->is_start) {
-            auto find_result = find_transition(event);
+            auto [before, after] = find_transition(event);
 
             RefPtr<Event> event_above;
             RefPtr<Event> event_below;
 
-            if (!find_result.is_end()) {
-                auto prev = find_result.prev();
-                auto next = find_result;
-                if (prev)
-                    event_above = *prev;
-                if (next)
-                    event_below = *next;
-            } else if (!m_status_stack.is_empty()) {
-                event_above = m_status_stack.last();
-            }
+            if (before)
+                event_above = *before;
+            if (after)
+                event_below = *after;
+
+            dbgln("    above = {}, below = {}", event_above, event_below);
 
             auto intersected = false;
-            if (event_above)
+            if (event_above) {
                 intersected = do_event_intersections(event, event_above);
+            }
 
-            if (!intersected && event_below)
+            if (!intersected && event_below) {
                 do_event_intersections(event, event_below);
+            }
 
             // In the case of intersection, events will have been added to the
             // event queue. They may need to be processed before this event.
@@ -644,7 +645,7 @@ PathClipping::Polygon PathClipping::create_polygon()
                 event->update_other_segment();
             }
 
-            m_status_stack.insert_before(find_result, event);
+            m_status_stack.insert_before(after, event);
         } else {
             auto existing_status = m_status_stack.find(event->other_event);
             if (existing_status.prev() && existing_status.next()) {
@@ -660,10 +661,16 @@ PathClipping::Polygon PathClipping::create_polygon()
                 event->update_other_segment();
             }
 
+            dbgln("    \033[36minserting segment {}\033[0m", event->segment);
             polygon.append(event->segment);
         }
 
         (void)m_event_queue.take_first();
+
+        dbgln();
+        dbgln("    \033[33mStatus stack:\033[0m");
+        for (auto const& status : m_status_stack)
+            dbgln("        \033[34m[{:p}]\033[35m {}\033[0m", status, *status);
     }
 
     return polygon;
@@ -671,6 +678,7 @@ PathClipping::Polygon PathClipping::create_polygon()
 
 void PathClipping::add_segment(PathClipping::Segment const& segment, bool is_primary)
 {
+    dbgln("adding segment {}", segment);
     auto start = adopt_ref(*new Event(true, is_primary, segment, {}));
     auto end = adopt_ref(*new Event(false, is_primary, segment, start));
     start->other_event = end;
@@ -679,38 +687,25 @@ void PathClipping::add_segment(PathClipping::Segment const& segment, bool is_pri
     add_event(end);
 }
 
-DoublyLinkedList<RefPtr<PathClipping::Event>>::Iterator PathClipping::find_transition(RefPtr<Event> event)
+PathClipping::Transition PathClipping::find_transition(RefPtr<Event> event)
 {
-    auto a1 = event->segment.start;
-    auto a2 = event->segment.end;
-
-    auto r = m_status_stack.find_if([&](RefPtr<Event> const& other_event) {
-        auto b1 = other_event->segment.start;
-        auto b2 = other_event->segment.end;
-
-        if (points_are_collinear(a1, b1, b2)) {
-            if (points_are_collinear(a2, b1, b2))
-                return true;
-            return point_above_or_on_line(a2, b1, b2);
-        }
-        return point_above_or_on_line(a1, b1, b2);
+    auto it = m_status_stack.find_if([&](RefPtr<Event> const& other_event) {
+        return *event > *other_event;
     });
 
-    return r;
+    return { it, ++it };
 }
 
 RefPtr<PathClipping::Event> PathClipping::intersect_events(RefPtr<Event>& a, RefPtr<Event>& b)
 {
+    dbgln("    intersecting {} with {}:", a->segment.to_string(), b->segment.to_string());
+
     auto share_point = equivalent(a->point(), b->point());
     auto share_other_point = equivalent(a->other_point(), b->other_point());
 
-    if (share_point && share_other_point)
+    if (share_point && share_other_point) {
+        dbgln("        same line");
         return b;
-
-    if (share_point || share_other_point || equivalent(a->point(), b->other_point()) || equivalent(a->other_point(), b->point())) {
-        // The segments are joined at one end, so we just ignore this and process
-        // them as two normal segments
-        return {};
     }
 
     auto intersection_result = line_intersection(a->segment.start, a->segment.end, b->segment.start, b->segment.end);
@@ -721,24 +716,24 @@ RefPtr<PathClipping::Event> PathClipping::intersect_events(RefPtr<Event>& a, Ref
         auto split_a = !equivalent(split_point, a->point()) && !equivalent(split_point, a->other_point());
         auto split_b = !equivalent(split_point, b->point()) && !equivalent(split_point, b->other_point());
 
+        // The lines aren't coincident, so we should only be splitting one of them
+        // VERIFY(!split_a || !split_b);
+
         if (split_a)
             split_event(a, split_point);
 
         if (split_b)
             split_event(b, split_point);
     } else if (intersection_result.type == IntersectionResult::Coincident) {
-        auto a1_eq_b1 = equivalent(a->point(), b->point());
-        auto a2_eq_b2 = equivalent(a->other_point(), b->other_point());
-
-        if (a1_eq_b1 && a2_eq_b2) {
+        if (share_point && share_other_point) {
             // The segments are equal
             return b;
         }
 
-        auto a1_between = !a1_eq_b1 && is_point_between(a->point(), b->point(), b->other_point());
-        auto a2_between = !a2_eq_b2 && is_point_between(a->other_point(), b->point(), b->other_point());
+        auto a1_between = !share_point && is_point_between(a->point(), b->point(), b->other_point());
+        auto a2_between = !share_other_point && is_point_between(a->other_point(), b->point(), b->other_point());
 
-        if (a1_eq_b1) {
+        if (share_point) {
             if (a2_between) {
                 // event1: (a1)---(a2)
                 // event2: (b1)---------(b2)
@@ -753,7 +748,7 @@ RefPtr<PathClipping::Event> PathClipping::intersect_events(RefPtr<Event>& a, Ref
             // we return true to indicate this event is redundant
             return b;
         } else if (a1_between) {
-            if (!a2_eq_b2) {
+            if (!share_other_point) {
                 // Make a2 equal to b2
                 if (a2_between) {
                     // event1:        (a1)-----(a2)
@@ -770,7 +765,10 @@ RefPtr<PathClipping::Event> PathClipping::intersect_events(RefPtr<Event>& a, Ref
                 split_event(b, a->point());
             }
         }
+    } else {
+        dbgln("        no intersection");
     }
+
 
     return {};
 }
@@ -792,6 +790,8 @@ void PathClipping::split_event(RefPtr<Event>& event, FloatPoint const& point_to_
     //       and we don't want to have to bother with detecting whether that is the
     //       case or not.
 
+    dbgln("        splitting \033[34m{:p}\033[0m @ {}", event, point_to_split_at);
+
     VERIFY(event->is_start);
 
     m_event_queue.remove(event->other_event);
@@ -807,6 +807,7 @@ void PathClipping::split_event(RefPtr<Event>& event, FloatPoint const& point_to_
     add_event(first_segment_end);
 
     add_segment(new_segment, event->is_primary);
+
 }
 
 void PathClipping::add_event(RefPtr<Event> const& event)
@@ -822,24 +823,24 @@ void PathClipping::add_event(RefPtr<Event> const& event)
 
 namespace AK {
 
-template<>
-struct Formatter<Gfx::PathClipping::Segment> : Formatter<StringView> {
-    ErrorOr<void> format(FormatBuilder& builder, Gfx::PathClipping::Segment const& segment)
-    {
-        String self = "???";
-        String other = "???";
-
-        if (segment.self.above != Gfx::IsInside::Unknown || segment.self.below != Gfx::IsInside::Unknown)
-            self = String::formatted("{} {}", segment.self.above, segment.self.below);
-        if (segment.other.above != Gfx::IsInside::Unknown || segment.other.below != Gfx::IsInside::Unknown)
-            other = String::formatted("{} {}", segment.other.above, segment.other.below);
-
-        auto str = String::formatted("{{ [{}, {}] self={} other={} }}", segment.start, segment.end, self, other);
-        TRY(Formatter<StringView>::format(builder, str));
-
-        return {};
-    }
-};
+// template<>
+// struct Formatter<Gfx::PathClipping::Segment> : Formatter<StringView> {
+//     ErrorOr<void> format(FormatBuilder& builder, Gfx::PathClipping::Segment const& segment)
+//     {
+//         String self = "???";
+//         String other = "???";
+//
+//         if (segment.self.above != Gfx::IsInside::Unknown || segment.self.below != Gfx::IsInside::Unknown)
+//             self = String::formatted("{} {}", segment.self.above, segment.self.below);
+//         if (segment.other.above != Gfx::IsInside::Unknown || segment.other.below != Gfx::IsInside::Unknown)
+//             other = String::formatted("{} {}", segment.other.above, segment.other.below);
+//
+//         auto str = String::formatted("{{ [{}, {}] self={} other={} }}", segment.start, segment.end, self, other);
+//         TRY(Formatter<StringView>::format(builder, str));
+//
+//         return {};
+//     }
+// };
 
 template<>
 struct Formatter<Gfx::IntersectionResult> : Formatter<StringView> {
@@ -863,61 +864,61 @@ struct Formatter<Gfx::IntersectionResult> : Formatter<StringView> {
     }
 };
 
-template<>
-struct Formatter<Gfx::PathClipping::ClipType> : Formatter<StringView> {
-    ErrorOr<void> format(FormatBuilder& builder, Gfx::PathClipping::ClipType const& result)
-    {
-        switch (result) {
-        case Gfx::PathClipping::ClipType::Intersection:
-            TRY(Formatter<StringView>::format(builder, "Intersection"));
-            break;
-        case Gfx::PathClipping::ClipType::Union:
-            TRY(Formatter<StringView>::format(builder, "Union"));
-            break;
-        case Gfx::PathClipping::ClipType::Difference:
-            TRY(Formatter<StringView>::format(builder, "Difference"));
-            break;
-        case Gfx::PathClipping::ClipType::DifferenceReversed:
-            TRY(Formatter<StringView>::format(builder, "DifferenceReversed"));
-            break;
-        case Gfx::PathClipping::ClipType::Xor:
-            TRY(Formatter<StringView>::format(builder, "Xor"));
-            break;
-        }
-
-        return {};
-    }
-};
-
-template<>
-struct Formatter<Gfx::PathClipping::Event> : Formatter<StringView> {
-    ErrorOr<void> format(FormatBuilder& builder, Gfx::PathClipping::Event const& event)
-    {
-        TRY(Formatter<StringView>::format(builder, String::formatted("{{ segment={}{}{} }}", event.segment, event.is_start ? ", start" : "", event.is_primary ? ", primary" : "")));
-        return {};
-    }
-};
-
-template<>
-struct Formatter<Gfx::IsInside> : Formatter<StringView> {
-    ErrorOr<void> format(FormatBuilder& builder, Gfx::IsInside state)
-    {
-        switch (state) {
-        case Gfx::IsInside::Yes:
-            TRY(Formatter<StringView>::format(builder, "Yes"));
-            break;
-        case Gfx::IsInside::No:
-            TRY(Formatter<StringView>::format(builder, "No"));
-            break;
-        case Gfx::IsInside::Unknown:
-            TRY(Formatter<StringView>::format(builder, "Unknown"));
-            break;
-        default:
-            VERIFY_NOT_REACHED();
-        }
-
-        return {};
-    }
-};
+// template<>
+// struct Formatter<Gfx::PathClipping::ClipType> : Formatter<StringView> {
+//     ErrorOr<void> format(FormatBuilder& builder, Gfx::PathClipping::ClipType const& result)
+//     {
+//         switch (result) {
+//         case Gfx::PathClipping::ClipType::Intersection:
+//             TRY(Formatter<StringView>::format(builder, "Intersection"));
+//             break;
+//         case Gfx::PathClipping::ClipType::Union:
+//             TRY(Formatter<StringView>::format(builder, "Union"));
+//             break;
+//         case Gfx::PathClipping::ClipType::Difference:
+//             TRY(Formatter<StringView>::format(builder, "Difference"));
+//             break;
+//         case Gfx::PathClipping::ClipType::DifferenceReversed:
+//             TRY(Formatter<StringView>::format(builder, "DifferenceReversed"));
+//             break;
+//         case Gfx::PathClipping::ClipType::Xor:
+//             TRY(Formatter<StringView>::format(builder, "Xor"));
+//             break;
+//         }
+//
+//         return {};
+//     }
+// };
+//
+// template<>
+// struct Formatter<Gfx::PathClipping::Event> : Formatter<StringView> {
+//     ErrorOr<void> format(FormatBuilder& builder, Gfx::PathClipping::Event const& event)
+//     {
+//         TRY(Formatter<StringView>::format(builder, String::formatted("{{ segment={}{}{} }}", event.segment, event.is_start ? ", start" : "", event.is_primary ? ", primary" : "")));
+//         return {};
+//     }
+// };
+//
+// template<>
+// struct Formatter<Gfx::IsInside> : Formatter<StringView> {
+//     ErrorOr<void> format(FormatBuilder& builder, Gfx::IsInside state)
+//     {
+//         switch (state) {
+//         case Gfx::IsInside::Yes:
+//             TRY(Formatter<StringView>::format(builder, "Yes"));
+//             break;
+//         case Gfx::IsInside::No:
+//             TRY(Formatter<StringView>::format(builder, "No"));
+//             break;
+//         case Gfx::IsInside::Unknown:
+//             TRY(Formatter<StringView>::format(builder, "Unknown"));
+//             break;
+//         default:
+//             VERIFY_NOT_REACHED();
+//         }
+//
+//         return {};
+//     }
+// };
 
 }
