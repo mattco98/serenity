@@ -34,6 +34,12 @@ struct Array {
         return __data[index];
     }
 
+    template<size_t N>
+    [[nodiscard]] constexpr auto const& get() const { return at(N); }
+
+    template<size_t N>
+    [[nodiscard]] constexpr auto& get() { return at(N); }
+
     [[nodiscard]] constexpr T const& first() const { return at(0); }
     [[nodiscard]] constexpr T& first() { return at(0); }
 
@@ -108,6 +114,27 @@ constexpr static auto iota_array(T const offset = {})
     static_assert(N >= T {}, "Negative sizes not allowed in iota_array()");
     return Detail::integer_sequence_generate_array<T>(offset, MakeIntegerSequence<T, N>());
 }
+
+}
+
+// Support destructuring Array<T>
+namespace std {
+
+template<typename T>
+struct tuple_size { };
+
+template<size_t Index, typename T>
+struct tuple_element { };
+
+template<typename T, size_t N>
+struct tuple_size<AK::Array<T, N>> {
+    static constexpr size_t value = N;
+};
+
+template<size_t Index, typename T, size_t N>
+struct tuple_element<Index, AK::Array<T, N>> {
+    using type = T;
+};
 
 }
 
