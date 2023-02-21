@@ -4,6 +4,8 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/Meta/CMake")
 
 project(SerenityOS C CXX ASM)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 if(NOT "${CMAKE_BUILD_TYPE}" STREQUAL "")
   message(FATAL_ERROR
     ": Don't use CMAKE_BUILD_TYPE when building serenity.\n"
