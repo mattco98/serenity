@@ -69,9 +69,22 @@ public:
         }
 
         template<typename T>
+        void visit(GCPtr<T const> cell)
+        {
+            if (cell)
+                visit_impl(const_cast<T&>(*cell.ptr()));
+        }
+
+        template<typename T>
         void visit(NonnullGCPtr<T> cell)
         {
             visit_impl(*cell.ptr());
+        }
+
+        template<typename T>
+        void visit(NonnullGCPtr<T const> cell)
+        {
+            visit_impl(const_cast<T&>(*cell.ptr()));
         }
 
         void visit(Value value)
