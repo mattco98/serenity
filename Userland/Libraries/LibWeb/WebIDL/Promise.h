@@ -9,6 +9,7 @@
 
 #include <LibJS/Forward.h>
 #include <LibJS/SafeFunction.h>
+#include <LibJS/Runtime/Value.h>
 #include <LibWeb/Forward.h>
 
 namespace Web::WebIDL {

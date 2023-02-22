@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <AK/WeakPtr.h>
 #include <AK/HashMap.h>
 #include <AK/NonnullRefPtr.h>
 #include <LibJS/Heap/Cell.h>

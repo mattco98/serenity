@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <AK/HashMap.h>
 #include <AK/Function.h>
 #include <AK/IDAllocator.h>
 #include <LibWeb/HTML/EventLoop/EventLoop.h>
