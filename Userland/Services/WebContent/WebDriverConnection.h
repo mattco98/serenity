@@ -11,6 +11,7 @@
 #include <AK/DeprecatedString.h>
 #include <AK/Function.h>
 #include <AK/HashMap.h>
+#include <LibGfx/Rect.h>
 #include <LibIPC/ConnectionToServer.h>
 #include <LibJS/Forward.h>
 #include <LibJS/Heap/MarkedVector.h>
