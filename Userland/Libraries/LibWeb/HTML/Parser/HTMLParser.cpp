@@ -735,7 +735,7 @@ void HTMLParser::handle_before_head(HTMLToken& token)
 
     if (token.is_start_tag() && token.tag_name() == HTML::TagNames::head) {
         auto element = insert_html_element(token);
-        m_head_element = JS::make_handle(verify_cast<HTMLHeadElement>(*element));
+        m_head_element = verify_cast<HTMLHeadElement>(*element);
         m_insertion_mode = InsertionMode::InHead;
         return;
     }
@@ -750,7 +750,7 @@ void HTMLParser::handle_before_head(HTMLToken& token)
     }
 
 AnythingElse:
-    m_head_element = JS::make_handle(verify_cast<HTMLHeadElement>(*insert_html_element(HTMLToken::make_start_tag(HTML::TagNames::head))));
+    m_head_element = verify_cast<HTMLHeadElement>(*insert_html_element(HTMLToken::make_start_tag(HTML::TagNames::head)));
     m_insertion_mode = InsertionMode::InHead;
     process_using_the_rules_for(InsertionMode::InHead, token);
     return;
@@ -967,12 +967,12 @@ void HTMLParser::insert_character(u32 data)
         return;
     }
     if (!m_character_insertion_node.ptr()) {
-        m_character_insertion_node = JS::make_handle(node);
+        m_character_insertion_node = node;
         m_character_insertion_builder.append(Utf32View { &data, 1 });
         return;
     }
     flush_character_insertions();
-    m_character_insertion_node = JS::make_handle(node);
+    m_character_insertion_node = node;
     m_character_insertion_builder.append(Utf32View { &data, 1 });
 }
 
@@ -1174,7 +1174,7 @@ Create:
     auto new_element = insert_html_element(HTMLToken::make_start_tag(entry->element->local_name()));
 
     // 9. Replace the entry for entry in the list with an entry for new element.
-    m_list_of_active_formatting_elements.entries().at(index).element = JS::make_handle(new_element);
+    m_list_of_active_formatting_elements.entries().at(index).element = new_element;
 
     // 10. If the entry for new element in the list of active formatting elements is not the last entry in the list, return to the step labeled advance.
     if (index != m_list_of_active_formatting_elements.entries().size() - 1)
@@ -1644,7 +1644,7 @@ void HTMLParser::handle_in_body(HTMLToken& token)
             close_a_p_element();
         auto element = insert_html_element(token);
         if (!m_stack_of_open_elements.contains(HTML::TagNames::template_))
-            m_form_element = JS::make_handle(verify_cast<HTMLFormElement>(*element));
+            m_form_element = verify_cast<HTMLFormElement>(*element);
         return;
     }
 
@@ -2718,7 +2718,7 @@ void HTMLParser::handle_in_table(HTMLToken& token)
             return;
         }
 
-        m_form_element = JS::make_handle(verify_cast<HTMLFormElement>(*insert_html_element(token)));
+        m_form_element = verify_cast<HTMLFormElement>(*insert_html_element(token));
 
         // FIXME: See previous FIXME, as this is the same situation but for form.
         (void)m_stack_of_open_elements.pop();
@@ -3458,7 +3458,7 @@ Vector<JS::Handle<DOM::Node>> HTMLParser::parse_html_fragment(DOM::Element& cont
 
     // 3. Create a new HTML parser, and associate it with the just created Document node.
     auto parser = HTMLParser::create(*temp_document, markup, "utf-8");
-    parser->m_context_element = JS::make_handle(context_element);
+    parser->m_context_element = context_element;
     parser->m_parsing_fragment = true;
 
     // 4. Set the state of the HTML parser's tokenization stage as follows, switching on the context element:
