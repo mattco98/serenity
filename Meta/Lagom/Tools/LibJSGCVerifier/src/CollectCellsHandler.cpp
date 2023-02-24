@@ -13,45 +13,12 @@ CollectCellsHandler::CollectCellsHandler()
 {
     using namespace clang::ast_matchers;
 
-    auto derived_from_cell = cxxRecordDecl(isDerivedFrom(hasName("::JS::Cell")));
-    auto refers_to_derived_from_cell = refersToType(recordType(hasDeclaration(derived_from_cell)));
-
     m_finder.addMatcher(
         traverse(
             clang::TK_IgnoreUnlessSpelledInSource,
-            fieldDecl(
-                decl().bind("invalid-gcptr-specialization"),
-                hasType(
-                    classTemplateSpecializationDecl(
-                        anyOf(hasName("::JS::GCPtr"), hasName("::JS::NonnullGCPtr")),
-                        hasTemplateArgument(
-                            0,
-                            unless(refers_to_derived_from_cell)
-                        )
-                    )
-                )
-            )
-        ),
-        this
-    );
-
-    m_finder.addMatcher(
-        traverse(
-            clang::TK_IgnoreUnlessSpelledInSource,
-            fieldDecl(
-                decl().bind("pointer-type-field-decl"),
-                hasType(pointsTo(derived_from_cell))
-            )
-        ),
-        this
-    );
-
-    m_finder.addMatcher(
-        traverse(
-            clang::TK_IgnoreUnlessSpelledInSource,
-            fieldDecl(
-                decl().bind("reference-type-field-decl"),
-                hasType(references(derived_from_cell))
+            cxxRecordDecl(
+                decl().bind("record-decl"),
+                isDerivedFrom(hasName("::JS::Cell"))
             )
         ),
         this
@@ -69,7 +36,6 @@ bool CollectCellsHandler::handleBeginSource(clang::CompilerInstance& ci)
 
     auto current_filepath = std::filesystem::canonical(file_entry->getName().str());
     llvm::outs() << "Processing " << current_filepath.string() << "\n";
-    m_run_has_printed = false;
 
     return true;
 }
@@ -154,28 +120,27 @@ static bool validate_non_gcptr_field(clang::QualType const& type)
 
 void CollectCellsHandler::run(clang::ast_matchers::MatchFinder::MatchResult const& result)
 {
-    auto will_print = [&] {
-        if (!m_run_has_printed) {
-            llvm::errs() << "\n";
-            m_run_has_printed = true;
+    clang::CXXRecordDecl const* record = result.Nodes.getNodeAs<clang::CXXRecordDecl>("record-decl");
+    if (!record || !record->isCompleteDefinition() || (!record->isClass() && !record->isStruct()))
+        return;
+
+    auto const class_name = record->getQualifiedNameAsString();
+    if (m_visited_classes.contains(class_name))
+        return;
+
+    m_visited_classes.insert(class_name);
+
+    for (auto const& field : record->fields()) {
+        auto const& type = field->getType();
+
+        if (!validate_gcptr_field(type)) {
+            llvm::errs() << "    Invalid specialization of (Nonnull)GCPtr:\n";
+            llvm::errs() << "        " << field->getType().getAsString() << " \033[34m" << class_name << "\033[0m::\033[33m" << field->getName() << "\033[0m\n";
         }
-    };
 
-    if (auto const* field = result.Nodes.getNodeAs<clang::FieldDecl>("invalid-gcptr-specialization")) {
-        will_print();
-        llvm::errs() << "    Invalid specialization of (Nonnull)GCPtr:\n";
-        llvm::errs() << "        " << field->getType().getAsString() << " \033[34m" << field->getParent()->getName() << "\033[0m::\033[33m" << field->getName() << "\033[0m\n";
-    }
-
-    if (auto const* field = result.Nodes.getNodeAs<clang::FieldDecl>("pointer-type-field-decl")) {
-        will_print();
-        llvm::errs() << "    Type that should be wrapped in (Nonnull)GCPtr:\n";
-        llvm::errs() << "        " << field->getType().getAsString() << " \033[34m" << field->getParent()->getName() << "\033[0m::\033[33m" << field->getName() << "\033[0m\n";
-    }
-
-    if (auto const* field = result.Nodes.getNodeAs<clang::FieldDecl>("reference-type-field-decl")) {
-        will_print();
-        llvm::errs() << "    Type that should be wrapped in (Nonnull)GCPtr:\n";
-        llvm::errs() << "        " << field->getType().getAsString() << " \033[34m" << field->getParent()->getName() << "\033[0m::\033[33m" << field->getName() << "\033[0m\n";
+        if (!validate_non_gcptr_field(type)) {
+            llvm::errs() << "    Type that should be wrapped in (Nonnull)GCPtr:\n";
+            llvm::errs() << "        " << field->getType().getAsString() << " \033[34m" << class_name << "\033[0m::\033[33m" << field->getName() << "\033[0m\n";
+        }
     }
 }

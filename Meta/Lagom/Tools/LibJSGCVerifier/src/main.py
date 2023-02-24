@@ -8,15 +8,15 @@ import sys
 
 # Relative to Userland directory
 PATHS_TO_SEARCH = [
-    'Applications/Assistant',
-    'Applications/Browser',
-    'Applications/Spreadsheet',
-    'Applications/TextEditor',
-    'DevTools/HackStudio',
-    'Libraries/LibJS',
-    'Libraries/LibMarkdown',
+    # 'Applications/Assistant',
+    # 'Applications/Browser',
+    # 'Applications/Spreadsheet',
+    # 'Applications/TextEditor',
+    # 'DevTools/HackStudio',
+    # 'Libraries/LibJS',
+    # 'Libraries/LibMarkdown',
     'Libraries/LibWeb',
-    'Services/WebContent',
+    # 'Services/WebContent',
 ]
 
 subprocess.run(['cmake', '--build', './build'], check=True)

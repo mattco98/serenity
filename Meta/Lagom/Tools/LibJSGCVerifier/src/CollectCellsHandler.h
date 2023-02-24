@@ -20,5 +20,4 @@ public:
 private:
     std::unordered_set<std::string> m_visited_classes;
     clang::ast_matchers::MatchFinder m_finder;
-    bool m_run_has_printed { false };
 };
