@@ -46,9 +46,9 @@ private:
     JobCallback m_cleanup_callback;
 
     struct FinalizationRecord {
-        Cell* target { nullptr };
+        GCPtr<Cell> target { nullptr };
         Value held_value;
-        Cell* unregister_token { nullptr };
+        GCPtr<Cell> unregister_token { nullptr };
     };
     SinglyLinkedList<FinalizationRecord> m_records;
 };

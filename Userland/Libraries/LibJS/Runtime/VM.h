@@ -297,10 +297,10 @@ private:
 
     Vector<Function<ThrowCompletionOr<Value>()>> m_promise_jobs;
 
-    Vector<FinalizationRegistry*> m_finalization_registry_cleanup_jobs;
+    Vector<GCPtr<FinalizationRegistry>> m_finalization_registry_cleanup_jobs;
 
-    PrimitiveString* m_empty_string { nullptr };
-    PrimitiveString* m_single_ascii_character_strings[128] {};
+    GCPtr<PrimitiveString> m_empty_string;
+    GCPtr<PrimitiveString> m_single_ascii_character_strings[128] {};
     AK::Array<String, to_underlying(ErrorMessage::__Count)> m_error_messages;
 
     struct StoredModule {
@@ -316,7 +316,7 @@ private:
     Vector<StoredModule> m_loaded_modules;
 
 #define __JS_ENUMERATE(SymbolName, snake_name) \
-    Symbol* m_well_known_symbol_##snake_name { nullptr };
+    GCPtr<Symbol> m_well_known_symbol_##snake_name;
     JS_ENUMERATE_WELL_KNOWN_SYMBOLS
 #undef __JS_ENUMERATE
 

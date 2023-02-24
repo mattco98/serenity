@@ -137,7 +137,7 @@ private:
     BaseType m_base_type { BaseType::Unresolvable };
     union {
         Value m_base_value {};
-        mutable Environment* m_base_environment;
+        mutable Environment* m_base_environment; // TODO: Convert to GCPtr?
     };
     PropertyKey m_name;
     Value m_this_value;

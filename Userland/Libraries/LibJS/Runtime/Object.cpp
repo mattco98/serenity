@@ -814,7 +814,7 @@ ThrowCompletionOr<Value> Object::internal_get(PropertyKey const& property_key, V
     VERIFY(descriptor->is_accessor_descriptor());
 
     // 5. Let getter be desc.[[Get]].
-    auto* getter = *descriptor->get;
+    auto getter = *descriptor->get;
 
     // 6. If getter is undefined, return undefined.
     if (!getter)
@@ -912,7 +912,7 @@ ThrowCompletionOr<bool> Object::ordinary_set_with_own_descriptor(PropertyKey con
     VERIFY(own_descriptor->is_accessor_descriptor());
 
     // 4. Let setter be ownDesc.[[Set]].
-    auto* setter = *own_descriptor->set;
+    auto setter = *own_descriptor->set;
 
     // 5. If setter is undefined, return false.
     if (!setter)

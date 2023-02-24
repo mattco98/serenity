@@ -28,9 +28,9 @@ public:
 private:
     AsyncFunctionDriverWrapper(Realm&, GeneratorObject*);
 
-    GeneratorObject* m_generator_object { nullptr };
-    NativeFunction* m_on_fulfillment { nullptr };
-    NativeFunction* m_on_rejection { nullptr };
+    GCPtr<GeneratorObject> m_generator_object;
+    GCPtr<NativeFunction> m_on_fulfillment;
+    GCPtr<NativeFunction> m_on_rejection;
 };
 
 }
