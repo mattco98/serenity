@@ -42,7 +42,7 @@ private:
     u16 m_iso_millisecond { 0 }; // [[ISOMillisecond]]
     u16 m_iso_microsecond { 0 }; // [[ISOMicrosecond]]
     u16 m_iso_nanosecond { 0 };  // [[ISONanosecond]]
-    Calendar& m_calendar;        // [[Calendar]] (always the built-in ISO 8601 calendar)
+    NonnullGCPtr<Calendar> m_calendar;        // [[Calendar]] (always the built-in ISO 8601 calendar)
 };
 
 struct DaysAndTime {

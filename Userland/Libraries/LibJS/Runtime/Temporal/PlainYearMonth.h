@@ -32,7 +32,7 @@ private:
     i32 m_iso_year { 0 }; // [[ISOYear]]
     u8 m_iso_month { 0 }; // [[ISOMonth]]
     u8 m_iso_day { 0 };   // [[ISODay]]
-    Object& m_calendar;   // [[Calendar]]
+    NonnullGCPtr<Object> m_calendar;   // [[Calendar]]
 };
 
 struct ISOYearMonth {

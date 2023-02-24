@@ -48,7 +48,7 @@ private:
     u16 m_iso_millisecond { 0 }; // [[ISOMillisecond]]
     u16 m_iso_microsecond { 0 }; // [[ISOMicrosecond]]
     u16 m_iso_nanosecond { 0 };  // [[ISONanosecond]]
-    Object& m_calendar;          // [[Calendar]]
+    NonnullGCPtr<Object> m_calendar;          // [[Calendar]]
 };
 
 // Used by AddDateTime to temporarily hold values

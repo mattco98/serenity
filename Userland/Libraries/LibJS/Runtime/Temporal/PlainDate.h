@@ -35,7 +35,7 @@ private:
     i32 m_iso_year { 0 }; // [[ISOYear]]
     u8 m_iso_month { 1 }; // [[ISOMonth]]
     u8 m_iso_day { 1 };   // [[ISODay]]
-    Object& m_calendar;   // [[Calendar]]
+    NonnullGCPtr<Object> m_calendar;   // [[Calendar]]
 };
 
 // 3.5.1 ISO Date Records, https://tc39.es/proposal-temporal/#sec-temporal-iso-date-records
