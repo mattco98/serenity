@@ -111,7 +111,7 @@ WebIDL::ExceptionOr<JS::NonnullGCPtr<Infrastructure::FetchController>> fetch(JS:
     auto const* window = request.window().get_pointer<Infrastructure::Request::Window>();
     if (window && *window == Infrastructure::Request::Window::Client) {
         if (is<HTML::Window>(request.client()->global_object())) {
-            request.set_window(request.client());
+            request.set_window(JS::GCPtr(request.client()));
         } else {
             request.set_window(Infrastructure::Request::Window::NoWindow);
         }
@@ -1458,7 +1458,7 @@ WebIDL::ExceptionOr<JS::NonnullGCPtr<PendingResponse>> http_network_or_cache_fet
         if (response->status() == 401
             && http_request->response_tainting() != Infrastructure::Request::ResponseTainting::CORS
             && include_credentials == IncludeCredentials::Yes
-            && request->window().has<HTML::EnvironmentSettingsObject*>()) {
+            && request->window().has<JS::GCPtr<HTML::EnvironmentSettingsObject>>()) {
             // 1. Needs testing: multiple `WWW-Authenticate` headers, missing, parsing issues.
             // (Red box in the spec, no-op)
 

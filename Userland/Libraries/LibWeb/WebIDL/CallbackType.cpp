@@ -19,7 +19,7 @@ StringView CallbackType::class_name() const { return "CallbackType"sv; }
 void CallbackType::visit_edges(Cell::Visitor& visitor)
 {
     Cell::visit_edges(visitor);
-    visitor.visit(&callback);
+    visitor.visit(callback);
 }
 
 }

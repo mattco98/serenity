@@ -1527,9 +1527,9 @@ void StyleComputer::did_load_font([[maybe_unused]] FlyString const& family_name)
 void StyleComputer::load_fonts_from_sheet(CSSStyleSheet const& sheet)
 {
     for (auto const& rule : static_cast<CSSStyleSheet const&>(sheet).rules()) {
-        if (!is<CSSFontFaceRule>(rule))
+        if (!is<CSSFontFaceRule>(*rule))
             continue;
-        auto const& font_face = static_cast<CSSFontFaceRule const&>(rule).font_face();
+        auto const& font_face = static_cast<CSSFontFaceRule const&>(*rule).font_face();
         if (font_face.sources().is_empty())
             continue;
         if (m_loaded_fonts.contains(font_face.font_family()))

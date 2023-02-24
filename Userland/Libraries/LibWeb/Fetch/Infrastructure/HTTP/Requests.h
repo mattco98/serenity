@@ -157,8 +157,8 @@ public:
     using OriginType = Variant<Origin, HTML::Origin>;
     using PolicyContainerType = Variant<PolicyContainer, HTML::PolicyContainer>;
     using ReferrerType = Variant<Referrer, AK::URL>;
-    using ReservedClientType = Variant<Empty, HTML::Environment*, HTML::EnvironmentSettingsObject*>;
-    using WindowType = Variant<Window, HTML::EnvironmentSettingsObject*>;
+    using ReservedClientType = Variant<Empty, JS::GCPtr<HTML::Environment>, JS::GCPtr<HTML::EnvironmentSettingsObject>>;
+    using WindowType = Variant<Window, JS::GCPtr<HTML::EnvironmentSettingsObject>>;
 
     [[nodiscard]] static JS::NonnullGCPtr<Request> create(JS::VM&);
 
@@ -343,7 +343,7 @@ private:
 
     // https://fetch.spec.whatwg.org/#concept-request-client
     // A request has an associated client (null or an environment settings object).
-    HTML::EnvironmentSettingsObject* m_client { nullptr };
+    JS::GCPtr<HTML::EnvironmentSettingsObject> m_client;
 
     // https://fetch.spec.whatwg.org/#concept-request-reserved-client
     // A request has an associated reserved client (null, an environment, or an environment settings object). Unless

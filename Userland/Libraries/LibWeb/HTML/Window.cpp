@@ -1905,7 +1905,7 @@ JS_DEFINE_NATIVE_FUNCTION(Window::name_setter)
         auto retval = impl->attribute();                                        \
         if (!retval)                                                            \
             return JS::js_null();                                               \
-        return &retval->callback;                                               \
+        return retval->callback;                                                \
     }                                                                           \
     JS_DEFINE_NATIVE_FUNCTION(Window::attribute##_setter)                       \
     {                                                                           \
