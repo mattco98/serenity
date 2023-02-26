@@ -325,7 +325,7 @@ ExecuteScriptResultSerialized execute_async_script(Web::Page& page, DeprecatedSt
         auto resolving_functions = promise->create_resolving_functions();
 
         // 2. Append resolvingFunctions.[[Resolve]] to arguments.
-        arguments.append(&resolving_functions.resolve);
+        arguments.append(resolving_functions.resolve);
 
         // 3. Let result be the result of calling execute a function body, with arguments body and arguments.
         // FIXME: 'result' -> 'scriptResult' (spec issue)

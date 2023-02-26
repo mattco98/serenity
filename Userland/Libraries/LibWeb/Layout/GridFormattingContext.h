@@ -44,7 +44,7 @@ private:
     bool is_auto_positioned_track(CSS::GridTrackPlacement const&, CSS::GridTrackPlacement const&) const;
 
     struct PositionedBox {
-        Box const& box;
+        JS::NonnullGCPtr<Box const> box;
         int row { 0 };
         int row_span { 1 };
         int column { 0 };
@@ -101,7 +101,7 @@ private:
 
     OccupationGrid m_occupation_grid;
     Vector<PositionedBox> m_positioned_boxes;
-    Vector<Box const&> m_boxes_to_place;
+    Vector<JS::NonnullGCPtr<Box const>> m_boxes_to_place;
 
     CSSPixels get_free_space_x(AvailableSpace const& available_space);
     CSSPixels get_free_space_y(Box const&);

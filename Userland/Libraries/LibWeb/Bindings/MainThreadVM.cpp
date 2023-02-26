@@ -156,7 +156,7 @@ JS::VM& main_thread_vm()
             // 2. Let script execution context be callback.[[HostDefined]].[[ActiveScriptContext]]. (NOTE: Not necessary)
 
             // 3. Prepare to run a callback with incumbent settings.
-            callback_host_defined.incumbent_settings.prepare_to_run_callback();
+            callback_host_defined.incumbent_settings->prepare_to_run_callback();
 
             // 4. If script execution context is not null, then push script execution context onto the JavaScript execution context stack.
             if (callback_host_defined.active_script_context)
@@ -172,7 +172,7 @@ JS::VM& main_thread_vm()
             }
 
             // 7. Clean up after running a callback with incumbent settings.
-            callback_host_defined.incumbent_settings.clean_up_after_running_callback();
+            callback_host_defined.incumbent_settings->clean_up_after_running_callback();
 
             // 8. Return result.
             return result;
@@ -374,7 +374,7 @@ JS::VM& main_thread_vm()
         auto& custom_data = *verify_cast<WebEngineCustomData>(vm->custom_data());
         custom_data.root_execution_context = MUST(JS::Realm::initialize_host_defined_realm(*vm, nullptr, nullptr));
 
-        auto* root_realm = custom_data.root_execution_context->realm;
+        auto root_realm = custom_data.root_execution_context->realm;
         auto intrinsics = root_realm->heap().allocate<Intrinsics>(*root_realm, *root_realm).release_allocated_value_but_fixme_should_propagate_errors();
         auto host_defined = make<HostDefined>(nullptr, intrinsics);
         root_realm->set_host_defined(move(host_defined));
@@ -441,7 +441,7 @@ void queue_mutation_observer_microtask(DOM::Document const& document)
             // 4. If records is not empty, then invoke mo’s callback with « records, mo », and mo. If this throws an exception, catch it, and report the exception.
             if (!records.is_empty()) {
                 auto& callback = mutation_observer->callback();
-                auto& realm = callback.callback_context.realm();
+                auto& realm = callback.callback_context->realm();
 
                 auto wrapped_records = MUST(JS::Array::create(realm, 0));
                 for (size_t i = 0; i < records.size(); ++i) {
@@ -468,7 +468,7 @@ NonnullOwnPtr<JS::ExecutionContext> create_a_new_javascript_realm(JS::VM& vm, Fu
     auto realm_execution_context = MUST(JS::Realm::initialize_host_defined_realm(vm, move(create_global_object), move(create_global_this_value)));
 
     // 3. Remove realm execution context from the JavaScript execution context stack.
-    vm.execution_context_stack().remove_first_matching([&realm_execution_context](auto* execution_context) {
+    vm.execution_context_stack().remove_first_matching([&realm_execution_context](auto execution_context) {
         return execution_context == realm_execution_context.ptr();
     });
 

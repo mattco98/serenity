@@ -296,7 +296,7 @@ private:
     ENUMERATE_WINDOW_EVENT_HANDLERS(__ENUMERATE);
 #undef __ENUMERATE
 
-    HTML::Location* m_location { nullptr };
+    JS::GCPtr<HTML::Location> m_location;
 
     // [[CrossOriginPropertyDescriptorMap]], https://html.spec.whatwg.org/multipage/browsers.html#crossoriginpropertydescriptormap
     CrossOriginPropertyDescriptorMap m_cross_origin_property_descriptor_map;
