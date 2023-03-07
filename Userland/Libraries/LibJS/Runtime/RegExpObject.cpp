@@ -335,4 +335,10 @@ ThrowCompletionOr<NonnullGCPtr<RegExpObject>> regexp_alloc(VM& vm, FunctionObjec
     return regexp_object;
 }
 
+void RegExpObject::visit_edges(Visitor& visitor)
+{
+    Base::visit_edges(visitor);
+    visitor.visit(m_realm);
+}
+
 }

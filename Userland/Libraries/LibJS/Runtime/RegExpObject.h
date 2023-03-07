@@ -59,6 +59,8 @@ private:
     RegExpObject(Object& prototype);
     RegExpObject(Regex<ECMA262> regex, DeprecatedString pattern, DeprecatedString flags, Object& prototype);
 
+    virtual void visit_edges(Visitor&) override;
+
     DeprecatedString m_pattern;
     DeprecatedString m_flags;
     bool m_legacy_features_enabled { false }; // [[LegacyFeaturesEnabled]]

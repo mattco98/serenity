@@ -36,6 +36,13 @@ JS::ThrowCompletionOr<void> DOMRectList::initialize(JS::Realm& realm)
     return {};
 }
 
+void DOMRectList::visit_edges(Visitor& visitor)
+{
+    Base::visit_edges(visitor);
+    for (auto const& rect : m_rects)
+        visitor.visit(rect);
+}
+
 // https://drafts.fxtf.org/geometry-1/#dom-domrectlist-length
 u32 DOMRectList::length() const
 {

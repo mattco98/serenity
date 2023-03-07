@@ -27,4 +27,5 @@ public:
 private:
     std::unordered_set<std::string> m_visited_classes;
     clang::ast_matchers::MatchFinder m_finder;
+    std::string m_file;
 };

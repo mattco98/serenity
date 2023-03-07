@@ -31,7 +31,7 @@ public:
             FloatingElement,
         };
         Type type {};
-        JS::GCPtr<Layout::Node const> node;
+        JS::GCPtr<Layout::Node const> node {};
         size_t offset_in_node { 0 };
         size_t length_in_node { 0 };
         CSSPixels width { 0.0f };

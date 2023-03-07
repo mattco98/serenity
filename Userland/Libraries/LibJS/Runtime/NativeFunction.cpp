@@ -238,4 +238,10 @@ bool NativeFunction::is_strict_mode() const
     return true;
 }
 
+void NativeFunction::visit_edges(Visitor& visitor)
+{
+    Base::visit_edges(visitor);
+    visitor.visit(m_realm);
+}
+
 }

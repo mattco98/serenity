@@ -114,10 +114,12 @@ Shape::Shape(Shape& previous_shape, Object* new_prototype)
 
 void Shape::visit_edges(Cell::Visitor& visitor)
 {
-    Cell::visit_edges(visitor);
+    Base::visit_edges(visitor);
     visitor.visit(m_realm);
     visitor.visit(m_prototype);
     visitor.visit(m_previous);
+    for (auto const& key : m_prototype_transitions->keys())
+        visitor.visit(key);
     m_property_key.visit_edges(visitor);
     if (m_property_table) {
         for (auto& it : *m_property_table)

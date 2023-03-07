@@ -29,6 +29,12 @@ CollectCellsHandler::CollectCellsHandler()
         this);
 }
 
+auto hasAnyName(std::vector<std::string> names)
+{
+    return clang::ast_matchers::internal::Matcher<clang::NamedDecl>(
+        new clang::ast_matchers::internal::HasNameMatcher(names));
+}
+
 bool CollectCellsHandler::handleBeginSource(clang::CompilerInstance& ci)
 {
     auto const& source_manager = ci.getSourceManager();
@@ -40,6 +46,7 @@ bool CollectCellsHandler::handleBeginSource(clang::CompilerInstance& ci)
 
     auto current_filepath = std::filesystem::canonical(file_entry->getName().str());
     llvm::outs() << "Processing " << current_filepath.string() << "\n";
+    m_file = current_filepath.string();
 
     return true;
 }
@@ -88,6 +95,7 @@ std::vector<clang::QualType> get_all_qualified_types(clang::QualType const& type
 struct FieldValidationResult {
     bool is_valid { false };
     bool is_wrapped_in_gcptr { false };
+    bool should_be_visited { false };
 };
 
 FieldValidationResult validate_field(clang::FieldDecl const* field_decl)
@@ -104,6 +112,7 @@ FieldValidationResult validate_field(clang::FieldDecl const* field_decl)
                 if (record_inherits_from_cell(*pointee)) {
                     result.is_valid = false;
                     result.is_wrapped_in_gcptr = false;
+                    result.should_be_visited = true;
                     return result;
                 }
             }
@@ -112,6 +121,7 @@ FieldValidationResult validate_field(clang::FieldDecl const* field_decl)
                 if (record_inherits_from_cell(*pointee)) {
                     result.is_valid = false;
                     result.is_wrapped_in_gcptr = false;
+                    result.should_be_visited = true;
                     return result;
                 }
             }
@@ -133,6 +143,7 @@ FieldValidationResult validate_field(clang::FieldDecl const* field_decl)
                 return result;
 
             result.is_wrapped_in_gcptr = true;
+            result.should_be_visited = true;
             result.is_valid = record_inherits_from_cell(*record_decl);
         }
     }
@@ -142,15 +153,16 @@ FieldValidationResult validate_field(clang::FieldDecl const* field_decl)
 
 void CollectCellsHandler::run(clang::ast_matchers::MatchFinder::MatchResult const& result)
 {
+    using namespace clang::ast_matchers;
+
     clang::CXXRecordDecl const* record = result.Nodes.getNodeAs<clang::CXXRecordDecl>("record-decl");
     if (!record || !record->isCompleteDefinition() || (!record->isClass() && !record->isStruct()))
         return;
 
     auto& diag_engine = result.Context->getDiagnostics();
+    std::unordered_set<std::string> fields_that_need_visiting;
 
-    for (clang::FieldDecl const* field : record->fields()) {
-        auto const& type = field->getType();
-
+    for (auto const* field : record->fields()) {
         auto validation_results = validate_field(field);
         if (!validation_results.is_valid) {
             if (validation_results.is_wrapped_in_gcptr) {
@@ -159,7 +171,7 @@ void CollectCellsHandler::run(clang::ast_matchers::MatchFinder::MatchResult cons
             } else {
                 auto diag_id = diag_engine.getCustomDiagID(clang::DiagnosticsEngine::Warning, "%0 to JS::Cell type should be wrapped in %1");
                 auto builder = diag_engine.Report(field->getLocation(), diag_id);
-                if (type->isReferenceType()) {
+                if (field->getType()->isReferenceType()) {
                     builder << "reference"
                             << "JS::NonnullGCPtr";
                 } else {
@@ -167,6 +179,87 @@ void CollectCellsHandler::run(clang::ast_matchers::MatchFinder::MatchResult cons
                             << "JS::GCPtr";
                 }
             }
+        } else if (validation_results.should_be_visited) {
+            fields_that_need_visiting.insert(field->getNameAsString());
         }
+    }
+
+    static std::unordered_set<std::string_view> const cells_without_visit_edges_whitelist = {
+        "FreelistEntry", "WeakSet",
+    };
+
+    if (fields_that_need_visiting.empty() || !record_inherits_from_cell(*record) || cells_without_visit_edges_whitelist.contains(record->getNameAsString()))
+        return;
+
+    clang::CXXMethodDecl const* visit_method = nullptr;
+    for (auto const* record_decl : record->decls()) {
+        auto const *method = clang::dyn_cast<clang::CXXMethodDecl>(record_decl);
+        if (method && method->getNameAsString() == "visit_edges" && !method->isImplicit())
+            visit_method = method;
+    }
+
+    if (!visit_method) {
+        auto diag_id = diag_engine.getCustomDiagID(clang::DiagnosticsEngine::Warning, "Class with JS::Cell members does not override visit_impl");
+        diag_engine.Report(record->getLocation(), diag_id);
+        return;
+    }
+
+    auto const* definition = visit_method->getDefinition();
+    if (!definition || !definition->getBody())
+        return;
+
+    auto& ast_context = definition->getASTContext();
+    auto& source_manager = ast_context.getSourceManager();
+    auto record_name = record->getQualifiedNameAsString();
+
+    // Check for call to Base::visit_edges()
+    auto base_visit_edges_matcher = cxxMemberCallExpr(callee(cxxMethodDecl(hasName("visit_edges")))).bind("member-expr");
+    bool found_base_call = false;
+
+    for (auto const& child : definition->getBody()->children()) {
+        if (auto const* member_call = clang::dyn_cast<clang::CXXMemberCallExpr>(child)) {
+            // FIXME: Ideally this would not rely directly on the source code, however it seems to be
+            //        the most reliable solution.
+            bool invalid = false;
+            const char* source_code_ptr = ast_context.getSourceManager().getCharacterData(member_call->getBeginLoc(), &invalid);
+            if (invalid)
+                continue;
+
+            auto begin = member_call->getBeginLoc();
+            auto end = member_call->getEndLoc();
+            auto length = source_manager.getFileOffset(end) - source_manager.getFileOffset(begin);
+            std::string source_code(source_code_ptr, length);
+            if (source_code.starts_with("Base::visit_edges(")) {
+                found_base_call = true;
+                break;
+            }
+        }
+    }
+
+    if (!found_base_call) {
+        auto diag_id = diag_engine.getCustomDiagID(clang::DiagnosticsEngine::Warning, "%0::visit_edges has no call to Base::visit_edges");
+        auto builder = diag_engine.Report(definition->getLocation(), diag_id);
+        builder << record_name;
+    }
+
+    // Check for a read of each field that needs visiting. We just check for any read
+    // to account for complex fields such as "Vector<GCPtr<Foo>>", assuming that a read
+    // in visit_edges will only ever happen if the field is getting visited.
+    auto names_vector = std::vector(fields_that_need_visiting.begin(), fields_that_need_visiting.end());
+    auto matcher = memberExpr(
+        isExpansionInMainFile(),
+        member(::hasAnyName(names_vector)),
+        hasAncestor(functionDecl(hasName("visit_edges")))
+    ).bind("member-expr");
+
+    for (auto const& bound_expr : match(matcher, ast_context)) {
+        if (auto const* member_expr = bound_expr.getNodeAs<clang::MemberExpr>("member-expr"))
+            fields_that_need_visiting.erase(member_expr->getMemberDecl()->getNameAsString());
+    }
+
+    for (auto const& name : fields_that_need_visiting) {
+        auto diag_id = diag_engine.getCustomDiagID(clang::DiagnosticsEngine::Warning, "GC field %0 is not visited in visit_edges");
+        auto builder = diag_engine.Report(definition->getLocation(), diag_id);
+        builder << name;
     }
 }

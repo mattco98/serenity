@@ -48,6 +48,8 @@ protected:
     NativeFunction(DeprecatedFlyString name, SafeFunction<ThrowCompletionOr<Value>(VM&)>, Object& prototype);
     explicit NativeFunction(Object& prototype);
 
+    virtual void visit_edges(Visitor&) override;
+
 private:
     virtual bool is_native_function() const final { return true; }
 
