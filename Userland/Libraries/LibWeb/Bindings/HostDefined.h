@@ -14,6 +14,8 @@
 namespace Web::Bindings {
 
 struct HostDefined : public JS::Realm::HostDefined {
+    JS_CELL(HostDefined, JS::Realm::HostDefined);
+
     HostDefined(JS::GCPtr<HTML::EnvironmentSettingsObject> eso, JS::NonnullGCPtr<Intrinsics> intrinsics)
         : environment_settings_object(eso)
         , intrinsics(intrinsics)

@@ -14,10 +14,8 @@
 namespace Web::HTML {
 
 // https://html.spec.whatwg.org/multipage/webappapis.html#concept-script
-class Script
-    : public JS::Cell
-    , public JS::Script::HostDefined {
-    JS_CELL(Script, JS::Cell);
+class Script : public JS::Script::HostDefined {
+    JS_CELL(Script, JS::Script::HostDefined);
 
 public:
     virtual ~Script() override;
@@ -30,9 +28,9 @@ public:
 protected:
     Script(AK::URL base_url, DeprecatedString filename, EnvironmentSettingsObject& environment_settings_object);
 
-private:
-    virtual void visit_host_defined_self(JS::Cell::Visitor&) override;
+    virtual void visit_edges(JS::Cell::Visitor&) override;
 
+private:
     AK::URL m_base_url;
     DeprecatedString m_filename;
     JS::NonnullGCPtr<EnvironmentSettingsObject> m_settings_object;

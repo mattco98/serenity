@@ -19,10 +19,10 @@ class Script final : public Cell {
     JS_CELL(Script, Cell);
 
 public:
-    struct HostDefined {
-        virtual ~HostDefined() = default;
+    struct HostDefined : public JS::Cell {
+        JS_CELL(HostDefined, JS::Cell);
 
-        virtual void visit_host_defined_self(Cell::Visitor&) = 0;
+        virtual ~HostDefined() = default;
     };
 
     virtual ~Script() override;
@@ -44,7 +44,7 @@ private:
 
     // Needed for potential lookups of modules.
     DeprecatedString m_filename;
-    HostDefined* m_host_defined { nullptr }; // [[HostDefined]]
+    GCPtr<HostDefined> m_host_defined; // [[HostDefined]]
 };
 
 }

@@ -23,10 +23,10 @@ class Realm final
     JS_CELL(Realm, Cell);
 
 public:
-    struct HostDefined {
-        virtual ~HostDefined() = default;
+    struct HostDefined : public JS::Cell {
+        JS_CELL(HostDefined, JS::Cell);
 
-        virtual void visit_edges(Cell::Visitor&) { }
+        virtual ~HostDefined() = default;
     };
 
     static ThrowCompletionOr<NonnullGCPtr<Realm>> create(VM&);

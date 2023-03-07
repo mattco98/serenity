@@ -28,8 +28,7 @@ void Module::visit_edges(Cell::Visitor& visitor)
     visitor.visit(m_realm);
     visitor.visit(m_environment);
     visitor.visit(m_namespace);
-    if (m_host_defined)
-        m_host_defined->visit_host_defined_self(visitor);
+    visitor.visit(m_host_defined);
 }
 
 // 16.2.1.5.1.1 InnerModuleLinking ( module, stack, index ), https://tc39.es/ecma262/#sec-InnerModuleLinking

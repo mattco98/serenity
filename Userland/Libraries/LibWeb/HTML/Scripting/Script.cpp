@@ -18,9 +18,10 @@ Script::Script(AK::URL base_url, DeprecatedString filename, EnvironmentSettingsO
 
 Script::~Script() = default;
 
-void Script::visit_host_defined_self(JS::Cell::Visitor& visitor)
+void Script::visit_edges(Visitor& visitor)
 {
-    visitor.visit(this);
+    Base::visit_edges(visitor);
+    visitor.visit(m_settings_object);
 }
 
 }

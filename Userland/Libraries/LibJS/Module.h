@@ -100,10 +100,10 @@ private:
     // destroy the VM but keep the modules this should not happen. Because VM
     // stores modules with a RefPtr we cannot just store the VM as that leads to
     // cycles.
-    GCPtr<Realm> m_realm;                            // [[Realm]]
-    GCPtr<Environment> m_environment;                // [[Environment]]
-    GCPtr<Object> m_namespace;                       // [[Namespace]]
-    Script::HostDefined* m_host_defined { nullptr }; // [[HostDefined]]
+    GCPtr<Realm> m_realm;                      // [[Realm]]
+    GCPtr<Environment> m_environment;          // [[Environment]]
+    GCPtr<Object> m_namespace;                 // [[Namespace]]
+    GCPtr<Script::HostDefined> m_host_defined; // [[HostDefined]]
 
     // Needed for potential lookups of modules.
     DeprecatedString m_filename;
