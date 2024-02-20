@@ -33,6 +33,9 @@ public:
     void associate_with_animation(JS::NonnullGCPtr<Animation>);
     void disassociate_with_animation(JS::NonnullGCPtr<Animation>);
 
+    JS::GCPtr<Animations::Animation> transition_for_property(CSS::PropertyID) const;
+    void set_transition_for_property(CSS::PropertyID, JS::NonnullGCPtr<Animations::Animation>);
+
     JS::GCPtr<CSS::CSSStyleDeclaration const> cached_animation_name_source() const { return m_cached_animation_name_source; }
     void set_cached_animation_name_source(JS::GCPtr<CSS::CSSStyleDeclaration const> value) { m_cached_animation_name_source = value; }
 
@@ -47,6 +50,7 @@ private:
     bool m_is_sorted_by_composite_order { true };
     JS::GCPtr<CSS::CSSStyleDeclaration const> m_cached_animation_name_source;
     JS::GCPtr<Animations::Animation> m_cached_animation_name_animation;
+    mutable HashMap<CSS::PropertyID, JS::NonnullGCPtr<Animations::Animation>> m_property_transitions;
 };
 
 }

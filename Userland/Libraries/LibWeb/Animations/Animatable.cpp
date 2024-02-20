@@ -94,11 +94,31 @@ void Animatable::disassociate_with_animation(JS::NonnullGCPtr<Animation> animati
     m_associated_animations.remove_first_matching([&](auto element) { return animation == element; });
 }
 
+JS::GCPtr<Animations::Animation> Animatable::transition_for_property(CSS::PropertyID property) const
+{
+    if (auto transition = m_property_transitions.get(property); transition.has_value()) {
+        if (!(*transition)->is_relevant()) {
+            m_property_transitions.remove(property);
+            return {};
+        }
+
+        return *transition;
+    }
+
+    return {};
+}
+
+void Animatable::set_transition_for_property(CSS::PropertyID property, JS::NonnullGCPtr<Animations::Animation> animation)
+{
+    m_property_transitions.set(property, animation);
+}
+
 void Animatable::visit_edges(JS::Cell::Visitor& visitor)
 {
     visitor.visit(m_associated_animations);
     visitor.visit(m_cached_animation_name_source);
     visitor.visit(m_cached_animation_name_animation);
+    visitor.visit(m_property_transitions);
 }
 
 }
