@@ -1698,16 +1698,26 @@ void StyleComputer::compute_cascaded_values(StyleProperties& style, DOM::Element
             auto property_value = transition_properties[i];
             Vector<PropertyID> properties;
 
-            auto maybe_property = property_id_from_string(property_value->as_custom_ident().custom_ident());
-            if (!maybe_property.has_value())
-                continue;
-
-            auto transition_property = maybe_property.release_value();
-            if (property_is_shorthand(transition_property)) {
-                for (auto const& prop : longhands_for_shorthand(transition_property))
-                    properties.append(prop);
+            if (property_value->is_identifier()) {
+                auto ident = property_value->as_identifier().to_identifier();
+                if (ident == ValueID::None)
+                    continue;
+                if (ident == ValueID::All) {
+                    for (auto prop = first_property_id; prop != last_property_id; prop = static_cast<PropertyID>(to_underlying(prop) + 1))
+                        properties.append(prop);
+                }
             } else {
-                properties.append(transition_property);
+                auto maybe_property = property_id_from_string(property_value->as_custom_ident().custom_ident());
+                if (!maybe_property.has_value())
+                    continue;
+
+                auto transition_property = maybe_property.release_value();
+                if (property_is_shorthand(transition_property)) {
+                    for (auto const& prop : longhands_for_shorthand(transition_property))
+                        properties.append(prop);
+                } else {
+                    properties.append(transition_property);
+                }
             }
 
             for (auto const& property : properties) {
