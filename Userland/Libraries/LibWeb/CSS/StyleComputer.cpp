@@ -47,6 +47,7 @@
 #include <LibWeb/CSS/StyleValues/GridTrackSizeListStyleValue.h>
 #include <LibWeb/CSS/StyleValues/IdentifierStyleValue.h>
 #include <LibWeb/CSS/StyleValues/IntegerStyleValue.h>
+#include <LibWeb/CSS/StyleValues/InterpolationStyleValue.h>
 #include <LibWeb/CSS/StyleValues/LengthStyleValue.h>
 #include <LibWeb/CSS/StyleValues/MathDepthStyleValue.h>
 #include <LibWeb/CSS/StyleValues/NumberStyleValue.h>
@@ -1167,8 +1168,16 @@ static NonnullRefPtr<StyleValue const> interpolate_box_shadow(DOM::Element& elem
 
 static NonnullRefPtr<StyleValue const> interpolate_value(DOM::Element& element, StyleValue const& from, StyleValue const& to, float delta)
 {
-    if (from.type() != to.type())
+    if (from.type() != to.type()) {
+        // Handle mixed percentage and dimension types
+        static constexpr auto is_dimension_type = [](StyleValue const& value) {
+            return value.is_length() || value.is_angle() || value.is_frequency() || value.is_time();
+        };
+        if ((from.is_percentage() && is_dimension_type(to)) || (to.is_percentage() && is_dimension_type(from)))
+            return InterpolationStyleValue::create(from, to, delta);
+
         return delta >= 0.5f ? to : from;
+    }
 
     switch (from.type()) {
     case StyleValue::Type::Angle:
