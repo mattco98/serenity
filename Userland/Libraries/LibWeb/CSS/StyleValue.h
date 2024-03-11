@@ -107,6 +107,7 @@ using StyleValueVector = Vector<ValueComparingNonnullRefPtr<StyleValue const>>;
     __ENUMERATE_STYLE_VALUE_TYPE(Inherit, inherit)                         \
     __ENUMERATE_STYLE_VALUE_TYPE(Initial, initial)                         \
     __ENUMERATE_STYLE_VALUE_TYPE(Integer, integer)                         \
+    __ENUMERATE_STYLE_VALUE_TYPE(Interpolation, interpolation)             \
     __ENUMERATE_STYLE_VALUE_TYPE(Length, length)                           \
     __ENUMERATE_STYLE_VALUE_TYPE(LinearGradient, linear_gradient)          \
     __ENUMERATE_STYLE_VALUE_TYPE(MathDepth, math_depth)                    \
