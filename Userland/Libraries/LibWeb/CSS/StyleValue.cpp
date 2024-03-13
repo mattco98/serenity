@@ -35,6 +35,7 @@
 #include <LibWeb/CSS/StyleValues/InheritStyleValue.h>
 #include <LibWeb/CSS/StyleValues/InitialStyleValue.h>
 #include <LibWeb/CSS/StyleValues/IntegerStyleValue.h>
+#include <LibWeb/CSS/StyleValues/InterpolationStyleValue.h>
 #include <LibWeb/CSS/StyleValues/LengthStyleValue.h>
 #include <LibWeb/CSS/StyleValues/LinearGradientStyleValue.h>
 #include <LibWeb/CSS/StyleValues/MathDepthStyleValue.h>

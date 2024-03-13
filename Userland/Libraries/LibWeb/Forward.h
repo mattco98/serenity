@@ -143,6 +143,7 @@ class InheritStyleValue;
 class InitialStyleValue;
 class IntegerOrCalculated;
 class IntegerStyleValue;
+class InterpolationStyleValue;
 class Length;
 class LengthBox;
 class LengthOrCalculated;
