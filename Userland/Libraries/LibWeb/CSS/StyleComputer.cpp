@@ -32,6 +32,7 @@
 #include <LibWeb/CSS/CSSFontFaceRule.h>
 #include <LibWeb/CSS/CSSImportRule.h>
 #include <LibWeb/CSS/CSSStyleRule.h>
+#include <LibWeb/CSS/CSSTransition.h>
 #include <LibWeb/CSS/Parser/Parser.h>
 #include <LibWeb/CSS/SelectorEngine.h>
 #include <LibWeb/CSS/StyleComputer.h>
@@ -1527,6 +1528,8 @@ static void apply_dimension_attribute(StyleProperties& style, DOM::Element const
 // https://www.w3.org/TR/css-cascade/#cascading
 void StyleComputer::compute_cascaded_values(StyleProperties& style, DOM::Element& element, Optional<CSS::Selector::PseudoElement::Type> pseudo_element, bool& did_match_any_pseudo_element_rules, ComputeStyleMode mode) const
 {
+    auto& realm = element.realm();
+
     // First, we collect all the CSS rules whose selectors match `element`:
     MatchingRuleSet matching_rule_set;
     matching_rule_set.user_agent_rules = collect_matching_rules(element, CascadeOrigin::UserAgent, pseudo_element);
@@ -1635,6 +1638,9 @@ void StyleComputer::compute_cascaded_values(StyleProperties& style, DOM::Element
 
     auto animations = element.get_animations({ .subtree = false });
     for (auto& animation : animations) {
+        if (!animation->is_css_animation())
+            continue;
+
         if (auto effect = animation->effect(); effect && effect->is_keyframe_effect()) {
             auto& keyframe_effect = *static_cast<Animations::KeyframeEffect*>(effect.ptr());
             if (keyframe_effect.pseudo_element_type() == pseudo_element)
@@ -1651,7 +1657,147 @@ void StyleComputer::compute_cascaded_values(StyleProperties& style, DOM::Element
     // Important user agent declarations
     cascade_declarations(style, element, pseudo_element, matching_rule_set.user_agent_rules, CascadeOrigin::UserAgent, Important::Yes);
 
-    // FIXME: Transition declarations [css-transitions-1]
+    // Transition declarations [css-transitions-1]
+    auto changed_properties = move(style.changed_properties({}));
+
+    if (auto maybe_transition_properties = style.maybe_null_property(PropertyID::TransitionProperty); maybe_transition_properties && element.computed_css_values()) {
+        auto transition_properties_value = maybe_transition_properties.release_nonnull();
+        auto transition_properties = transition_properties_value->is_value_list()
+            ? transition_properties_value->as_value_list().values()
+            : StyleValueVector { transition_properties_value };
+
+        auto normalize_transition_length_list = [&](PropertyID property, auto make_default_value) {
+            auto style_value = style.maybe_null_property(property);
+            StyleValueVector list;
+
+            if (!style_value || !style_value->is_value_list() || style_value->as_value_list().size() == 0) {
+                auto default_value = make_default_value();
+                for (size_t i = 0; i < transition_properties.size(); i++)
+                    list.append(default_value);
+                return list;
+            }
+
+            auto& value_list = style_value->as_value_list();
+            for (size_t i = 0; i < transition_properties.size(); i++)
+                list.append(value_list.value_at(i, true));
+
+            return list;
+        };
+
+        auto transition_delays = normalize_transition_length_list(
+            PropertyID::TransitionDelay,
+            [] { return TimeStyleValue::create(Time::make_seconds(0.0)); });
+        auto transition_durations = normalize_transition_length_list(
+            PropertyID::TransitionDuration,
+            [] { return TimeStyleValue::create(Time::make_seconds(0.0)); });
+        auto transition_timing_function = normalize_transition_length_list(
+            PropertyID::TransitionTimingFunction,
+            [] { return EasingStyleValue::create(EasingFunction::Ease, {}); });
+
+        for (size_t i = 0; i < transition_properties.size(); i++) {
+            auto property_value = transition_properties[i];
+            Vector<PropertyID> properties;
+
+            auto maybe_property = property_id_from_string(property_value->as_custom_ident().custom_ident());
+            if (!maybe_property.has_value())
+                continue;
+
+            auto transition_property = maybe_property.release_value();
+            if (property_is_shorthand(transition_property)) {
+                for (auto const& prop : longhands_for_shorthand(transition_property))
+                    properties.append(prop);
+            } else {
+                properties.append(transition_property);
+            }
+
+            for (auto const& property : properties) {
+                if (!changed_properties.contains(property))
+                    continue;
+
+                auto old_value = element.computed_css_values()->maybe_null_property(property);
+                auto current_value = style.maybe_null_property(property);
+                if ((!current_value && !old_value) || (current_value && old_value && *current_value == *old_value))
+                    continue;
+
+                // Before creating a new transition, check if there is an existing transition for this property.
+                if (auto existing_transition = element.transition_for_property(property)) {
+                    VERIFY(existing_transition->is_css_transition());
+                    auto& transition = static_cast<CSS::CSSTransition&>(*existing_transition);
+                    if (auto cached_declaration = transition.cached_declaration(); cached_declaration && cached_declaration == style.property_source_declaration(property)) {
+                        // This transition has the same source and same property, so it must be the same as
+                        // existing_transition
+                        continue;
+                    }
+
+                    // The transition is different, so cancel and remake it
+                    existing_transition->cancel();
+                    element.disassociate_with_animation(*existing_transition);
+                    if (auto existing_effect = existing_transition->effect()) {
+                        if (existing_effect->is_keyframe_effect())
+                            static_cast<Animations::KeyframeEffect&>(*existing_effect).set_target({});
+                    }
+                }
+
+                auto delay = transition_delays[i];
+                auto duration = transition_durations[i];
+                auto timing_function = transition_timing_function[i];
+                auto transition = CSS::CSSTransition::create(realm, property, document().transition_generation());
+
+                // Add new transition to the animations vector so we don't need to call element.get_animations() again
+                animations.append(transition);
+
+                auto effect = Animations::KeyframeEffect::create(realm);
+                effect->set_target(&element);
+
+                if (delay->is_time())
+                    effect->set_start_delay(delay->as_time().time().to_milliseconds());
+                if (duration->is_time())
+                    effect->set_iteration_duration(duration->as_time().time().to_milliseconds());
+                if (timing_function->is_easing())
+                    effect->set_timing_function(Animations::TimingFunction::from_easing_style_value(timing_function->as_easing()));
+
+                auto key_frame_set = adopt_ref(*new Animations::KeyframeEffect::KeyFrameSet);
+                Animations::KeyframeEffect::KeyFrameSet::ResolvedKeyFrame initial_keyframe;
+                if (old_value) {
+                    initial_keyframe.properties.set(property, CSS::ValueComparingNonnullRefPtr<StyleValue const> { *old_value });
+                } else {
+                    initial_keyframe.properties.set(property, Animations::KeyframeEffect::KeyFrameSet::UseInitial {});
+                }
+
+                Animations::KeyframeEffect::KeyFrameSet::ResolvedKeyFrame final_keyframe;
+                if (current_value) {
+                    final_keyframe.properties.set(property, CSS::ValueComparingNonnullRefPtr<StyleValue const> { *current_value });
+                } else {
+                    final_keyframe.properties.set(property, Animations::KeyframeEffect::KeyFrameSet::UseInitial {});
+                }
+
+                key_frame_set->keyframes_by_key.insert(0, initial_keyframe);
+                key_frame_set->keyframes_by_key.insert(100 * Animations::KeyframeEffect::AnimationKeyFrameKeyScaleFactor, final_keyframe);
+                effect->set_key_frame_set(key_frame_set);
+
+                transition->set_timeline(m_document->timeline());
+                transition->set_owning_element(element);
+                transition->set_effect(effect);
+                transition->set_cached_declaration(style.property_source_declaration(property));
+
+                element.associate_with_animation(transition);
+
+                element.set_transition_for_property(property, transition);
+                HTML::TemporaryExecutionContext context(m_document->relevant_settings_object());
+                transition->play().release_value_but_fixme_should_propagate_errors();
+            }
+        }
+    }
+
+    for (auto& animation : animations) {
+        if (!animation->is_relevant() || !animation->is_css_transition())
+            continue;
+
+        if (auto effect = animation->effect(); effect && effect->is_keyframe_effect()) {
+            auto& keyframe_effect = *static_cast<Animations::KeyframeEffect*>(effect.ptr());
+            collect_animation_into(element, pseudo_element, keyframe_effect, style);
+        }
+    }
 }
 
 DOM::Element const* element_to_inherit_style_from(DOM::Element const* element, Optional<CSS::Selector::PseudoElement::Type> pseudo_element)
