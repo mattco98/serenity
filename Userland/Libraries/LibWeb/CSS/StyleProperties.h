@@ -65,6 +65,7 @@ public:
     NonnullRefPtr<StyleValue const> property(CSS::PropertyID) const;
     RefPtr<StyleValue const> maybe_null_property(CSS::PropertyID) const;
     CSS::CSSStyleDeclaration const* property_source_declaration(CSS::PropertyID) const;
+    auto& changed_properties(Badge<StyleComputer>) { return m_changed_properties; }
 
     CSS::Size size_value(CSS::PropertyID) const;
     LengthPercentage length_percentage_or_fallback(CSS::PropertyID, LengthPercentage const& fallback) const;
@@ -190,6 +191,7 @@ private:
 
     PropertyValues m_property_values;
     HashMap<CSS::PropertyID, NonnullRefPtr<StyleValue const>> m_animated_property_values;
+    HashTable<CSS::PropertyID> m_changed_properties;
 
     Optional<CSS::Overflow> overflow(CSS::PropertyID) const;
     Vector<CSS::ShadowData> shadow(CSS::PropertyID, Layout::Node const&) const;

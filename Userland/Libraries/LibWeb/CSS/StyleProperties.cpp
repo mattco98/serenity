@@ -47,6 +47,7 @@ bool StyleProperties::is_property_inherited(CSS::PropertyID property_id) const
 void StyleProperties::set_property(CSS::PropertyID id, NonnullRefPtr<StyleValue const> value, CSS::CSSStyleDeclaration const* source_declaration, Inherited inherited, Important important)
 {
     m_property_values[to_underlying(id)] = StyleAndSourceDeclaration { move(value), source_declaration, important, inherited };
+    m_changed_properties.set(id);
 }
 
 void StyleProperties::set_animated_property(CSS::PropertyID id, NonnullRefPtr<StyleValue const> value)
