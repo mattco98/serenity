@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<style>
+    div {
+        position: absolute;
+        width: 100px;
+        height: 100px;
+    }
+
+    #el1 {
+        animation: anim1 1s linear;
+    }
+    #el2 {
+        animation: anim2 1s linear;
+    }
+    #el3 {
+        animation: anim3 1s linear;
+    }
+
+    @keyframes anim1 {
+        to {
+            transform: translate(200%, 100px) scale(2)
+        }
+    }
+
+    @keyframes anim2 {
+        from {
+            transform: translate(200%, 100px) scale(2)
+        }
+    }
+
+    @keyframes anim3 {
+        from {
+            transform: translate(200%, 100px) scale(2)
+        }
+        to {
+            transform: translate(200%, 100px) scale(2)
+        }
+    }
+</style>
+<div id="el1"></div>
+<div id="el2"></div>
+<div id="el3"></div>
+<script>
+
+</script>
