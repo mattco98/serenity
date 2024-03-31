@@ -1581,52 +1581,67 @@ void StyleComputer::compute_cascaded_values(StyleProperties& style, DOM::Element
 
 void StyleComputer::cascade_animations(StyleProperties& style, DOM::Element& element, Optional<CSS::Selector::PseudoElement::Type> pseudo_element) const
 {
-    auto animation_name = [&]() -> Optional<String> {
+    auto animation_names = [&]() -> Vector<String> {
         auto animation_name = style.maybe_null_property(PropertyID::AnimationName);
         if (animation_name.is_null())
-            return OptionalNone {};
+            return {};
         if (animation_name->is_string())
-            return animation_name->as_string().string_value();
-        return animation_name->to_string();
+            return { animation_name->as_string().string_value() };
+        if (animation_name->is_value_list()) {
+            Vector<String> names;
+            for (auto const& name_value : animation_name->as_value_list().values()) {
+                if (name_value->is_string()) {
+                    names.append(name_value->as_string().string_value());
+                } else {
+                    names.append(name_value->to_string());
+                }
+            }
+            return names;
+        }
+        return { animation_name->to_string() };
     }();
-    
-    if (animation_name.has_value()) {
+
+    if (!animation_names.is_empty()) {
         if (auto source_declaration = style.property_source_declaration(PropertyID::AnimationName); source_declaration) {
             auto& realm = element.realm();
 
             if (source_declaration != element.cached_animation_name_source()) {
-                // This animation name is new, so we need to create a new animation for it.
+                // These animation names are new, so we need to create new animations for them.
                 for (auto const& existing_animation : move(element.cached_animation_name_animations()))
                     existing_animation->cancel(Animations::Animation::ShouldInvalidate::No);
                 element.set_cached_animation_name_source(source_declaration);
 
-                auto effect = Animations::KeyframeEffect::create(realm);
-                auto animation = CSSAnimation::create(realm);
-                animation->set_id(animation_name.release_value());
-                animation->set_timeline(m_document->timeline());
-                animation->set_owning_element(element);
-                animation->set_effect(effect);
-                apply_animation_properties(m_document, style, animation, 0);
-                if (pseudo_element.has_value())
-                    effect->set_pseudo_element(Selector::PseudoElement { pseudo_element.value() });
+                for (size_t i = 0; i < animation_names.size(); i++) {
+                    auto animation_name = animation_names[i];
+                    auto effect = Animations::KeyframeEffect::create(realm);
+                    auto animation = CSSAnimation::create(realm);
+                    animation->set_id(animation_name);
+                    animation->set_timeline(m_document->timeline());
+                    animation->set_owning_element(element);
+                    animation->set_effect(effect);
+                    apply_animation_properties(m_document, style, animation, i);
+                    if (pseudo_element.has_value())
+                        effect->set_pseudo_element(Selector::PseudoElement { pseudo_element.value() });
 
-                auto const& rule_cache = rule_cache_for_cascade_origin(CascadeOrigin::Author);
-                if (auto keyframe_set = rule_cache.rules_by_animation_keyframes.get(animation->id()); keyframe_set.has_value())
-                    effect->set_key_frame_set(keyframe_set.value());
+                    auto const& rule_cache = rule_cache_for_cascade_origin(CascadeOrigin::Author);
+                    if (auto keyframe_set = rule_cache.rules_by_animation_keyframes.get(animation->id()); keyframe_set.has_value())
+                        effect->set_key_frame_set(keyframe_set.value());
 
-                effect->set_target(&element);
-                element.cached_animation_name_animations().append(animation);
+                    effect->set_target(&element);
 
-                HTML::TemporaryExecutionContext context(m_document->relevant_settings_object());
-                animation->play().release_value_but_fixme_should_propagate_errors();
+                    HTML::TemporaryExecutionContext context(m_document->relevant_settings_object());
+                    animation->play().release_value_but_fixme_should_propagate_errors();
+                    element.cached_animation_name_animations().append(animation);
+                }
             } else {
-                // The animation hasn't changed, but some properties of the animation may have
-                for (auto const& existing_animation : move(element.cached_animation_name_animations()))
-                    apply_animation_properties(m_document, style, *existing_animation, 0);
+                // The animations haven't changed, but some properties of the animations may have
+                auto& animations = element.cached_animation_name_animations();
+                for (size_t i = 0; i < animations.size(); i++)
+                    apply_animation_properties(m_document, style, animations[i], i);
             }
         }
     } else {
-        // If the element had an existing animation, cancel it
+        // If the element had an existing animations, cancel them
         for (auto const& existing_animation : move(element.cached_animation_name_animations()))
             existing_animation->cancel(Animations::Animation::ShouldInvalidate::No);
         element.set_cached_animation_name_source({});
