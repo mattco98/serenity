@@ -44,6 +44,7 @@
     "affects-layout": true,
     "inherited": false,
     "initial": "none 0s ease 1 normal running 0s none",
+    "is-coordinating-list-group": true,
     "longhands": [
       "animation-name",
       "animation-duration",

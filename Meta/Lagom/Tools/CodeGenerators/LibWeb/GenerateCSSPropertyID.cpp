@@ -223,6 +223,8 @@ size_t property_maximum_value_count(PropertyID);
 bool property_affects_layout(PropertyID);
 bool property_affects_stacking_context(PropertyID);
 
+bool property_is_coordinating_list_group(PropertyID);
+
 constexpr PropertyID first_property_id = PropertyID::@first_property_id@;
 constexpr PropertyID last_property_id = PropertyID::@last_property_id@;
 constexpr PropertyID first_shorthand_property_id = PropertyID::@first_shorthand_property_id@;
@@ -564,6 +566,34 @@ bool property_affects_stacking_context(PropertyID property_id)
             affects_stacking_context = value.as_object().get_bool("affects-stacking-context"sv).value_or(false);
 
         if (affects_stacking_context) {
+            auto member_generator = generator.fork();
+            member_generator.set("name:titlecase", title_casify(name));
+            member_generator.append(R"~~~(
+    case PropertyID::@name:titlecase@:
+)~~~");
+        }
+    });
+
+    generator.append(R"~~~(
+        return true;
+    default:
+        return false;
+    }
+}
+
+bool property_is_coordinating_list_group(PropertyID property_id)
+{
+    switch (property_id) {
+)~~~");
+
+    properties.for_each_member([&](auto& name, auto& value) {
+        VERIFY(value.is_object());
+
+        bool is_list = false;
+        if (value.as_object().has("is-coordinating-list-group"sv))
+            is_list = value.as_object().get_bool("is-coordinating-list-group"sv).value_or(false);
+
+        if (is_list) {
             auto member_generator = generator.fork();
             member_generator.set("name:titlecase", title_casify(name));
             member_generator.append(R"~~~(
