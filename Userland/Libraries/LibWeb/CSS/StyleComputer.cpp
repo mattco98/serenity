@@ -1437,26 +1437,34 @@ void StyleComputer::collect_animation_into(DOM::Element& element, Optional<CSS::
     }
 }
 
-static void apply_animation_properties(DOM::Document& document, StyleProperties& style, Animations::Animation& animation)
+static void apply_animation_properties(DOM::Document& document, StyleProperties& style, Animations::Animation& animation, size_t index)
 {
     auto& effect = verify_cast<Animations::KeyframeEffect>(*animation.effect());
 
-    Optional<CSS::Time> duration;
-    if (auto duration_value = style.maybe_null_property(PropertyID::AnimationDuration); duration_value) {
-        if (duration_value->is_time()) {
-            duration = duration_value->as_time().time();
-        } else if (duration_value->is_identifier() && duration_value->as_identifier().id() == ValueID::Auto) {
-            // We use empty optional to represent "auto".
-            duration = {};
+    auto get_animation_property = [&](PropertyID property_id) -> RefPtr<StyleValue const> {
+        if (auto value = style.maybe_null_property(property_id)) {
+            if (value->is_value_list()) {
+                auto const& value_list = value->as_value_list().values();
+                if (value_list.is_empty())
+                    return {};
+                return value_list[index % value_list.size()];
+            }
+            return value;
         }
-    }
 
-    CSS::Time delay { 0, CSS::Time::Type::S };
-    if (auto delay_value = style.maybe_null_property(PropertyID::AnimationDelay); delay_value && delay_value->is_time())
-        delay = delay_value->as_time().time();
+        return {};
+    };
+
+    double duration { 0.0 };
+    if (auto duration_value = get_animation_property(PropertyID::AnimationDuration); duration_value && duration_value->is_time())
+        duration = duration_value->as_time().time().to_milliseconds();
+
+    double delay { 0.0 };
+    if (auto delay_value = get_animation_property(PropertyID::AnimationDelay); delay_value && delay_value->is_time())
+        delay = delay_value->as_time().time().to_milliseconds();
 
     double iteration_count = 1.0;
-    if (auto iteration_count_value = style.maybe_null_property(PropertyID::AnimationIterationCount); iteration_count_value) {
+    if (auto iteration_count_value = get_animation_property(PropertyID::AnimationIterationCount); iteration_count_value) {
         if (iteration_count_value->is_identifier() && iteration_count_value->to_identifier() == ValueID::Infinite)
             iteration_count = HUGE_VAL;
         else if (iteration_count_value->is_number())
@@ -1464,32 +1472,29 @@ static void apply_animation_properties(DOM::Document& document, StyleProperties&
     }
 
     CSS::AnimationFillMode fill_mode { CSS::AnimationFillMode::None };
-    if (auto fill_mode_property = style.maybe_null_property(PropertyID::AnimationFillMode); fill_mode_property && fill_mode_property->is_identifier()) {
+    if (auto fill_mode_property = get_animation_property(PropertyID::AnimationFillMode); fill_mode_property && fill_mode_property->is_identifier()) {
         if (auto fill_mode_value = value_id_to_animation_fill_mode(fill_mode_property->to_identifier()); fill_mode_value.has_value())
             fill_mode = *fill_mode_value;
     }
 
     CSS::AnimationDirection direction { CSS::AnimationDirection::Normal };
-    if (auto direction_property = style.maybe_null_property(PropertyID::AnimationDirection); direction_property && direction_property->is_identifier()) {
+    if (auto direction_property = get_animation_property(PropertyID::AnimationDirection); direction_property && direction_property->is_identifier()) {
         if (auto direction_value = value_id_to_animation_direction(direction_property->to_identifier()); direction_value.has_value())
             direction = *direction_value;
     }
 
     CSS::AnimationPlayState play_state { CSS::AnimationPlayState::Running };
-    if (auto play_state_property = style.maybe_null_property(PropertyID::AnimationPlayState); play_state_property && play_state_property->is_identifier()) {
+    if (auto play_state_property = get_animation_property(PropertyID::AnimationPlayState); play_state_property && play_state_property->is_identifier()) {
         if (auto play_state_value = value_id_to_animation_play_state(play_state_property->to_identifier()); play_state_value.has_value())
             play_state = *play_state_value;
     }
 
     Animations::TimingFunction timing_function = Animations::ease_timing_function;
-    if (auto timing_property = style.maybe_null_property(PropertyID::AnimationTimingFunction); timing_property && timing_property->is_easing())
+    if (auto timing_property = get_animation_property(PropertyID::AnimationTimingFunction); timing_property && timing_property->is_easing())
         timing_function = Animations::TimingFunction::from_easing_style_value(timing_property->as_easing());
 
-    auto iteration_duration = duration.has_value()
-        ? Variant<double, String> { duration.release_value().to_milliseconds() }
-        : "auto"_string;
-    effect.set_iteration_duration(iteration_duration);
-    effect.set_start_delay(delay.to_milliseconds());
+    effect.set_iteration_duration(duration);
+    effect.set_start_delay(delay);
     effect.set_iteration_count(iteration_count);
     effect.set_timing_function(move(timing_function));
     effect.set_fill_mode(Animations::css_fill_mode_to_bindings_fill_mode(fill_mode));
@@ -1585,7 +1590,7 @@ void StyleComputer::compute_cascaded_values(StyleProperties& style, DOM::Element
                 animation->set_timeline(m_document->timeline());
                 animation->set_owning_element(element);
                 animation->set_effect(effect);
-                apply_animation_properties(m_document, style, animation);
+                apply_animation_properties(m_document, style, animation, 0);
                 if (pseudo_element.has_value())
                     effect->set_pseudo_element(Selector::PseudoElement { pseudo_element.value() });
 
@@ -1601,7 +1606,7 @@ void StyleComputer::compute_cascaded_values(StyleProperties& style, DOM::Element
             } else {
                 // The animation hasn't changed, but some properties of the animation may have
                 for (auto const& existing_animation : move(element.cached_animation_name_animations()))
-                    apply_animation_properties(m_document, style, *existing_animation);
+                    apply_animation_properties(m_document, style, *existing_animation, 0);
             }
         }
     } else {
