@@ -1,0 +1,45 @@
+<!DOCTYPE>
+<style>
+    div {
+        width: 200px;
+        height: 200px;
+    }
+
+    #el1 {
+        animation: anim1 1s, anim2 1s;
+    }
+
+    #el2 {
+        animation-name: anim1, anim2;
+        animation-duration: 1s, 1s;
+    }
+
+    @keyframes anim1 {
+        from {
+            width: 200px;
+        }
+        to {
+            width: 400px;
+        }
+    }
+
+    @keyframes anim2 {
+        from {
+            height: 200px;
+        }
+        to {
+            height: 400px;
+        }
+    }
+</style>
+<div id="el1"></div>
+<div id="el2"></div>
+<script src="../../include.js"></script>
+<script>
+    test(() => {
+        if (document.getElementById("el1").getAnimations().length > 0)
+            println("element 1 is animating");
+        if (document.getElementById("el2").getAnimations().length > 0)
+            println("element 2 is animating");
+    });
+</script>
