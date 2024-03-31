@@ -1565,6 +1565,22 @@ void StyleComputer::compute_cascaded_values(StyleProperties& style, DOM::Element
     cascade_declarations(style, element, pseudo_element, matching_rule_set.author_rules, CascadeOrigin::Author, Important::No);
 
     // Animation declarations [css-animations-2]
+    cascade_animations(style, element, pseudo_element);
+
+    // Important author declarations
+    cascade_declarations(style, element, pseudo_element, matching_rule_set.author_rules, CascadeOrigin::Author, Important::Yes);
+
+    // Important user declarations
+    cascade_declarations(style, element, pseudo_element, matching_rule_set.user_rules, CascadeOrigin::User, Important::Yes);
+
+    // Important user agent declarations
+    cascade_declarations(style, element, pseudo_element, matching_rule_set.user_agent_rules, CascadeOrigin::UserAgent, Important::Yes);
+
+    // FIXME: Transition declarations [css-transitions-1]
+}
+
+void StyleComputer::cascade_animations(StyleProperties& style, DOM::Element& element, Optional<CSS::Selector::PseudoElement::Type> pseudo_element) const
+{
     auto animation_name = [&]() -> Optional<String> {
         auto animation_name = style.maybe_null_property(PropertyID::AnimationName);
         if (animation_name.is_null())
@@ -1573,7 +1589,7 @@ void StyleComputer::compute_cascaded_values(StyleProperties& style, DOM::Element
             return animation_name->as_string().string_value();
         return animation_name->to_string();
     }();
-
+    
     if (animation_name.has_value()) {
         if (auto source_declaration = style.property_source_declaration(PropertyID::AnimationName); source_declaration) {
             auto& realm = element.realm();
@@ -1624,17 +1640,6 @@ void StyleComputer::compute_cascaded_values(StyleProperties& style, DOM::Element
                 collect_animation_into(element, pseudo_element, keyframe_effect, style);
         }
     }
-
-    // Important author declarations
-    cascade_declarations(style, element, pseudo_element, matching_rule_set.author_rules, CascadeOrigin::Author, Important::Yes);
-
-    // Important user declarations
-    cascade_declarations(style, element, pseudo_element, matching_rule_set.user_rules, CascadeOrigin::User, Important::Yes);
-
-    // Important user agent declarations
-    cascade_declarations(style, element, pseudo_element, matching_rule_set.user_agent_rules, CascadeOrigin::UserAgent, Important::Yes);
-
-    // FIXME: Transition declarations [css-transitions-1]
 }
 
 DOM::Element const* element_to_inherit_style_from(DOM::Element const* element, Optional<CSS::Selector::PseudoElement::Type> pseudo_element)
