@@ -6379,8 +6379,9 @@ Parser::ParseErrorOr<NonnullRefPtr<StyleValue>> Parser::parse_css_value(Property
     auto stream = TokenStream { component_values };
 
     HashMap<UnderlyingType<PropertyID>, Vector<ValueComparingNonnullRefPtr<StyleValue const>>> assigned_values;
+    auto is_coordinating_list_group = property_is_coordinating_list_group(property_id);
 
-    while (stream.has_next_token() && !unassigned_properties.is_empty()) {
+    while (stream.has_next_token()) {
         auto property_and_value = parse_css_value_for_properties(unassigned_properties, stream);
         if (property_and_value.has_value()) {
             auto property = property_and_value->property;
@@ -6389,17 +6390,28 @@ Parser::ParseErrorOr<NonnullRefPtr<StyleValue>> Parser::parse_css_value(Property
             if (values.size() + 1 == property_maximum_value_count(property)) {
                 // We're done with this property, move on to the next one.
                 unassigned_properties.remove_first_matching([&](auto& unassigned_property) { return unassigned_property == property; });
+
+                if (!is_coordinating_list_group && unassigned_properties.is_empty())
+                    break;
             }
 
             values.append(value.release_nonnull());
             continue;
         }
 
-        // No property matched, so we're done.
-        dbgln("No property (from {} properties) matched {}", unassigned_properties.size(), stream.peek_token().to_debug_string());
-        for (auto id : unassigned_properties)
-            dbgln("    {}", string_from_property_id(id));
-        break;
+        if (!is_coordinating_list_group) {
+            // No property matched, so we're done.
+            dbgln("No property (from {} properties) matched {}", unassigned_properties.size(), stream.peek_token().to_debug_string());
+            for (auto id : unassigned_properties)
+                dbgln("    {}", string_from_property_id(id));
+            break;
+        }
+
+        if (!stream.has_next_token() || !stream.peek_token().is(Token::Type::Comma))
+            break;
+
+        stream.next_token();
+        unassigned_properties = longhands_for_shorthand(property_id);
     }
 
     for (auto& property : unassigned_properties)
