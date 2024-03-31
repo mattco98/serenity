@@ -6,40 +6,100 @@
         height: 100px;
     }
 
-    #el1 {
-        animation: anim1 1s linear;
-    }
-    #el2 {
-        animation: anim2 1s linear;
-    }
-    #el3 {
-        animation: anim3 1s linear;
-    }
+    /*#el1 {*/
+    /*    background-color: red;*/
+    /*}*/
+    /*#el2 {*/
+    /*    background-color: blue;*/
+    /*    transform: translate(200%, 100px) scale(2)*/
+    /*}*/
+    /*#el3 {*/
+    /*    background-color: black;*/
+    /*    transform: translate(200%, 300px) scale(4)*/
+    /*}*/
 
-    @keyframes anim1 {
-        to {
-            transform: translate(200%, 100px) scale(2)
-        }
-    }
+    /*@keyframes anim1 {*/
+    /*    from {*/
+    /*        transform: translate(200%, 100px) scale(2)*/
+    /*    }*/
+    /*}*/
 
-    @keyframes anim2 {
-        from {
-            transform: translate(200%, 100px) scale(2)
-        }
-    }
+    /*@keyframes anim2 {*/
+    /*    to {*/
+    /*        transform: translate(200%, 100px) scale(2)*/
+    /*    }*/
+    /*}*/
 
-    @keyframes anim3 {
-        from {
-            transform: translate(200%, 100px) scale(2)
-        }
-        to {
-            transform: translate(200%, 100px) scale(2)
-        }
-    }
+    /*@keyframes anim3 {*/
+    /*    from {*/
+    /*        transform: translate(100%, 100px) scale(2)*/
+    /*    }*/
+    /*    to {*/
+    /*        transform: translate(200%, 300px) scale(4)*/
+    /*    }*/
+    /*}*/
 </style>
+<script src="../../include.js"></script>
 <div id="el1"></div>
 <div id="el2"></div>
 <div id="el3"></div>
 <script>
+    promiseTest(async () => {
+        const timeline = internals.createInternalAnimationTimeline();
+        timeline.setTime(0);
 
+        // const divs = document.getElementsByTagName("div");
+        // for (const div of divs) {
+        //     for (const anim of div.getAnimations()) {
+        //         anim.cancel();
+        //         anim.timeline = timeline;
+        //         anim.play();
+        //     }
+        // }
+
+        function stringifyDOMRect(rect) {
+            return `[x=${rect.x}, y=${rect.y}, width=${rect.width}, height=${rect.height}]`;
+        }
+
+        const el1 = document.getElementById("el1");
+        const el2 = document.getElementById("el2");
+        const el3 = document.getElementById("el3");
+
+        el1.animate(
+            [{ transform: "translate(200%, 100px) scale(2)" }, {}],
+            { duration: 1000, timeline, fill: "forwards" },
+        );
+        el2.animate(
+            [{}, { transform: "translate(200%, 100px) scale(2)" }],
+            { duration: 1000, timeline, fill: "forwards" });
+        el3.animate([
+            { transform: "translate(100%, 100px) scale(2)" },
+            { transform: "translate(200%, 300px) scale(4)" },
+        ], {
+            duration: 1000,
+            timeline,
+            fill: "forwards",
+        });
+
+        timeline.setTime(500);
+        await animationFrame();
+        println("At 500ms:")
+        println(`el1 rect: ${stringifyDOMRect(el1.getBoundingClientRect())}`);
+        println(`el2 rect: ${stringifyDOMRect(el2.getBoundingClientRect())}`);
+        println(`el3 rect: ${stringifyDOMRect(el3.getBoundingClientRect())}`);
+
+        timeline.setTime(750);
+        await animationFrame();
+        println("\nAt 750ms:")
+        println(`el1 rect: ${stringifyDOMRect(el1.getBoundingClientRect())}`);
+        println(`el2 rect: ${stringifyDOMRect(el2.getBoundingClientRect())}`);
+        println(`el3 rect: ${stringifyDOMRect(el3.getBoundingClientRect())}`);
+
+        timeline.setTime(1000);
+        await animationFrame();
+        println("\nAt 1000ms:")
+        println(`el1 rect: ${stringifyDOMRect(el1.getBoundingClientRect())}`);
+        println(`el2 rect: ${stringifyDOMRect(el2.getBoundingClientRect())}`);
+        println(`el3 rect: ${stringifyDOMRect(el3.getBoundingClientRect())}`);
+    });
 </script>

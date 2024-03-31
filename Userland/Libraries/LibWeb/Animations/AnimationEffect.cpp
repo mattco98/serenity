@@ -561,6 +561,7 @@ Optional<double> AnimationEffect::current_iteration() const
 // https://www.w3.org/TR/web-animations-1/#transformed-progress
 Optional<double> AnimationEffect::transformed_progress() const
 {
+    // dbgln("timeline time = {}", associated_animation()->current_time());
     // 1. If the directed progress is unresolved, return unresolved.
     auto directed_progress = this->directed_progress();
     if (!directed_progress.has_value())
