@@ -1,0 +1,40 @@
+<!DOCTYPE>
+<style>
+    #el1 {
+        animation: anim1 1s, anim2 1s;
+    }
+
+    #el2 {
+        animation-name: anim1, anim2;
+        animation-duration: 1s, 1s;
+    }
+
+    @keyframes anim1 {
+        from {
+            width: 200px;
+        }
+        to {
+            width: 400px;
+        }
+    }
+
+    @keyframes anim2 {
+        from {
+            height: 200px;
+        }
+        to {
+            height: 400px;
+        }
+    }
+</style>
+<div id="el1"></div>
+<div id="el2"></div>
+<script src="../../include.js"></script>
+<script>
+    test(() => {
+        const el1Count = document.getElementById("el1").getAnimations().length;
+        println(`el1 animation count: ${el1Count}`);
+        const el2Count = document.getElementById("el2").getAnimations().length;
+        println(`el2 animation count: ${el2Count}`);
+    });
+</script>

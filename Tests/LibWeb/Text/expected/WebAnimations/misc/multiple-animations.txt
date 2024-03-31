@@ -1,0 +1,2 @@
+    el1 animation count: 2
+el2 animation count: 2
