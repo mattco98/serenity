@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.25)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/Meta/CMake")
 
 project(SerenityOS C CXX ASM)
+set(CMAKE_BUILD_WITH_INSTALL_RPATH ON)
 
 if(NOT "${CMAKE_BUILD_TYPE}" STREQUAL "")
   message(FATAL_ERROR
@@ -44,7 +45,6 @@ include(serenity_options NO_POLICY_SCOPE)
 include(setup_ccache)
 
 if (NOT HACKSTUDIO_BUILD)
-
     include(check_for_dependencies)
 
     # Host tools, required to generate files for the build
@@ -56,6 +56,10 @@ if (NOT HACKSTUDIO_BUILD)
         )
     endif()
 
+    option(ENABLE_LIBJS_GC_VERIFIER OFF)
+    if (${ENABLE_LIBJS_GC_VERIFIER} AND CMAKE_CXX_COMPILER_ID MATCHES "Clang$")
+        add_compile_options("-fplugin=${CMAKE_BINARY_DIR}/../lagom/lib/libLibJSGCVerifier2.so")
+    endif()
 endif()
 
 # Meta target to run all code-gen steps in the build.
