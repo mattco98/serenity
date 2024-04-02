@@ -289,3 +289,11 @@ if (BUILD_TESTING)
         ENVIRONMENT "SERENITY_SOURCE_DIR=${SERENITY_SOURCE_DIR}"
     )
 endif()
+
+target_compile_options(ladybird PUBLIC "-fplugin=${SerenityOS_SOURCE_DIR}/Meta/Lagom/Tools/LibJSGCVerifier2/build/libLibJSGCVerifier2.so")
+#add_compile_options("-fplugin=${CMAKE_BINARY_DIR}../lagom/Tools/LibJSGCVerifier2/libLibJSGCVerifier2.so")
+
+#option(ENABLE_LIBJS_GC_VERIFIER OFF)
+#if(${ENABLE_LIBJS_GC_VERIFIER} AND (CMAKE_CXX_COMPILER_ID MATCHES "Clang$"))
+#    add_subdirectory(${SerenityOS_SOURCE_DIR}/Meta/Lagom/Tools/LibJSGCVerifier2)
+#endif()

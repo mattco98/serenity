@@ -279,4 +279,9 @@ if("${CMAKE_SYSTEM_PROCESSOR}" MATCHES "i.86.*")
     target_link_libraries(LibJS PRIVATE atomic)
 endif()
 
-target_compile_options(LibJS PRIVATE -fno-omit-frame-pointer)
+#target_compile_options(LibJS PRIVATE -fno-omit-frame-pointer)
+#
+#if(${ENABLE_LIBJS_GC_VERIFIER} AND (CMAKE_CXX_COMPILER_ID MATCHES "Clang$"))
+##    add_dependencies(LibJS LibJSGCVerifier2)
+##    find_library(GC_VERIFIER GCVerifier LibJSGCVerifier2)
+#endif()
