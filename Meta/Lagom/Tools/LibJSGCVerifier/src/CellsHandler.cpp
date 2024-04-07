@@ -106,9 +106,15 @@ std::vector<clang::QualType> get_all_qualified_types(clang::QualType const& type
     return qualified_types;
 }
 
+enum class WrapType {
+    None,
+    GCPtr,
+    Handle,
+};
+
 struct FieldValidationResult {
     bool is_valid { false };
-    bool is_wrapped_in_gcptr { false };
+    WrapType wrap_type { WrapType::None };
     bool needs_visiting { false };
 };
 
@@ -125,7 +131,6 @@ FieldValidationResult validate_field(clang::FieldDecl const* field_decl)
             if (auto const* pointee = pointer_decl->getPointeeCXXRecordDecl()) {
                 if (record_inherits_from_cell(*pointee)) {
                     result.is_valid = false;
-                    result.is_wrapped_in_gcptr = false;
                     result.needs_visiting = true;
                     return result;
                 }
@@ -134,15 +139,17 @@ FieldValidationResult validate_field(clang::FieldDecl const* field_decl)
             if (auto const* pointee = reference_decl->getPointeeCXXRecordDecl()) {
                 if (record_inherits_from_cell(*pointee)) {
                     result.is_valid = false;
-                    result.is_wrapped_in_gcptr = false;
                     result.needs_visiting = true;
                     return result;
                 }
             }
         } else if (auto const* specialization = qualified_type->getAs<clang::TemplateSpecializationType>()) {
             auto template_type_name = specialization->getTemplateName().getAsTemplateDecl()->getName();
-            if (template_type_name != "GCPtr" && template_type_name != "NonnullGCPtr" && template_type_name != "RawGCPtr")
+            if (template_type_name != "GCPtr" && template_type_name != "NonnullGCPtr" && template_type_name != "RawGCPtr" && template_type_name != "Handle")
                 return result;
+
+            if (template_type_name == "Handle")
+                llvm::errs() << "HANDLE!\n";
 
             auto const template_args = specialization->template_arguments();
             if (template_args.size() != 1)
@@ -157,7 +164,7 @@ FieldValidationResult validate_field(clang::FieldDecl const* field_decl)
             if (!record_decl->hasDefinition())
                 return result;
 
-            result.is_wrapped_in_gcptr = true;
+            result.wrap_type = template_type_name == "Handle" ? WrapType::Handle : WrapType::GCPtr;
             result.is_valid = record_inherits_from_cell(*record_decl);
             result.needs_visiting = template_type_name != "RawGCPtr";
         }
@@ -186,7 +193,7 @@ void CollectCellsHandler::run(clang::ast_matchers::MatchFinder::MatchResult cons
     for (clang::FieldDecl const* field : record->fields()) {
         auto validation_results = validate_field(field);
         if (!validation_results.is_valid) {
-            if (validation_results.is_wrapped_in_gcptr) {
+            if (validation_results.wrap_type == WrapType::GCPtr) {
                 auto diag_id = diag_engine.getCustomDiagID(clang::DiagnosticsEngine::Warning, "Specialization type must inherit from JS::Cell");
                 diag_engine.Report(field->getLocation(), diag_id);
             } else {
@@ -200,6 +207,9 @@ void CollectCellsHandler::run(clang::ast_matchers::MatchFinder::MatchResult cons
                             << "JS::GCPtr";
                 }
             }
+        } else if (validation_results.wrap_type == WrapType::Handle) {
+            auto diag_id = diag_engine.getCustomDiagID(clang::DiagnosticsEngine::Warning, "GC-allocated member of JS::Cell class should not be wrapped in a Handle");
+            diag_engine.Report(field->getLocation(), diag_id);
         } else if (validation_results.needs_visiting) {
             fields_that_need_visiting.push_back(field);
         }
