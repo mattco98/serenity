@@ -9,6 +9,7 @@ endif()
 set(SOURCES
     main.cpp
     FileProcessor.cpp
+    LibJSGCPluginAction.cpp
 )
 
 lagom_tool(ClangPlugin LIBS clangTooling)

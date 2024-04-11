@@ -5,9 +5,9 @@
  */
 
 #include "FileProcessor.h"
+#include "LibJSGCPluginAction.h"
 #include <atomic>
 #include <clang/Tooling/ArgumentsAdjusters.h>
-#include <clang/Tooling/Tooling.h>
 
 void FileProcessor::run(size_t num_threads)
 {
@@ -46,6 +46,6 @@ void FileProcessor::process()
             return args;
         });
 
-        // FIXME: Run analysis here
+        run_plugin_action<LibJSGCPluginAction>(tool, path);
     }
 }
