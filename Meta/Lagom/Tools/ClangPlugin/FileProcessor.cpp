@@ -5,6 +5,7 @@
  */
 
 #include "FileProcessor.h"
+#include "LambdaCapturePluginAction.h"
 #include "LibJSGCPluginAction.h"
 #include <atomic>
 #include <clang/Tooling/ArgumentsAdjusters.h>
@@ -46,6 +47,7 @@ void FileProcessor::process()
             return args;
         });
 
+        run_plugin_action<LambdaCapturePluginAction>(tool, path);
         run_plugin_action<LibJSGCPluginAction>(tool, path);
     }
 }

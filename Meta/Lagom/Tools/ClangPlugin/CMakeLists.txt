@@ -9,6 +9,7 @@ endif()
 set(SOURCES
     main.cpp
     FileProcessor.cpp
+    LambdaCapturePluginAction.cpp
     LibJSGCPluginAction.cpp
 )
 
