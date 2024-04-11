@@ -10,7 +10,7 @@
 #include <atomic>
 #include <clang/Tooling/ArgumentsAdjusters.h>
 
-void FileProcessor::run(size_t num_threads)
+int FileProcessor::run(size_t num_threads)
 {
     num_threads = std::min(num_threads, m_file_paths.size());
 
@@ -19,6 +19,8 @@ void FileProcessor::run(size_t num_threads)
 
     for (auto& thread : m_threads)
         thread.join();
+
+    return DiagConsumer::did_emit_diagnostic() ? 1 : 0;
 }
 
 void FileProcessor::process()

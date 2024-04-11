@@ -8,6 +8,7 @@ endif()
 
 set(SOURCES
     main.cpp
+    DiagConsumer.cpp
     FileProcessor.cpp
     LambdaCapturePluginAction.cpp
     LibJSGCPluginAction.cpp

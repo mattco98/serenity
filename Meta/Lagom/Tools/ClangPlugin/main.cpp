@@ -5,13 +5,20 @@
  */
 
 #include "FileProcessor.h"
+#include <cassert>
 #include <clang/Tooling/CommonOptionsParser.h>
-#include <clang/Tooling/Tooling.h>
 #include <filesystem>
 #include <llvm/Support/CommandLine.h>
 #include <thread>
 
 llvm::cl::OptionCategory s_tool_category { "ClangPlugin", "A plugin that performs SerenityOS-specific analysis" };
+
+llvm::cl::opt<bool> s_test_mode {
+    "test-mode",
+    llvm::cl::desc("Run the plugin in a manner more hospitable to the test runner"),
+    llvm::cl::init(false),
+    llvm::cl::cat(s_tool_category)
+};
 
 llvm::cl::opt<bool> s_use_lagom_build {
     "lagom",
@@ -139,6 +146,5 @@ int main(int argc, char const** argv)
         return 1;
 
     FileProcessor processor { *compilation_database, *source_paths };
-    processor.run(s_num_threads);
-    return 0;
+    return processor.run(s_num_threads);
 }

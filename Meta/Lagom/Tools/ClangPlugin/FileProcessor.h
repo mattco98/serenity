@@ -6,9 +6,9 @@
 
 #pragma once
 
+#include "DiagConsumer.h"
 #include <clang/Basic/Diagnostic.h>
 #include <clang/Tooling/CommonOptionsParser.h>
-#include <clang/Tooling/Tooling.h>
 #include <optional>
 #include <string>
 #include <thread>
@@ -22,7 +22,7 @@ public:
     {
     }
 
-    void run(size_t num_threads);
+    int run(size_t num_threads);
 
 private:
     void process();
@@ -30,7 +30,7 @@ private:
     template<typename T>
     void run_plugin_action(clang::tooling::ClangTool& tool, std::string const& path)
     {
-        {
+        if (!s_test_mode) {
             std::lock_guard guard { m_print_mutex };
             llvm::outs() << "\033[38;5;48m[" << T::action_name() << "]\033[0m Processing " << path << "\n";
         }
