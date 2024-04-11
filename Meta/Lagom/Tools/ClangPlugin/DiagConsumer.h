@@ -14,6 +14,8 @@
 
 extern llvm::cl::opt<bool> s_test_mode;
 
+std::lock_guard<std::mutex> get_print_lock();
+
 // This consumer emits diagnostics in an easy-to-compare manner when running in test mode,
 // as clang diagnostics include the full file path, which of course will differ depending
 // on the machine. When outside of test mode, diagnostics are delegated to Clang's default

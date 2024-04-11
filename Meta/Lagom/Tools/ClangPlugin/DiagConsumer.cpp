@@ -12,6 +12,13 @@ static thread_local std::unordered_set<clang::DiagnosticsEngine*> s_installed_en
 static bool s_did_emit_diagnostic;
 static VisitedObjectSet<unsigned int> s_visited_locations;
 
+std::mutex print_mutex;
+
+std::lock_guard<std::mutex> get_print_lock()
+{
+    return std::lock_guard(print_mutex);
+}
+
 bool DiagConsumer::did_emit_diagnostic()
 {
     return s_did_emit_diagnostic;

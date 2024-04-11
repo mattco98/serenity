@@ -31,7 +31,7 @@ private:
     void run_plugin_action(clang::tooling::ClangTool& tool, std::string const& path)
     {
         if (!s_test_mode) {
-            std::lock_guard guard { m_print_mutex };
+            auto lock = get_print_lock();
             llvm::outs() << "\033[38;5;48m[" << T::action_name() << "]\033[0m Processing " << path << "\n";
         }
 
@@ -45,5 +45,4 @@ private:
     size_t m_next_file_path_index { 0 };
     std::vector<std::thread> m_threads;
     std::mutex m_mutex;
-    std::mutex m_print_mutex;
 };
