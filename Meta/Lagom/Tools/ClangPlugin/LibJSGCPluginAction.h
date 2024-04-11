@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include "DiagConsumer.h"
 #include <clang/AST/ASTConsumer.h>
 #include <clang/AST/RecursiveASTVisitor.h>
 #include <clang/Frontend/FrontendAction.h>
@@ -29,6 +30,11 @@ private:
 
 class LibJSGCASTConsumer : public clang::ASTConsumer {
 public:
+    virtual void Initialize(clang::ASTContext& context) override
+    {
+        DiagConsumer::install(context.getDiagnostics());
+    }
+
     virtual void HandleTranslationUnit(clang::ASTContext& context) override;
 };
 

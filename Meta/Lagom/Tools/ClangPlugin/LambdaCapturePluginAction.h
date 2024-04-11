@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include "DiagDelegatingASTConsumer.h"
 #include <clang/ASTMatchers/ASTMatchFinder.h>
 #include <clang/ASTMatchers/ASTMatchers.h>
 #include <clang/Tooling/Tooling.h>
@@ -26,7 +27,7 @@ public:
 
     virtual std::unique_ptr<clang::ASTConsumer> CreateASTConsumer(clang::CompilerInstance&, llvm::StringRef) override
     {
-        return m_finder.newASTConsumer();
+        return std::make_unique<DiagDelegatingASTConsumer>(m_finder.newASTConsumer());
     }
 
 private:
