@@ -651,6 +651,7 @@ if (BUILD_LAGOM)
         # LibTest tests from Tests/
         set(TEST_DIRECTORIES
             AK
+            ClangPlugin
             JSSpecCompiler
             LibCrypto
             LibCompress
