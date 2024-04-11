@@ -19,6 +19,22 @@ llvm::cl::opt<bool> s_use_lagom_build {
     llvm::cl::cat(s_tool_category),
 };
 
+enum class ScanType {
+    None,
+    JS,
+    All,
+};
+llvm::cl::opt<ScanType> s_scan_type {
+    "scan",
+    llvm::cl::desc("Automatically find files to analyze"),
+    llvm::cl::values(
+        clEnumValN(ScanType::None, "none", "Scan only the files provided by the user"),
+        clEnumValN(ScanType::JS, "js", "Scan all JS-related files"),
+        clEnumValN(ScanType::All, "all", "Scan the entire SerenityOS source tree")),
+    llvm::cl::init(ScanType::None),
+    llvm::cl::cat(s_tool_category),
+};
+
 llvm::cl::list<std::string> s_file_paths {
     llvm::cl::Positional,
     llvm::cl::desc("<source files>"),
@@ -32,8 +48,27 @@ llvm::cl::opt<size_t> s_num_threads {
     llvm::cl::cat(s_tool_category),
 };
 
+void scan_directory_for_relevant_files(std::vector<std::string>& paths, std::filesystem::path const& path)
+{
+    assert(std::filesystem::is_directory(path));
+
+    for (auto const& dir_entry : std::filesystem::recursive_directory_iterator(path)) {
+        if (!dir_entry.is_regular_file())
+            continue;
+
+        auto const& file_path = dir_entry.path();
+        if (file_path.extension() == ".h" || file_path.extension() == ".cpp")
+            paths.push_back(file_path.string());
+    }
+}
+
 std::optional<std::vector<std::string>> get_source_path_list(std::filesystem::path const& project_root)
 {
+    if (s_scan_type == ScanType::None && s_file_paths.empty()) {
+        llvm::errs() << "Expected at least one source file to be specified without --scan\n";
+        return {};
+    }
+
     std::vector<std::string> paths;
     for (auto const& path : s_file_paths) {
         if (std::filesystem::path(path).is_absolute()) {
@@ -41,6 +76,24 @@ std::optional<std::vector<std::string>> get_source_path_list(std::filesystem::pa
         } else {
             paths.push_back(project_root / path);
         }
+    }
+
+    if (s_scan_type == ScanType::JS) {
+        scan_directory_for_relevant_files(paths, project_root / "Userland" / "Libraries" / "LibJS");
+        scan_directory_for_relevant_files(paths, project_root / "Userland" / "Libraries" / "LibMarkdown");
+        scan_directory_for_relevant_files(paths, project_root / "Userland" / "Libraries" / "LibWeb");
+        scan_directory_for_relevant_files(paths, project_root / "Userland" / "Services" / "WebContent");
+        scan_directory_for_relevant_files(paths, project_root / "Userland" / "Services" / "WebWorker");
+        scan_directory_for_relevant_files(paths, project_root / "Userland" / "Applications" / "Assistant");
+        scan_directory_for_relevant_files(paths, project_root / "Userland" / "Applications" / "Browser");
+        scan_directory_for_relevant_files(paths, project_root / "Userland" / "Applications" / "Spreadsheet");
+        scan_directory_for_relevant_files(paths, project_root / "Userland" / "Applications" / "TextEditor");
+        scan_directory_for_relevant_files(paths, project_root / "Userland" / "DevTools" / "HackStudio");
+    } else if (s_scan_type == ScanType::All) {
+        scan_directory_for_relevant_files(paths, project_root / "AK");
+        scan_directory_for_relevant_files(paths, project_root / "Kernel");
+        scan_directory_for_relevant_files(paths, project_root / "Ladybird");
+        scan_directory_for_relevant_files(paths, project_root / "Userland");
     }
 
     return paths;
