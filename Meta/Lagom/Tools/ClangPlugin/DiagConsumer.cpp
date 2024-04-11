@@ -52,10 +52,14 @@ void DiagConsumer::HandleDiagnostic(clang::DiagnosticsEngine::Level level, clang
     auto col_hash = std::hash<unsigned int> {}(col);
     auto hash = pair_int_hash(u64_hash(path_hash), pair_int_hash(line_hash, col_hash));
 
-    if (s_visited_locations.has_visited(hash))
-        return;
+    auto lock = get_print_lock();
+    llvm::outs() << "path: " << path << ", line: " << line << ", col: " << col << "\n";
 
     auto& diag_engine = source_manager.getDiagnostics();
+    if (s_visited_locations.has_visited(hash)) {
+        diag_engine.Clear();
+        return;
+    }
 
     // FIXME: Only set this to true if this is a diagnostic emitted by this tool, so e.g. failing to find a random
     //        header file won't cause the program to return an error code.
@@ -94,6 +98,4 @@ void DiagConsumer::HandleDiagnostic(clang::DiagnosticsEngine::Level level, clang
     llvm::SmallVector<char> message;
     info.FormatDiagnostic(message);
     llvm::errs() << message << "\n";
-
-    diag_engine.Clear();
 }

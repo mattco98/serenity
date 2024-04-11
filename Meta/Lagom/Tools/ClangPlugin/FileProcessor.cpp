@@ -19,6 +19,7 @@ int FileProcessor::run(size_t num_threads)
 
     for (auto& thread : m_threads)
         thread.join();
+    // process();
 
     return DiagConsumer::did_emit_diagnostic() ? 1 : 0;
 }
@@ -49,7 +50,7 @@ void FileProcessor::process()
             return args;
         });
 
-        run_plugin_action<LambdaCapturePluginAction>(tool, path);
+        // run_plugin_action<LambdaCapturePluginAction>(tool, path);
         run_plugin_action<LibJSGCPluginAction>(tool, path);
     }
 }

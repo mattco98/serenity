@@ -341,7 +341,12 @@ void LibJSGCVisitor::validate_record_macros(clang::CXXRecordDecl const& record)
     }
 
     bool found_macro = false;
-    auto record_name = record.getName();
+    auto record_name = record.getNameAsString();
+    if (auto qualifier_loc = record.getQualifierLoc()) {
+        auto qualifier_range = source_manager.getExpansionRange(qualifier_loc.getSourceRange());
+        auto qualifier_name = clang::Lexer::getSourceText(qualifier_range, source_manager, m_context.getLangOpts());
+        record_name = qualifier_name.str() + record_name;
+    }
 
     for (auto const& macro : it->second) {
         if (record_range.fullyContains(macro.range)) {
