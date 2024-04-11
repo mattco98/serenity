@@ -7,6 +7,7 @@
 #pragma once
 
 #include <AK/HashMap.h>
+#include <LibURL/URL.h>
 
 namespace Web::HTML {
 
