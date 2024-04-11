@@ -9,6 +9,7 @@
 #include <clang/ASTMatchers/ASTMatchers.h>
 #include <clang/Basic/SourceManager.h>
 #include <clang/Frontend/CompilerInstance.h>
+#include <clang/Lex/MacroArgs.h>
 
 template<typename T>
 class SimpleCollectMatchesCallback : public clang::ast_matchers::MatchFinder::MatchCallback {
@@ -254,4 +255,85 @@ void LibJSGCASTConsumer::HandleTranslationUnit(clang::ASTContext& context)
 {
     LibJSGCVisitor visitor { context };
     visitor.TraverseDecl(context.getTranslationUnitDecl());
+}
+
+char const* LibJSCellMacro::type_name(Type type)
+{
+    switch (type) {
+    case Type::JSCell:
+        return "JS_CELL";
+    case Type::JSObject:
+        return "JS_OBJECT";
+    case Type::JSEnvironment:
+        return "JS_ENVIRONMENT";
+    case Type::JSPrototypeObject:
+        return "JS_PROTOTYPE_OBJECT";
+    case Type::WebPlatformObject:
+        return "WEB_PLATFORM_OBJECT";
+    default:
+        __builtin_unreachable();
+    }
+}
+
+std::string LibJSCellMacro::stringify() const
+{
+    std::string str = type_name(type);
+    str += "(";
+    bool first = true;
+    for (auto const& arg : args) {
+        if (!first)
+            str += ", ";
+        first = false;
+        str += arg.text;
+    }
+    str += ")";
+    return str;
+}
+
+void LibJSPPCallbacks::LexedFileChanged(clang::FileID curr_fid, LexedFileChangeReason reason, clang::SrcMgr::CharacteristicKind, clang::FileID, clang::SourceLocation)
+{
+    if (reason == LexedFileChangeReason::EnterFile) {
+        m_curr_fid_hash_stack.push_back(curr_fid.getHashValue());
+    } else {
+        assert(!m_curr_fid_hash_stack.empty());
+        m_curr_fid_hash_stack.pop_back();
+    }
+}
+
+void LibJSPPCallbacks::MacroExpands(clang::Token const& name_token, clang::MacroDefinition const&, clang::SourceRange range, [[maybe_unused]] clang::MacroArgs const* args)
+{
+    if (auto* ident_info = name_token.getIdentifierInfo()) {
+        auto name = ident_info->getName();
+        LibJSCellMacro::Type type;
+        if (name == "JS_CELL") {
+            type = LibJSCellMacro::Type::JSCell;
+        } else if (name == "JS_OBJECT") {
+            type = LibJSCellMacro::Type::JSObject;
+        } else if (name == "JS_ENVIRONMENT") {
+            type = LibJSCellMacro::Type::JSEnvironment;
+        } else if (name == "JS_PROTOTYPE_OBJECT") {
+            type = LibJSCellMacro::Type::JSPrototypeObject;
+        } else if (name == "WEB_PLATFORM_OBJECT") {
+            type = LibJSCellMacro::Type::WebPlatformObject;
+        } else {
+            return;
+        }
+
+        LibJSCellMacro macro { range, type, {} };
+
+        for (size_t arg_index = 0; arg_index < args->getNumMacroArguments(); arg_index++) {
+            auto const* first_token = args->getUnexpArgument(arg_index);
+            auto stringified_token = clang::MacroArgs::StringifyArgument(first_token, m_preprocessor, false, range.getBegin(), range.getEnd());
+            // The token includes leading and trailing quotes
+            auto len = strlen(stringified_token.getLiteralData());
+            std::string arg_text { stringified_token.getLiteralData() + 1, len - 2 };
+            macro.args.push_back({ arg_text, first_token->getLocation() });
+        }
+
+        assert(!m_curr_fid_hash_stack.empty());
+        auto curr_fid_hash = m_curr_fid_hash_stack.back();
+        if (m_macro_map.find(curr_fid_hash) == m_macro_map.end())
+            m_macro_map[curr_fid_hash] = {};
+        m_macro_map[curr_fid_hash].push_back(macro);
+    }
 }
