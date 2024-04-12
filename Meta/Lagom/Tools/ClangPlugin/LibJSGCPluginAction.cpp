@@ -54,7 +54,12 @@ std::vector<clang::QualType> get_all_qualified_types(clang::QualType const& type
     if (auto const* template_specialization = type->getAs<clang::TemplateSpecializationType>()) {
         auto specialization_name = template_specialization->getTemplateName().getAsTemplateDecl()->getQualifiedNameAsString();
         // Do not unwrap GCPtr/NonnullGCPtr/MarkedVector
-        if (specialization_name == "JS::GCPtr" || specialization_name == "JS::NonnullGCPtr" || specialization_name == "JS::RawGCPtr" || specialization_name == "JS::MarkedVector") {
+        if (specialization_name == "JS::GCPtr" || 
+            specialization_name == "JS::NonnullGCPtr" || 
+            specialization_name == "JS::RawGCPtr" || 
+            specialization_name == "JS::MarkedVector" ||
+            specialization_name == "JS::Handle" || 
+            specialization_name == "JS::SafeFunction") {
             qualified_types.push_back(type);
         } else {
             auto const template_arguments = template_specialization->template_arguments();
@@ -73,64 +78,75 @@ std::vector<clang::QualType> get_all_qualified_types(clang::QualType const& type
     return qualified_types;
 }
 
-struct FieldValidationResult {
-    bool is_valid { false };
-    bool is_wrapped_in_gcptr { false };
-    bool needs_visiting { false };
+enum class OuterType {
+    GCPtr,
+    RawGCPtr,
+    Handle,
+    SafeFunction,
+    Ptr,
+    Ref,
 };
 
-FieldValidationResult validate_field(clang::FieldDecl const* field_decl)
+struct QualTypeGCInfo {
+    std::optional<OuterType> outer_type { {} };
+    bool base_type_inherits_from_cell { false };
+};
+
+std::optional<QualTypeGCInfo> validate_qualified_type(clang::QualType const& type)
+{
+    if (auto const* pointer_decl = type->getAs<clang::PointerType>()) {
+        if (auto const* pointee = pointer_decl->getPointeeCXXRecordDecl())
+            return QualTypeGCInfo { OuterType::Ptr, record_inherits_from_cell(*pointee) };
+    } else if (auto const* reference_decl = type->getAs<clang::ReferenceType>()) {
+        if (auto const* pointee = reference_decl->getPointeeCXXRecordDecl())
+            return QualTypeGCInfo { OuterType::Ref, record_inherits_from_cell(*pointee) };
+    } else if (auto const* specialization = type->getAs<clang::TemplateSpecializationType>()) {
+        auto template_type_name = specialization->getTemplateName().getAsTemplateDecl()->getQualifiedNameAsString();
+
+        OuterType outer_type;
+        if (template_type_name == "JS::GCPtr" || template_type_name == "JS::NonnullGCPtr") {
+            outer_type = OuterType::GCPtr;
+        } else if (template_type_name == "JS::RawGCPtr") {
+            outer_type = OuterType::RawGCPtr;
+        } else if (template_type_name == "JS::Handle") {
+            outer_type = OuterType::Handle;
+        } else if (template_type_name == "JS::SafeFunction") {
+            return QualTypeGCInfo { OuterType::SafeFunction, false };
+        } else {
+            return {};
+        }
+
+        auto template_args = specialization->template_arguments();
+        if (template_args.size() != 1)
+            return {}; // Not really valid, but will produce a compilation error anyway
+
+        auto const& type_arg = template_args[0];
+        auto const* record_type = type_arg.getAsType()->getAs<clang::RecordType>();
+        if (!record_type)
+            return {};
+
+        auto const* record_decl = record_type->getAsCXXRecordDecl();
+        if (!record_decl->hasDefinition())
+            return {};
+
+        return QualTypeGCInfo { outer_type, record_inherits_from_cell(*record_decl) };
+    }
+
+    return {};
+}
+
+std::optional<QualTypeGCInfo> validate_field_qualified_type(clang::FieldDecl const* field_decl)
 {
     auto type = field_decl->getType();
     if (auto const* elaborated_type = llvm::dyn_cast<clang::ElaboratedType>(type.getTypePtr()))
         type = elaborated_type->desugar();
 
-    FieldValidationResult result { .is_valid = true };
-
     for (auto const& qualified_type : get_all_qualified_types(type)) {
-        if (auto const* pointer_decl = qualified_type->getAs<clang::PointerType>()) {
-            if (auto const* pointee = pointer_decl->getPointeeCXXRecordDecl()) {
-                if (record_inherits_from_cell(*pointee)) {
-                    result.is_valid = false;
-                    result.is_wrapped_in_gcptr = false;
-                    result.needs_visiting = true;
-                    return result;
-                }
-            }
-        } else if (auto const* reference_decl = qualified_type->getAs<clang::ReferenceType>()) {
-            if (auto const* pointee = reference_decl->getPointeeCXXRecordDecl()) {
-                if (record_inherits_from_cell(*pointee)) {
-                    result.is_valid = false;
-                    result.is_wrapped_in_gcptr = false;
-                    result.needs_visiting = true;
-                    return result;
-                }
-            }
-        } else if (auto const* specialization = qualified_type->getAs<clang::TemplateSpecializationType>()) {
-            auto template_type_name = specialization->getTemplateName().getAsTemplateDecl()->getName();
-            if (template_type_name != "GCPtr" && template_type_name != "NonnullGCPtr" && template_type_name != "RawGCPtr")
-                return result;
-
-            auto const template_args = specialization->template_arguments();
-            if (template_args.size() != 1)
-                return result; // Not really valid, but will produce a compilation error anyway
-
-            auto const& type_arg = template_args[0];
-            auto const* record_type = type_arg.getAsType()->getAs<clang::RecordType>();
-            if (!record_type)
-                return result;
-
-            auto const* record_decl = record_type->getAsCXXRecordDecl();
-            if (!record_decl->hasDefinition())
-                return result;
-
-            result.is_wrapped_in_gcptr = true;
-            result.is_valid = record_inherits_from_cell(*record_decl);
-            result.needs_visiting = template_type_name != "RawGCPtr";
-        }
+        if (auto error = validate_qualified_type(qualified_type))
+            return error;
     }
 
-    return result;
+    return {};
 }
 
 bool LibJSGCVisitor::VisitCXXRecordDecl(clang::CXXRecordDecl* record)
@@ -146,32 +162,45 @@ bool LibJSGCVisitor::VisitCXXRecordDecl(clang::CXXRecordDecl* record)
     if (qualified_name == "JS::Cell")
         return true;
 
+    auto record_is_cell = record_inherits_from_cell(*record);
+
     auto& diag_engine = m_context.getDiagnostics();
     std::vector<clang::FieldDecl const*> fields_that_need_visiting;
 
     for (clang::FieldDecl const* field : record->fields()) {
-        auto validation_results = validate_field(field);
-        if (!validation_results.is_valid) {
-            if (validation_results.is_wrapped_in_gcptr) {
-                auto diag_id = diag_engine.getCustomDiagID(clang::DiagnosticsEngine::Warning, "Specialization type must inherit from JS::Cell");
-                diag_engine.Report(field->getLocation(), diag_id);
-            } else {
+        auto validation_results = validate_field_qualified_type(field);
+        if (!validation_results)
+            continue;
+
+        auto [outer_type, base_type_inherits_from_cell] = *validation_results;
+
+        if (outer_type == OuterType::Ptr || outer_type == OuterType::Ref) {
+            if (base_type_inherits_from_cell) {
                 auto diag_id = diag_engine.getCustomDiagID(clang::DiagnosticsEngine::Warning, "%0 to JS::Cell type should be wrapped in %1");
                 auto builder = diag_engine.Report(field->getLocation(), diag_id);
-                if (field->getType()->isReferenceType()) {
-                    builder << "reference"
-                            << "JS::NonnullGCPtr";
+                if (outer_type == OuterType::Ref) {
+                    builder << "reference" << "JS::NonnullGCPtr";
                 } else {
-                    builder << "pointer"
-                            << "JS::GCPtr";
+                    builder << "pointer" << "JS::GCPtr";
                 }
             }
-        } else if (validation_results.needs_visiting) {
-            fields_that_need_visiting.push_back(field);
+        } else if (outer_type == OuterType::GCPtr || outer_type == OuterType::RawGCPtr) {
+            if (!base_type_inherits_from_cell) {
+                auto diag_id = diag_engine.getCustomDiagID(clang::DiagnosticsEngine::Warning, "Specialization type must inherit from JS::Cell");
+                diag_engine.Report(field->getLocation(), diag_id);
+            } else if (outer_type == OuterType::GCPtr) {
+                fields_that_need_visiting.push_back(field);
+            }
+        } else if (outer_type == OuterType::Handle || outer_type == OuterType::SafeFunction) {
+            if (record_is_cell) {
+                auto diag_id = diag_engine.getCustomDiagID(clang::DiagnosticsEngine::Warning, "Types inheriting from JS::Cell should not have %0 fields");
+                auto builder = diag_engine.Report(field->getLocation(), diag_id);
+                builder << (outer_type == OuterType::Handle ? "JS::Handle" : "JS::SafeFunction");
+            }
         }
     }
 
-    if (!record_inherits_from_cell(*record))
+    if (!record_is_cell)
         return true;
 
     clang::DeclarationName name = &m_context.Idents.get("visit_edges");
