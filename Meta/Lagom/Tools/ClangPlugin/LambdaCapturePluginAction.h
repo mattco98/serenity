@@ -6,32 +6,22 @@
 
 #pragma once
 
-#include "DiagDelegatingASTConsumer.h"
-#include <clang/ASTMatchers/ASTMatchFinder.h>
-#include <clang/ASTMatchers/ASTMatchers.h>
 #include <clang/Tooling/Tooling.h>
-#include <unordered_set>
 
 class LambdaCapturePluginAction
-    : public clang::PluginASTAction
-    , public clang::ast_matchers::MatchFinder::MatchCallback {
+    : public clang::PluginASTAction {
 public:
-    static constexpr char const* action_name() { return "LambdaCapturePluginAction"; }
-
-    LambdaCapturePluginAction();
+    LambdaCapturePluginAction() = default;
 
     virtual bool ParseArgs(clang::CompilerInstance const&, std::vector<std::string> const&) override
     {
         return true;
     }
 
-    virtual std::unique_ptr<clang::ASTConsumer> CreateASTConsumer(clang::CompilerInstance&, llvm::StringRef) override
+    virtual std::unique_ptr<clang::ASTConsumer> CreateASTConsumer(clang::CompilerInstance&, llvm::StringRef) override;
+
+    ActionType getActionType() override
     {
-        return std::make_unique<DiagDelegatingASTConsumer>(m_finder.newASTConsumer());
+        return AddAfterMainAction;
     }
-
-private:
-    virtual void run(clang::ast_matchers::MatchFinder::MatchResult const& result) override;
-
-    clang::ast_matchers::MatchFinder m_finder;
 };

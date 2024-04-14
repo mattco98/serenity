@@ -16,3 +16,4 @@ serenity_option(ENABLE_LAGOM_LIBWEB ON CACHE BOOL "Enable compiling LibWeb for L
 serenity_option(ENABLE_LAGOM_LADYBIRD OFF CACHE BOOL "Enable compiling Ladybird from Lagom")
 serenity_option(LAGOM_USE_LINKER "" CACHE STRING "The linker to use (e.g. lld, mold) instead of the system default")
 serenity_option(ENABLE_LAGOM_COVERAGE_COLLECTION OFF CACHE STRING "Enable code coverage instrumentation for lagom binaries in clang")
+serenity_option(ENABLE_CLANG_PLUGINS OFF CACHE BOOL "Enable building with the Clang plugins")

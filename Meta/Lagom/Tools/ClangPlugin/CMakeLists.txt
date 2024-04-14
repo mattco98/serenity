@@ -1,27 +1,19 @@
-set(LAGOM_BUILD OFF CACHE BOOL "Build without the serenity toolchain Clang")
+find_package(Clang 16 CONFIG REQUIRED)
 
-if (LAGOM_BUILD)
-    find_package(Clang 16 CONFIG REQUIRED)
-else()
-    find_package(Clang CONFIG REQUIRED HINTS "../../../../Toolchain/Local/clang")
-endif()
+find_package(Clang 16 CONFIG REQUIRED)
+add_custom_target(ClangPlugins ALL)
 
-set(SOURCES
-    main.cpp
-    DiagConsumer.cpp
-    FileProcessor.cpp
-    LambdaCapturePluginAction.cpp
-    LibJSGCPluginAction.cpp
-)
+function(clang_plugin target_name)
+    cmake_parse_arguments(CLANG_PLUGIN "" "" "SOURCES" ${ARGN})
+    add_library(${target_name} ${CLANG_PLUGIN_SOURCES})
+    install(TARGETS ${target_name} DESTINATION ${CMAKE_INSTALL_LIBDIR})
+    target_include_directories(${target_name} SYSTEM PRIVATE ${CLANG_INCLUDE_DIRS} ${LLVM_INCLUDE_DIRS})
+    target_compile_features(${target_name} PRIVATE cxx_std_20)
+    target_compile_options(${target_name} PRIVATE -Wall -Wextra -Werror -Wno-unused -fno-rtti -ggdb3)
 
-lagom_tool(ClangPlugin LIBS clangTooling)
-target_include_directories(ClangPlugin SYSTEM PRIVATE ${CLANG_INCLUDE_DIRS} ${LLVM_INCLUDE_DIRS})
-target_compile_features(ClangPlugin PRIVATE cxx_std_20)
-target_compile_options(ClangPlugin PRIVATE
-    -Wall
-    -Wextra
-    -Werror
-    -Wno-unused
-    -fno-rtti
-    -ggdb3
-)
+    set_property(GLOBAL APPEND PROPERTY CLANG_PLUGIN_COMPILE_OPTIONS -fplugin=${CMAKE_INSTALL_LIBDIR}/lib${target_name}.so)
+    add_dependencies(ClangPlugins ${target_name})
+endfunction()
+
+clang_plugin(LambdaCaptureClangPlugin SOURCES LambdaCapturePluginAction.cpp)
+clang_plugin(LibJSGCClangPlugin SOURCES LibJSGCPluginAction.cpp)

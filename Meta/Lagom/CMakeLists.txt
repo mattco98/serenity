@@ -418,6 +418,12 @@ if (BUILD_LAGOM_TOOLS)
     add_subdirectory(Tools)
 endif()
 
+if (ENABLE_CLANG_PLUGINS AND CMAKE_CXX_COMPILER_ID MATCHES "Clang$")
+    get_property(CLANG_PLUGIN_COMPILE_OPTIONS GLOBAL PROPERTY CLANG_PLUGIN_COMPILE_OPTIONS)
+    add_compile_options(${CLANG_PLUGIN_COMPILE_OPTIONS})
+    add_dependencies(AK ClangPlugins)
+endif()
+
 if (BUILD_LAGOM)
 
     # Create lagom equivalent of Serenity's Build/foo/Root/res (which for Serenity becomes /res in the disk image).

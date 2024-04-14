@@ -14,7 +14,10 @@ endfunction()
 add_subdirectory(CodeGenerators)
 add_subdirectory(ConfigureComponents)
 add_subdirectory(IPCMagicLinter)
-add_subdirectory(ClangPlugin)
+
+if (ENABLE_CLANG_PLUGINS)
+    add_subdirectory(ClangPlugin)
+endif()
 
 if (ENABLE_JAKT)
     include(jakt)
