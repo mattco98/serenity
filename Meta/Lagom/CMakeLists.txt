@@ -416,6 +416,14 @@ install(FILES
 # Code Generators and other host tools
 if (BUILD_LAGOM_TOOLS)
     add_subdirectory(Tools)
+
+    if (CMAKE_CXX_COMPILER_ID MATCHES "Clang$")
+        # FIXME: Do this correctly
+        find_library(LambdaCaptureClangPlugin NAMES lagom-lambda_capture_clang_plugin PATHS ${CMAKE_CURRENT_BINARY_DIR}/lib REQUIRED)
+        find_library(LibJSGCClangPlugin NAMES lagom-libjs_gc_clang_plugin PATHS ${CMAKE_CURRENT_BINARY_DIR}/lib REQUIRED)
+        add_compile_options(-fplugin=${LambdaCaptureClangPlugin} -fplugin=${LibJSGCClangPlugin})
+#        add_compile_options(-v)
+    endif()
 endif()
 
 if (BUILD_LAGOM)

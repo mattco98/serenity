@@ -9,6 +9,8 @@
 #include <clang/ASTMatchers/ASTMatchers.h>
 #include <clang/Basic/SourceManager.h>
 #include <clang/Frontend/CompilerInstance.h>
+#include <clang/Frontend/FrontendPluginRegistry.h>
+#include <unordered_set>
 
 template<typename T>
 class SimpleCollectMatchesCallback : public clang::ast_matchers::MatchFinder::MatchCallback {
@@ -255,3 +257,5 @@ void LibJSGCASTConsumer::HandleTranslationUnit(clang::ASTContext& context)
     LibJSGCVisitor visitor { context };
     visitor.TraverseDecl(context.getTranslationUnitDecl());
 }
+
+static clang::FrontendPluginRegistry::Add<LibJSGCPluginAction> X("libjs-gc-scanner", "analyze LibJS GC usage");
