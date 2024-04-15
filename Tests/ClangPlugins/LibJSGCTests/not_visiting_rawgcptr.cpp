@@ -1,3 +1,6 @@
+// RUN: %clang++ -cc1 -verify %plugin_opts% %s 2>&1
+// expected-no-diagnostics
+
 #include <LibJS/Runtime/Object.h>
 
 class TestClass : public JS::Object {

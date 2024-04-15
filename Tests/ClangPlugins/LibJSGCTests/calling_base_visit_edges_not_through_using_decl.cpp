@@ -1,13 +1,13 @@
+// RUN: %clang++ -cc1 -verify %plugin_opts% %s 2>&1
+
 #include <LibJS/Runtime/Object.h>
 
 class TestClass : public JS::Object {
     JS_OBJECT(TestClass, JS::Object);
 
+    // expected-warning@+1 {{Missing call to Base::visit_edges}}
     virtual void visit_edges(Visitor& visitor) override
     {
-        Base::visit_edges(visitor);
-        visitor.visit(m_object);
+        JS::Object::visit_edges(visitor);
     }
-
-    JS::GCPtr<JS::Object> m_object;
 };

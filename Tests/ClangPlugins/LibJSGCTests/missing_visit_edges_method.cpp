@@ -1,0 +1,10 @@
+// RUN: %clang++ -cc1 -verify %plugin_opts% %s 2>&1
+
+#include <LibJS/Runtime/Object.h>
+
+// expected-warning@+1 {{JS::Cell-inheriting class TestClass contains a GC-allocated member 'm_cell' but has no visit_edges method}}
+class TestClass : public JS::Object {
+    JS_OBJECT(TestClass, JS::Object);
+
+    JS::GCPtr<JS::Object> m_cell;
+};

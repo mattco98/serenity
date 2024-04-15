@@ -1,3 +1,6 @@
+// RUN: %clang++ -cc1 -verify %plugin_opts% %s 2>&1
+// expected-no-diagnostics
+
 #include <AK/Function.h>
 
 void take_fn(NOESCAPE Function<void()>) { }

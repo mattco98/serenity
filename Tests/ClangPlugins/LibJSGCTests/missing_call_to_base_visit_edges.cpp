@@ -1,10 +1,12 @@
-/// [missing_call_to_base_visit_edges.cpp:8:5] warning: Missing call to Base::visit_edges
+// RUN: %clang++ -cc1 -verify %plugin_opts% %s 2>&1
+
 
 #include <LibJS/Runtime/Object.h>
 
 class TestClass : public JS::Object {
     JS_OBJECT(TestClass, JS::Object);
 
+    // expected-warning@+1 {{Missing call to Base::visit_edges}}
     virtual void visit_edges(Visitor&) override
     {
     }
