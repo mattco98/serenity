@@ -5,9 +5,13 @@
  */
 
 #include "LambdaCapturePluginAction.h"
+#include "SimpleCollectMatchesCallback.h"
 #include <clang/ASTMatchers/ASTMatchFinder.h>
 #include <clang/ASTMatchers/ASTMatchers.h>
 #include <clang/Frontend/FrontendPluginRegistry.h>
+#include <mutex>
+#include <shared_mutex>
+#include <unordered_map>
 
 AST_MATCHER_P(clang::Decl, hasAnnotation, std::string, name)
 {
@@ -20,6 +24,54 @@ AST_MATCHER_P(clang::Decl, hasAnnotation, std::string, name)
         }
     }
     return false;
+}
+
+AST_MATCHER_P(clang::Decl, isDecl, clang::Decl const*, decl)
+{
+    (void)Builder;
+    (void)Finder;
+    return &Node == decl;
+}
+
+// Method -> parameter index -> does escape?
+static std::unordered_map<clang::CXXMethodDecl const*, std::unordered_map<unsigned int, bool>> s_method_escapes;
+static std::shared_mutex s_method_escapes_mutex;
+
+bool method_parameter_escapes(clang::CXXMethodDecl const& method, unsigned int parameter_index)
+{
+    {
+        std::shared_lock lock { s_method_escapes_mutex };
+        if (auto it = s_method_escapes.find(&method); it != s_method_escapes.end()) {
+            auto method_map = it->second;
+            if (auto it2 = method_map.find(parameter_index); it2 != method_map.end())
+                return it2->second;
+        }
+    }
+
+    using namespace clang::ast_matchers;
+
+    std::unique_lock lock { s_method_escapes_mutex };
+    auto param = method.parameters()[parameter_index];
+
+    // Try to find an instance of the parameter being used but not invoked
+    auto matcher =
+        traverse(
+            clang::TK_IgnoreUnlessSpelledInSource,
+            declRefExpr(
+                to(isDecl(param)),
+                // Avoid immediately invoked lambdas (i.e. match `move(lambda)` but not `move(lambda())`)
+                unless(hasParent(
+                    // <lambda struct>::operator()(...)
+                    cxxOperatorCallExpr(has(declRefExpr(to(isDecl(param)))))))).bind("match"));
+
+    SimpleCollectMatchesCallback<clang::DeclRefExpr> callback("match");
+    callback.add_matcher(matcher);
+    callback.match(method.getASTContext());
+    auto parameter_escapes = !callback.matches().empty();
+
+    auto method_matches = s_method_escapes[&method];
+    method_matches[parameter_index] = parameter_escapes;
+    return parameter_escapes;
 }
 
 class Consumer
@@ -70,6 +122,7 @@ public:
             traverse(
                 clang::TK_IgnoreUnlessSpelledInSource,
                 callExpr(
+                    callee(cxxMethodDecl().bind("target-method")),
                     forEachArgumentWithParam(
                         anyOf(
                             // Match a lambda given directly in the function call
@@ -105,21 +158,32 @@ public:
             if (capture->capturesThis() || capture->getCaptureKind() != clang::LCK_ByRef)
                 return;
 
-            auto diag_id = diag_engine.getCustomDiagID(clang::DiagnosticsEngine::Warning, "Variable with local storage is captured by reference in a lambda that may be asynchronously executed");
-            diag_engine.Report(capture->getLocation(), diag_id);
-
-            clang::SourceLocation captured_var_location;
-            if (auto const* var_decl = llvm::dyn_cast<clang::VarDecl>(capture->getCapturedVar())) {
-                captured_var_location = var_decl->getTypeSourceInfo()->getTypeLoc().getBeginLoc();
-            } else {
-                captured_var_location = capture->getCapturedVar()->getLocation();
-            }
-            diag_id = diag_engine.getCustomDiagID(clang::DiagnosticsEngine::Note, "Annotate the variable declaration with IGNORE_USE_IN_ESCAPING_LAMBDA if it outlives the lambda");
-            diag_engine.Report(captured_var_location, diag_id);
-
             auto const* param = result.Nodes.getNodeAs<clang::ParmVarDecl>("lambda-param-ref");
-            diag_id = diag_engine.getCustomDiagID(clang::DiagnosticsEngine::Note, "Annotate the parameter with NOESCAPE if the lambda will not outlive the function call");
-            diag_engine.Report(param->getTypeSourceInfo()->getTypeLoc().getBeginLoc(), diag_id);
+            auto const* method = result.Nodes.getNodeAs<clang::CXXMethodDecl>("target-method");
+            unsigned int index = 0;
+            for (auto const& parameter : method->parameters()) {
+                if (parameter == param)
+                    break;
+                index++;
+            }
+
+            if (method_parameter_escapes(*method, index)) {
+                auto diag_id = diag_engine.getCustomDiagID(clang::DiagnosticsEngine::Warning, "Variable with local storage is captured by reference in a lambda that escapes its function");
+                diag_engine.Report(capture->getLocation(), diag_id);
+
+                clang::SourceLocation captured_var_location;
+                if (auto const* var_decl = llvm::dyn_cast<clang::VarDecl>(capture->getCapturedVar())) {
+                    captured_var_location = var_decl->getTypeSourceInfo()->getTypeLoc().getBeginLoc();
+                } else {
+                    captured_var_location = capture->getCapturedVar()->getLocation();
+                }
+                diag_id = diag_engine.getCustomDiagID(clang::DiagnosticsEngine::Note, "Annotate the variable declaration with IGNORE_USE_IN_ESCAPING_LAMBDA if it outlives the lambda");
+                diag_engine.Report(captured_var_location, diag_id);
+
+                auto const* param = result.Nodes.getNodeAs<clang::ParmVarDecl>("lambda-param-ref");
+                diag_id = diag_engine.getCustomDiagID(clang::DiagnosticsEngine::Note, "Annotate the parameter with NOESCAPE if this is a false positive");
+                diag_engine.Report(param->getTypeSourceInfo()->getTypeLoc().getBeginLoc(), diag_id);
+            }
         }
     }
 

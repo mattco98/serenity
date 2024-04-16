@@ -47,7 +47,7 @@ ErrorOr<Vector<Certificate>> load_certificates()
 
 TEST_CASE(test_TLS_hello_handshake)
 {
-    Core::EventLoop loop;
+    IGNORE_USE_IN_ESCAPING_LAMBDA Core::EventLoop loop;
     TLS::Options options;
     options.set_root_certificates(TRY_OR_FAIL(load_certificates()));
     options.set_alert_handler([&](TLS::AlertDescription) {

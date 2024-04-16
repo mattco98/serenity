@@ -5,33 +5,13 @@
  */
 
 #include "LibJSGCPluginAction.h"
+#include "SimpleCollectMatchesCallback.h"
 #include <clang/ASTMatchers/ASTMatchFinder.h>
 #include <clang/ASTMatchers/ASTMatchers.h>
 #include <clang/Basic/SourceManager.h>
 #include <clang/Frontend/CompilerInstance.h>
 #include <clang/Frontend/FrontendPluginRegistry.h>
 #include <unordered_set>
-
-template<typename T>
-class SimpleCollectMatchesCallback : public clang::ast_matchers::MatchFinder::MatchCallback {
-public:
-    explicit SimpleCollectMatchesCallback(std::string name)
-        : m_name(std::move(name))
-    {
-    }
-
-    void run(clang::ast_matchers::MatchFinder::MatchResult const& result) override
-    {
-        if (auto const* node = result.Nodes.getNodeAs<T>(m_name))
-            m_matches.push_back(node);
-    }
-
-    auto const& matches() const { return m_matches; }
-
-private:
-    std::string m_name;
-    std::vector<T const*> m_matches;
-};
 
 bool record_inherits_from_cell(clang::CXXRecordDecl const& record)
 {
@@ -190,7 +170,6 @@ bool LibJSGCVisitor::VisitCXXRecordDecl(clang::CXXRecordDecl* record)
     // Search for a call to Base::visit_edges. Note that this also has the nice side effect of
     // ensuring the classes use JS_CELL/JS_OBJECT, as Base will not be defined if they do not.
 
-    MatchFinder base_visit_edges_finder;
     SimpleCollectMatchesCallback<clang::MemberExpr> base_visit_edges_callback("member-call");
 
     auto base_visit_edges_matcher = cxxMethodDecl(
@@ -199,8 +178,8 @@ bool LibJSGCVisitor::VisitCXXRecordDecl(clang::CXXRecordDecl* record)
         isOverride(),
         hasDescendant(memberExpr(member(hasName("visit_edges"))).bind("member-call")));
 
-    base_visit_edges_finder.addMatcher(base_visit_edges_matcher, &base_visit_edges_callback);
-    base_visit_edges_finder.matchAST(m_context);
+    base_visit_edges_callback.add_matcher(base_visit_edges_matcher);
+    base_visit_edges_callback.match(m_context);
 
     bool call_to_base_visit_edges_found = false;
 
