@@ -17,7 +17,7 @@ config.have_zlib = @LLVM_ENABLE_ZLIB@
 config.enable_shared = @ENABLE_SHARED@
 config.host_arch = "@HOST_ARCH@"
 config.python_executable = "@Python3_EXECUTABLE@"
-# config.has_plugins = @CLANG_PLUGIN_SUPPORT@
+# config.has_plugins = @CLANG_PLUGIN_SUPPORT@=
 config.plugin_opts = "@CLANG_PLUGINS_ALL_COMPILE_OPTIONS@"
 config.plugin_includes = "@CLANG_PLUGINS_INCLUDE_DIRECTORIES@"
 
