@@ -11,3 +11,4 @@ set(SOURCES
 
 serenity_app(Assistant ICON app-assistant)
 target_link_libraries(Assistant PRIVATE LibCore LibDesktop LibGfx LibGUI LibJS LibMain LibThreading LibURL)
+compile_with_clang_plugins(Assistant JS)

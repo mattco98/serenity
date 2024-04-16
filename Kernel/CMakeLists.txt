@@ -789,9 +789,11 @@ add_link_options(LINKER:-z,notext)
 
 add_library(kernel_heap STATIC ${KERNEL_HEAP_SOURCES})
 add_dependencies(kernel_heap install_libc_headers)
+compile_with_clang_plugins(kernel_heap GENERIC)
 
 add_executable(Kernel ${SOURCES})
 add_dependencies(Kernel generate_EscapeSequenceStateMachine.h generate_version_header install_libc_headers)
+compile_with_clang_plugins(Kernel GENERIC)
 
 if("${SERENITY_ARCH}" STREQUAL "aarch64")
     target_link_options(Kernel PRIVATE LINKER:-T ${CMAKE_CURRENT_SOURCE_DIR}/Arch/aarch64/linker.ld -nostdlib LINKER:--no-pie)

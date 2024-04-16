@@ -1,6 +1,7 @@
 function(lagom_tool tool)
     cmake_parse_arguments(LAGOM_TOOL "" "" "SOURCES;LIBS" ${ARGN})
     add_executable(${tool} ${SOURCES} ${LAGOM_TOOL_SOURCES})
+    compile_with_clang_plugins(${tool} GENERIC)
     # alias for parity with exports
     add_executable(Lagom::${tool} ALIAS ${tool})
     target_link_libraries(${tool} AK LibCoreMinimal LibFileSystem ${LAGOM_TOOL_LIBS})
@@ -14,6 +15,7 @@ endfunction()
 add_subdirectory(CodeGenerators)
 add_subdirectory(ConfigureComponents)
 add_subdirectory(IPCMagicLinter)
+
 
 if (ENABLE_JAKT)
     include(jakt)

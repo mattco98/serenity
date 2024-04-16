@@ -33,6 +33,7 @@ set(GENERATED_SOURCES
 serenity_bin(WebContent)
 target_link_libraries(WebContent PRIVATE LibCore LibFileSystem LibIPC LibGfx LibAudio LibImageDecoderClient LibJS LibWebView LibWeb LibLocale LibMain LibURL)
 link_with_locale_data(WebContent)
+compile_with_clang_plugins(WebContent JS)
 
 if (HAS_ACCELERATED_GRAPHICS)
     target_compile_definitions(WebContent PRIVATE HAS_ACCELERATED_GRAPHICS)

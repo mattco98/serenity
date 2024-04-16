@@ -19,3 +19,4 @@ set(GENERATED_SOURCES
 
 serenity_app(TextEditor ICON app-text-editor)
 target_link_libraries(TextEditor PRIVATE LibCore LibWebView LibWeb LibMarkdown LibGfx LibGUI LibShell LibRegex LibDesktop LibCpp LibCMake LibJS LibSQL LibSyntax LibFileSystemAccessClient LibConfig LibMain LibURL)
+compile_with_clang_plugins(TextEditor JS)

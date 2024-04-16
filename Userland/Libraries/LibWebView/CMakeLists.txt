@@ -62,6 +62,7 @@ set(GENERATED_SOURCES
 serenity_lib(LibWebView webview)
 target_link_libraries(LibWebView PRIVATE LibCore LibFileSystem LibGfx LibIPC LibProtocol LibJS LibWeb LibSQL LibUnicode LibURL)
 target_compile_definitions(LibWebView PRIVATE ENABLE_PUBLIC_SUFFIX=$<BOOL:${ENABLE_PUBLIC_SUFFIX_DOWNLOAD}>)
+compile_with_clang_plugins(LibWebView JS)
 
 if (SERENITYOS)
     target_link_libraries(LibWebView PRIVATE LibFileSystemAccessClient LibGUI)

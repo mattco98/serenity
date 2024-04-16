@@ -16,3 +16,4 @@ set(SOURCES
 
 serenity_lib(LibMarkdown markdown)
 target_link_libraries(LibMarkdown PRIVATE LibUnicode LibJS LibRegex LibSyntax)
+compile_with_clang_plugins(LibMarkdown JS)

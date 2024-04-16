@@ -147,6 +147,9 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang$")
         set(LINKER_FLAGS "${LINKER_FLAGS} -fsanitize=fuzzer")
     endif()
 
+    if (ENABLE_CLANG_PLUGINS)
+        add_subdirectory(ClangPlugins)
+    endif()
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     if (ENABLE_FUZZERS_LIBFUZZER)
         message(FATAL_ERROR
@@ -229,6 +232,8 @@ function(lagom_lib target_name fs_name)
         target_link_libraries(${target_name} PRIVATE AK)
     endif()
 
+    compile_with_clang_plugins(${target_name} GENERIC)
+
     # FIXME: Clean these up so that we don't need so many include dirs
     target_include_directories(${target_name} INTERFACE
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/Services>
@@ -289,6 +294,7 @@ endfunction()
 function(serenity_bin name)
     add_executable(${name} ${SOURCES} ${GENERATED_SOURCES})
     add_executable(Lagom::${name} ALIAS ${name})
+    compile_with_clang_plugins(${name} GENERIC)
     install(
         TARGETS ${target_name}
         EXPORT LagomTargets
@@ -647,6 +653,8 @@ if (BUILD_LAGOM)
             OBJECT
             "${SERENITY_PROJECT_ROOT}/Userland/Libraries/LibTest/TestMain.cpp"
         )
+        compile_with_clang_plugins(LibTest GENERIC)
+        compile_with_clang_plugins(LibTestMain GENERIC)
 
         # LibTest tests from Tests/
         set(TEST_DIRECTORIES
@@ -672,6 +680,9 @@ if (BUILD_LAGOM)
         if (ENABLE_LAGOM_LIBWEB)
             list(APPEND TEST_DIRECTORIES LibWeb)
             list(APPEND TEST_DIRECTORIES LibWebView)
+        endif()
+        if (ENABLE_CLANG_PLUGINS AND CMAKE_CXX_COMPILER_ID MATCHES "Clang$")
+            list(APPEND TEST_DIRECTORIES ClangPlugins)
         endif()
 
         foreach (dir IN LISTS TEST_DIRECTORIES)

@@ -10,6 +10,7 @@ set(SOURCES
 
 serenity_lib(LibWasm wasm)
 target_link_libraries(LibWasm PRIVATE LibCore LibJS)
+compile_with_clang_plugins(LibWasm JS)
 
 # FIXME: Install these into usr/Tests/LibWasm
 include(wasm_spec_tests)
