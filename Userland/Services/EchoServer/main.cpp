@@ -50,7 +50,7 @@ ErrorOr<int> serenity_main(Main::Arguments arguments)
 
         auto client = Client::create(id, maybe_client_socket.release_value());
         client->on_exit = [&clients, id] {
-            Core::deferred_invoke([&clients, id] {
+            Core::deferred_invoke([&clients, id] DOES_NOT_OUTLIVE_CAPTURES {
                 clients.remove(id);
                 outln("Client {} disconnected", id);
             });

@@ -816,11 +816,11 @@ WebIDL::ExceptionOr<void> HTMLMediaElement::select_resource()
     // -> If mode is attribute
     case SelectMode::Attribute: {
         auto failed_with_attribute = [this](auto error_message) {
-            IGNORE_USE_IN_ESCAPING_LAMBDA bool ran_media_element_task = false;
+            bool ran_media_element_task = false;
 
             // 6. Failed with attribute: Reaching this step indicates that the media resource failed to load or that the given URL could not be parsed. Take
             //    pending play promises and queue a media element task given the media element to run the dedicated media source failure steps with the result.
-            queue_a_media_element_task([this, &ran_media_element_task, error_message = move(error_message)]() mutable {
+            queue_a_media_element_task([this, &ran_media_element_task, error_message = move(error_message)] DOES_NOT_OUTLIVE_CAPTURES mutable {
                 auto promises = take_pending_play_promises();
                 handle_media_source_failure(promises, move(error_message)).release_value_but_fixme_should_propagate_errors();
 
@@ -828,7 +828,7 @@ WebIDL::ExceptionOr<void> HTMLMediaElement::select_resource()
             });
 
             // 7. Wait for the task queued by the previous step to have executed.
-            HTML::main_thread_event_loop().spin_until([&]() { return ran_media_element_task; });
+            HTML::main_thread_event_loop().spin_until([&] { return ran_media_element_task; });
         };
 
         // 1. ⌛ If the src attribute's value is the empty string, then end the synchronous section, and jump down to the failed with attribute step below.

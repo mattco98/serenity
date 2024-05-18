@@ -49,7 +49,7 @@ TEST_CASE(simple_multithread)
     for (int i = 0; i < test_count; ++i)
         (void)queue.enqueue(i);
 
-    auto second_thread = Threading::Thread::construct([&queue]() {
+    auto second_thread = Threading::Thread::construct([&queue] DOES_NOT_OUTLIVE_CAPTURES {
         auto copied_queue = queue;
         for (int i = 0; i < test_count; ++i) {
             QueueError result = TestQueue::QueueStatus::Invalid;
@@ -79,7 +79,7 @@ TEST_CASE(producer_consumer_multithread)
 
     Atomic<bool> other_thread_running { false };
 
-    auto second_thread = Threading::Thread::construct([&queue, &other_thread_running]() {
+    auto second_thread = Threading::Thread::construct([&queue, &other_thread_running] DOES_NOT_OUTLIVE_CAPTURES {
         auto copied_queue = queue;
         other_thread_running.store(true);
         for (size_t i = 0; i < test_count; ++i) {

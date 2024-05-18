@@ -22,7 +22,7 @@ static ErrorOr<void> test_once()
     Vector<NonnullRefPtr<Threading::Thread>, threads_count> threads;
 
     for (size_t i = 0; i < threads_count; i++) {
-        threads.unchecked_append(TRY(Threading::Thread::try_create([&] {
+        threads.unchecked_append(TRY(Threading::Thread::try_create([&] DOES_NOT_OUTLIVE_CAPTURES {
             return pthread_once(&once, [] {
                 v.append(35);
                 sleep(1);
@@ -49,7 +49,7 @@ static ErrorOr<void> test_mutex()
     pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
     for (size_t i = 0; i < threads_count; i++) {
-        threads.unchecked_append(TRY(Threading::Thread::try_create([&] {
+        threads.unchecked_append(TRY(Threading::Thread::try_create([&] DOES_NOT_OUTLIVE_CAPTURES {
             for (size_t j = 0; j < num_times; j++) {
                 pthread_mutex_lock(&mutex);
                 v.append(35);
@@ -83,7 +83,7 @@ static ErrorOr<void> test_semaphore_as_lock()
     sem_init(&semaphore, 0, 1);
 
     for (size_t i = 0; i < threads_count; i++) {
-        threads.unchecked_append(TRY(Threading::Thread::try_create([&] {
+        threads.unchecked_append(TRY(Threading::Thread::try_create([&] DOES_NOT_OUTLIVE_CAPTURES {
             for (size_t j = 0; j < num_times; j++) {
                 sem_wait(&semaphore);
                 v.append(35);
@@ -113,14 +113,14 @@ static ErrorOr<void> test_semaphore_as_event()
     sem_t semaphore;
     sem_init(&semaphore, 0, 0);
 
-    auto reader = TRY(Threading::Thread::try_create([&] {
+    auto reader = TRY(Threading::Thread::try_create([&] DOES_NOT_OUTLIVE_CAPTURES {
         sem_wait(&semaphore);
         VERIFY(v.size() == 1);
         return 0;
     }));
     reader->start();
 
-    auto writer = TRY(Threading::Thread::try_create([&] {
+    auto writer = TRY(Threading::Thread::try_create([&] DOES_NOT_OUTLIVE_CAPTURES {
         sched_yield();
         v.append(35);
         sem_post(&semaphore);
@@ -151,7 +151,7 @@ static ErrorOr<void> test_semaphore_nonbinary()
     Atomic<bool, AK::memory_order_relaxed> seen_more_than_two = false;
 
     for (size_t i = 0; i < threads_count; i++) {
-        threads.unchecked_append(TRY(Threading::Thread::try_create([&] {
+        threads.unchecked_append(TRY(Threading::Thread::try_create([&] DOES_NOT_OUTLIVE_CAPTURES {
             for (size_t j = 0; j < num_times; j++) {
                 sem_wait(&semaphore);
                 u32 v = 1 + value.fetch_add(1);

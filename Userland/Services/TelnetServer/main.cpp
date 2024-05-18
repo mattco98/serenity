@@ -142,7 +142,7 @@ ErrorOr<int> serenity_main(Main::Arguments arguments)
 
         auto client = maybe_client.release_value();
         client->on_exit = [&clients, id] {
-            Core::deferred_invoke([&clients, id] { clients.remove(id); });
+            Core::deferred_invoke([&clients, id] DOES_NOT_OUTLIVE_CAPTURES { clients.remove(id); });
         };
         clients.set(id, client);
     };

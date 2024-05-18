@@ -3154,7 +3154,7 @@ void Document::destroy_a_document_and_its_descendants(JS::GCPtr<JS::HeapFunction
     auto child_navigables = document_tree_child_navigables();
 
     // 3. Let numberDestroyed be 0.
-    IGNORE_USE_IN_ESCAPING_LAMBDA size_t number_destroyed = 0;
+    size_t number_destroyed = 0;
 
     // 3. For each childNavigable of childNavigable's, queue a global task on the navigation and traversal task source
     //    given childNavigable's active window to perform the following steps:
@@ -3371,7 +3371,7 @@ void Document::unload_a_document_and_its_descendants(JS::GCPtr<Document> new_doc
     // This way we maintain the invariant that all navigable containers present in the DOM tree
     // have an active document while the document is being unloaded.
 
-    IGNORE_USE_IN_ESCAPING_LAMBDA size_t number_unloaded = 0;
+    size_t number_unloaded = 0;
 
     auto navigable = this->navigable();
 

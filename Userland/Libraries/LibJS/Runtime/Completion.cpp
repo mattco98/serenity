@@ -41,11 +41,11 @@ ThrowCompletionOr<Value> await(VM& vm, Value value)
     // 2. Let promise be ? PromiseResolve(%Promise%, value).
     auto* promise_object = TRY(promise_resolve(vm, realm.intrinsics().promise_constructor(), value));
 
-    IGNORE_USE_IN_ESCAPING_LAMBDA Optional<bool> success;
-    IGNORE_USE_IN_ESCAPING_LAMBDA Value result;
+    Optional<bool> success;
+    Value result;
 
     // 3. Let fulfilledClosure be a new Abstract Closure with parameters (value) that captures asyncContext and performs the following steps when called:
-    auto fulfilled_closure = [&success, &result](VM& vm) -> ThrowCompletionOr<Value> {
+    auto fulfilled_closure = [&success, &result] DOES_NOT_OUTLIVE_CAPTURES (VM& vm) -> ThrowCompletionOr<Value> {
         // a. Let prevContext be the running execution context.
         // b. Suspend prevContext.
         // FIXME: We don't have this concept yet.
@@ -69,7 +69,7 @@ ThrowCompletionOr<Value> await(VM& vm, Value value)
     auto on_fulfilled = NativeFunction::create(realm, move(fulfilled_closure), 1, "");
 
     // 5. Let rejectedClosure be a new Abstract Closure with parameters (reason) that captures asyncContext and performs the following steps when called:
-    auto rejected_closure = [&success, &result](VM& vm) -> ThrowCompletionOr<Value> {
+    auto rejected_closure = [&success, &result] DOES_NOT_OUTLIVE_CAPTURES (VM& vm) -> ThrowCompletionOr<Value> {
         // a. Let prevContext be the running execution context.
         // b. Suspend prevContext.
         // FIXME: We don't have this concept yet.

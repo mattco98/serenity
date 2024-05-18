@@ -17,7 +17,7 @@ TEST_CASE(deferred_invoke)
         VERIFY_NOT_REACHED();
     });
 
-    Core::deferred_invoke([&event_loop] {
+    Core::deferred_invoke([&event_loop] DOES_NOT_OUTLIVE_CAPTURES {
         event_loop.quit(0);
     });
 

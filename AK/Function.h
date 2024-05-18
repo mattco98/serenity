@@ -41,11 +41,9 @@ namespace AK {
 // These annotations are used to avoid capturing a variable with local storage in a lambda that outlives it
 #if defined(AK_COMPILER_CLANG)
 #    define ESCAPING [[clang::annotate("serenity::escaping")]]
-#    define IGNORE_USE_IN_ESCAPING_LAMBDA [[clang::annotate("serenity::ignore_use_in_escaping_lambda")]]
 #    define DOES_NOT_OUTLIVE_CAPTURES [[clang::annotate("serenity::does_not_outlive_captures")]]
 #else
 #    define ESCAPING
-#    define IGNORE_USE_IN_ESCAPING_LAMBDA
 #    define DOES_NOT_OUTLIVE_CAPTURES
 #endif
 

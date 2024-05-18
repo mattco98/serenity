@@ -56,7 +56,7 @@ ErrorOr<int> serenity_main(Main::Arguments arguments)
     if (path.has_value()) {
         // Note: This is deferred to ensure that the window has already popped and any error dialog boxes would show up correctly.
         app->event_loop().deferred_invoke(
-            [&window, &path, &main_widget]() {
+            [&window, &path, &main_widget] DOES_NOT_OUTLIVE_CAPTURES {
                 auto response = FileSystemAccessClient::Client::the().request_file_read_only_approved(window, path.value());
                 if (!response.is_error()) {
                     auto load_from_file_result = main_widget->load_from_file(response.value().filename(), response.value().release_stream());

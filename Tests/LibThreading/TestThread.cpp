@@ -29,7 +29,7 @@ TEST_CASE(threads_can_detach)
 {
     Atomic<int> should_be_42 = 0;
 
-    auto thread = Threading::Thread::construct([&should_be_42]() {
+    auto thread = Threading::Thread::construct([&should_be_42] DOES_NOT_OUTLIVE_CAPTURES {
         usleep(10 * 1000);
         should_be_42 = 42;
         return 0;

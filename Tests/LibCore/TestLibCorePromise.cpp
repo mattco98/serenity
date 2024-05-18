@@ -162,7 +162,7 @@ TEST_CASE(threaded_promise_resolved_later)
 
     auto promise = Core::ThreadedPromise<int>::create();
 
-    auto thread = Threading::Thread::construct([&, promise] {
+    auto thread = Threading::Thread::construct([&, promise] DOES_NOT_OUTLIVE_CAPTURES {
         thread_id = pthread_self();
         while (!unblock_thread)
             usleep(500);
@@ -183,7 +183,7 @@ TEST_CASE(threaded_promise_resolved_later)
             VERIFY_NOT_REACHED();
         });
 
-    Core::EventLoop::current().deferred_invoke([&]() { unblock_thread = true; });
+    Core::EventLoop::current().deferred_invoke([&] DOES_NOT_OUTLIVE_CAPTURES { unblock_thread = true; });
 
     promise->await();
     EXPECT(promise->has_completed());
