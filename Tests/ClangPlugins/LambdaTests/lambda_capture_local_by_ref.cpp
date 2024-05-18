@@ -19,7 +19,7 @@ void test()
         (void)a;
     });
 
-    // expected-warning@+2 {{Variable with local storage is captured by reference in a lambda marked ESCAPING}}
+    // expected-error@+2 {{Variable with local storage is captured by reference in a lambda marked ESCAPING}}
     // expected-note@+1 {{Annotate the lambda with DOES_NOT_OUTLIVE_CAPTURES if the captures will not go out of scope before the lambda is executed}}
     take_fn_escaping([&a] {
         (void)a;

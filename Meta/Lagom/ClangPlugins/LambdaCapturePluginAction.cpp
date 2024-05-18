@@ -116,7 +116,7 @@ public:
             if (capture->capturesThis() || capture->getCaptureKind() != clang::LCK_ByRef)
                 return;
 
-            auto diag_id = diag_engine.getCustomDiagID(clang::DiagnosticsEngine::Warning, "Variable with local storage is captured by reference in a lambda marked ESCAPING");
+            auto diag_id = diag_engine.getCustomDiagID(clang::DiagnosticsEngine::Error, "Variable with local storage is captured by reference in a lambda marked ESCAPING");
             diag_engine.Report(capture->getLocation(), diag_id);
 
             if (auto const* lambda = result.Nodes.getNodeAs<clang::LambdaExpr>("lambda")) {
