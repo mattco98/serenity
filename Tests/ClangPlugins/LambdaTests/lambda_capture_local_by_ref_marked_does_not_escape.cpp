@@ -13,9 +13,9 @@ void take_fn(ESCAPING Function<void()>) { }
 
 void test()
 {
-    IGNORE_USE_IN_ESCAPING_LAMBDA int a = 0;
+    int a = 0;
 
-    take_fn([&a] {
+    take_fn([&a] DOES_NOT_OUTLIVE_CAPTURES {
         (void)a;
     });
 }

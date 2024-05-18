@@ -13,14 +13,14 @@ void take_fn_escaping(ESCAPING Function<void()>) { }
 
 void test()
 {
-    // expected-note@+1 {{Annotate the variable declaration with IGNORE_USE_IN_ESCAPING_LAMBDA if it outlives the lambda}}
     int a = 0;
 
     take_fn([&a] {
         (void)a;
     });
 
-    // expected-warning@+1 {{Variable with local storage is captured by reference in a lambda marked ESCAPING}}
+    // expected-warning@+2 {{Variable with local storage is captured by reference in a lambda marked ESCAPING}}
+    // expected-note@+1 {{Annotate the lambda with DOES_NOT_OUTLIVE_CAPTURES if the captures will not go out of scope before the lambda is executed}}
     take_fn_escaping([&a] {
         (void)a;
     });
