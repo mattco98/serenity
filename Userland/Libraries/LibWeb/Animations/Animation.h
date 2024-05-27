@@ -7,6 +7,7 @@
 #pragma once
 
 #include <LibJS/Runtime/PromiseCapability.h>
+#include <LibWeb/Animations/AnimationEffect.h>
 #include <LibWeb/Bindings/AnimationPrototype.h>
 #include <LibWeb/DOM/EventTarget.h>
 
@@ -100,6 +101,7 @@ public:
 
     virtual bool is_css_animation() const { return false; }
     virtual bool is_css_transition() const { return false; }
+    virtual bool is_css_based() const { return is_css_animation() || is_css_transition(); }
 
     virtual JS::GCPtr<DOM::Element> owning_element() const { return {}; }
 
@@ -109,6 +111,8 @@ public:
     unsigned int global_animation_list_order() const { return m_global_animation_list_order; }
 
     auto release_saved_cancel_time() { return move(m_saved_cancel_time); }
+
+    virtual AnimationEffect::Phase phase() const { return m_effect->phase(); };
 
 protected:
     Animation(JS::Realm&);

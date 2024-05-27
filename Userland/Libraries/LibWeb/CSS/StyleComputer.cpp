@@ -1729,6 +1729,12 @@ void StyleComputer::compute_cascaded_values(StyleProperties& style, DOM::Element
                 if ((!current_value && !old_value) || (current_value && old_value && *current_value == *old_value))
                     continue;
 
+                // dbgln("prop: {}", string_from_property_id(property));
+                // if (old_value)
+                //     dbgln("  old: {}", old_value->to_string());
+                // if (current_value)
+                //     dbgln("  new: {}", current_value->to_string());
+
                 // Before creating a new transition, check if there is an existing transition for this property.
                 if (auto existing_transition = element.transition_for_property(property)) {
                     VERIFY(existing_transition->is_css_transition());

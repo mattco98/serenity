@@ -67,6 +67,47 @@ Optional<int> CSSTransition::class_specific_composite_order(JS::NonnullGCPtr<Ani
     return {};
 }
 
+// https://drafts.csswg.org/css-transitions-2/#transition-phase
+Animations::AnimationEffect::Phase CSSTransition::phase() const
+{
+    // The transition phase of a transition is initially ‘idle’ and is updated on each animation frame according to the
+    // first matching condition from below:
+
+    // -> If the transition has no associated effect,
+    auto effect = this->effect();
+    if (!effect) {
+        // The transition phase is set according to the first matching condition from below:
+
+        // -> If the transition has an unresolved current time,
+        auto current_time = this->current_time();
+        if (!current_time.has_value()) {
+            // The transition phase is ‘idle’.
+            return Animations::AnimationEffect::Phase::Idle;
+        }
+
+        // -> If the transition has a current time < 0,
+        if (*current_time < 0) {
+            // The transition phase is ‘before’.
+            return Animations::AnimationEffect::Phase::Before;
+        }
+
+        // -> Otherwise,
+        //    The transition phase is ‘after’.
+        return Animations::AnimationEffect::Phase::After;
+    }
+
+    // -> If the transition has a pending play task or a pending pause task and its phase was previously ‘idle’ or ‘pending’,
+    auto previous_phase = effect->previous_phase();
+    if (pending() && (previous_phase == Animations::AnimationEffect::Phase::Idle || previous_phase == Animations::AnimationEffect::Phase::Pending)) {
+        // The transition phase is ‘pending’.
+        return Animations::AnimationEffect::Phase::Pending;
+    }
+
+    // Otherwise,
+    //     The transition phase is the phase of its associated effect.
+    return effect->phase();
+}
+
 CSSTransition::CSSTransition(JS::Realm& realm, PropertyID property_id, size_t transition_generation)
     : Animations::Animation(realm)
     , m_transition_property(property_id)

@@ -126,6 +126,9 @@ public:
         Active,
         After,
         Idle,
+
+        // This is only used for transitions
+        Pending,
     };
     Phase phase() const;
 

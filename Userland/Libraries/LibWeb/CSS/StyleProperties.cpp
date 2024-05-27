@@ -62,17 +62,32 @@ void StyleProperties::reset_animated_properties()
 
 NonnullRefPtr<StyleValue const> StyleProperties::property(CSS::PropertyID property_id) const
 {
-    if (auto animated_value = m_animated_property_values.get(property_id).value_or(nullptr))
+    if (auto animated_value = m_animated_property_values.get(property_id).value_or(nullptr)) {
+        if (property_id == CSS::PropertyID::BackgroundColor)
+            dbgln("base: {}, animated: {}", m_property_values[to_underlying(property_id)].style->to_string(), animated_value->to_string());
         return *animated_value;
+    }
 
     // By the time we call this method, all properties have values assigned.
+    if (property_id == CSS::PropertyID::BackgroundColor)
+        dbgln("base: {}", m_property_values[to_underlying(property_id)].style->to_string());
     return *m_property_values[to_underlying(property_id)].style;
 }
 
 RefPtr<StyleValue const> StyleProperties::maybe_null_property(CSS::PropertyID property_id) const
 {
-    if (auto animated_value = m_animated_property_values.get(property_id).value_or(nullptr))
+    if (auto animated_value = m_animated_property_values.get(property_id).value_or(nullptr)) {
+        if (property_id == CSS::PropertyID::BackgroundColor)
+            dbgln("base: {}, animated: {}", m_property_values[to_underlying(property_id)].style->to_string(), animated_value->to_string());
         return *animated_value;
+    }
+    if (property_id == CSS::PropertyID::BackgroundColor) {
+        if (m_property_values[to_underlying(property_id)].style) {
+            dbgln("base: {}", m_property_values[to_underlying(property_id)].style->to_string());
+        } else {
+            dbgln("base: <null>");
+        }
+    }
     return m_property_values[to_underlying(property_id)].style;
 }
 

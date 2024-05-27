@@ -62,6 +62,13 @@ Animations::AnimationClass CSSAnimation::animation_class() const
     return Animations::AnimationClass::CSSAnimationWithoutOwningElement;
 }
 
+Animations::AnimationEffect::Phase CSSAnimation::phase() const
+{
+    if (!effect())
+        return Animations::AnimationEffect::Phase::Idle;
+    return effect()->phase();
+}
+
 CSSAnimation::CSSAnimation(JS::Realm& realm)
     : Animations::Animation(realm)
 {
