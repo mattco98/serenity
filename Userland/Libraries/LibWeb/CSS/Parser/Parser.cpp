@@ -6449,11 +6449,17 @@ Parser::ParseErrorOr<NonnullRefPtr<StyleValue>> Parser::parse_css_value(Property
         }
 
         // Some types (such as <ratio>) can be made from multiple ComponentValues, so if we only made 1 StyleValue, return it directly.
-        if (parsed_values.size() == 1)
+        if (parsed_values.size() == 1) {
+            if (stream.has_next_token())
+                return ParseError::SyntaxError;
             return *parsed_values.take_first();
+        }
 
-        if (!parsed_values.is_empty() && parsed_values.size() <= property_maximum_value_count(property_id))
+        if (!parsed_values.is_empty() && parsed_values.size() <= property_maximum_value_count(property_id)) {
+            if (stream.has_next_token())
+                return ParseError::SyntaxError;
             return StyleValueList::create(move(parsed_values), StyleValueList::Separator::Space);
+        }
     }
 
     // We have multiple values, but the property claims to accept only a single one, check if it's a shorthand property.
