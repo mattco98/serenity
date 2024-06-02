@@ -1791,6 +1791,79 @@
       "position"
     ]
   },
+  "offset": {
+    "affects-layout": false,
+    "inherited": false,
+    "initial": "normal none 0 auto auto",
+    "longhands": [
+      "offset-position",
+      "offset-path",
+      "offset-distance",
+      "offset-rotate",
+      "offset-anchor"
+    ]
+  },
+  "offset-anchor": {
+    "animation-type": "by-computed-value",
+    "affects-layout": false,
+    "inherited": false,
+    "initial": "auto",
+    "valid-types": [
+      "position"
+    ],
+    "valid-identifiers": [
+      "auto"
+    ]
+  },
+  "offset-distance": {
+    "animation-type": "by-computed-value",
+    "affects-layout": false,
+    "inherited": false,
+    "initial": 0,
+    "valid-types": [
+      "length [-∞,∞]",
+      "percentage [-∞,∞]"
+    ],
+    "percentages-resolve-to": "length"
+  },
+  "offset-path": {
+    "animation-type": "by-computed-value",
+    "affects-layout": false,
+    "inherited": false,
+    "initial": "none",
+    "valid-types": [
+      "offset-path",
+      "coord-box"
+    ],
+    "valid-identifiers": [
+      "none"
+    ]
+  },
+  "offset-position": {
+    "animation-type": "by-computed-value",
+    "affects-layout": false,
+    "inherited": false,
+    "initial": "normal",
+    "valid-types": [
+      "position"
+    ],
+    "valid-identifiers": [
+      "auto",
+      "normal"
+    ]
+  },
+  "offset-rotation": {
+    "animation-type": "by-computed-value",
+    "affects-layout": false,
+    "inherited": false,
+    "valid-types": [
+      "angle"
+    ],
+    "valid-identifiers": [
+      "auto",
+      "reverse"
+    ]
+  },
   "opacity": {
     "animation-type": "by-computed-value",
     "affects-layout": false,
