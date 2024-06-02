@@ -41,7 +41,7 @@ ErrorOr<int> serenity_main(Main::Arguments arguments)
 
     auto json = TRY(read_entire_file_as_json(properties_json_path));
     VERIFY(json.is_object());
-    auto properties = json.as_object();
+    auto properties = json.as_object().get_object("properties"sv).value();
 
     // Check we're in alphabetical order
     ByteString most_recent_name = "";
