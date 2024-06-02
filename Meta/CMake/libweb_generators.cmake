@@ -38,7 +38,7 @@ function (generate_css_implementation)
 
     invoke_generator(
         "PropertyID.cpp"
-        Lagom::GenerateCSSPropertyID
+        Lagom::CSSPropertiesGenerator
         "${LIBWEB_INPUT_FOLDER}/CSS/Properties.json"
         "CSS/PropertyID.h"
         "CSS/PropertyID.cpp"
