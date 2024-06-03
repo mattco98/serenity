@@ -1,4 +1,102 @@
 {
+  "grammar": {
+    "non-numeric-base-types": [
+      "custom-ident",
+      "dashed-ident",
+      "hex-color",
+      "named-color",
+      "string",
+      "url"
+    ],
+    "numeric-base-types": [
+      "angle",
+      "frequency",
+      "integer",
+      "length",
+      "number",
+      "percentage",
+      "resolution",
+      "time"
+    ],
+    "derived-types": {
+      "compat-auto": "searchfield | textarea | checkbox | radio | menulist | listbox | meter | progress-bar | button",
+      "compat-special": "textfield | menulist-button",
+      
+      "alpha-value": "<number> | <percentage>",
+      "color": {
+        "correct-value": "<color-base> | currentColor | <system-color> | <device-cmyk()>  | <light-dark()>",
+        "supported-value": "<color-base> | currentColor"
+      },
+      "color-base": {
+        "correct-value": "<hex-color> | <color-function> | <named-color> | <color-mix()> | transparent",
+        "supported-value": "<hex-color> | <color-function> | <named-color> | <color-mix()> | transparent"
+      },
+      "color-function": "<rgb()> | <rgba()> | <hsl()> | <hsla()> | <hwb()> | <lab()> | <lch()> | <oklab()> | <oklch()> | <color()>",
+      "rgb()": "[ <legacy-rgb-syntax> | <modern-rgb-syntax> ]",
+      "rgba()": "[ <legacy-rgba-syntax> | <modern-rgba-syntax> ]",
+      "legacy-rgb-syntax": "rgb( <percentage>#{3} , <alpha-value>? ) | rgb( <number>#{3} , <alpha-value>? )",
+      "legacy-rgba-syntax": "rgba( <percentage>#{3} , <alpha-value>? ) | rgba( <number>#{3} , <alpha-value>? )",
+      "modern-rgb-syntax": "rgb( [ <number> | <percentage> | none]{3} [ / [<alpha-value> | none] ]?  )",
+      "modern-rgba-syntax": "rgba( [ <number> | <percentage> | none]{3} [ / [<alpha-value> | none] ]?  )",
+      "hsl()": "[ <legacy-hsl-syntax> | <modern-hsl-syntax> ]",
+      "hsla()": "[ <legacy-hsla-syntax> | <modern-hsla-syntax> ]",
+      "modern-hsl-syntax": "hsl( [<hue> | none] [<percentage> | <number> | none] [<percentage> | <number> | none] [ / [<alpha-value> | none] ]? )",
+      "modern-hsla-syntax": "hsla( [<hue> | none] [<percentage> | <number> | none] [<percentage> | <number> | none] [ / [<alpha-value> | none] ]? )",
+      "legacy-hsl-syntax": "hsl( <hue>, <percentage>, <percentage>, <alpha-value>? )",
+      "legacy-hsla-syntax": "hsla( <hue>, <percentage>, <percentage>, <alpha-value>? )",
+      "hue": "<number> | <angle>",
+      "hwb()": "hwb( [<hue> | none] [<percentage> | <number> | none] [<percentage> | <number> | none] [ / [<alpha-value> | none] ]? )",
+      "lab()": "lab( [<percentage> | <number> | none] [ <percentage> | <number> | none] [ <percentage> | <number> | none] [ / [<alpha-value> | none] ]? )",
+      "lch()": "lch( [<percentage> | <number> | none] [ <percentage> | <number> | none] [ <hue> | none] [ / [<alpha-value> | none] ]? )",
+      "oklab()": "oklab( [ <percentage> | <number> | none] [ <percentage> | <number> | none] [ <percentage> | <number> | none] [ / [<alpha-value> | none] ]? )",
+      "oklch()": "oklch( [ <percentage> | <number> | none] [ <percentage> | <number> | none] [ <hue> | none] [ / [<alpha-value> | none] ]? )",
+      "color()": "color( <colorspace-params> [ / [ <alpha-value> | none ] ]? )",
+      "color-mix()": "color-mix( <color-interpolation-method> , [ <color> && <percentage [0,100]>? ]#{2})",
+      "color-space": "<rectangular-color-space> | <polar-color-space> | <custom-color-space>",
+      "polar-color-space": "hsl | hwb | lch | oklch",
+      "custom-color-space": "<dashed-ident>",
+      "hue-interpolation-method": "[ shorter | longer | increasing | decreasing ] hue",
+      "color-interpolation-method": "in [ <rectangular-color-space> | <polar-color-space> <hue-interpolation-method>? | <custom-color-space> ]",
+      "rectangular-color-space": "srgb | srgb-linear | display-p3 | a98-rgb | prophoto-rgb | rec2020 | lab | oklab | xyz | xyz-d50 | xyz-d65",
+      "colorspace-params": "[ <predefined-rgb-params> | <xyz-params>]",
+      "predefined-rgb-params": "<predefined-rgb> [ <number> | <percentage> | none ]{3}",
+      "predefined-rgb": "srgb | srgb-linear | display-p3 | a98-rgb | prophoto-rgb | rec2020",
+      "xyz-params": "<xyz-space> [ <number> | <percentage> | none ]{3}",
+      "xyz-space": "xyz | xyz-d50 | xyz-d65",
+      "system-color": {
+        "correct-value": "TODO: Fill in the rest of the colors",
+        "supported-value": "accentcolor"
+      },
+
+      "easing-function": "linear | <cubic-bezier-easing-function> | <step-easing-function>",
+      "cubic-bezier-easing-function": "ease | ease-in | ease-out | ease-in-out | cubic-bezier(<number [0,1]>, <number>, <number [0,1]>, <number>)",
+      "step-easing-function": "step-start | step-end | <steps()>",
+      "steps()": "steps(<integer>[, <step-position> ]?)",
+      "step-position": "jump-start | jump-end | jump-none | jump-both | start | end",
+
+      "single-animation": "<time [0s,∞]> || <easing-function> || <time> || <single-animation-iteration-count> || <single-animation-direction> || <single-animation-fill-mode> || <single-animation-play-state> || [ none | <keyframes-name> ]",
+      "single-animation-iteration-count": "infinite | <number [0,∞]>",
+      "single-animation-direction": "normal | reverse | alternate | alternate-reverse",
+      "single-animation-fill-mode": "none | forwards | backwards | both",
+      "single-animation-play-state": "running | paused",
+      "keyframes-name": "<custom-ident> | <string>",
+
+      "ratio": "<number [0,∞]> [ / <number [0,∞]> ]?",
+
+      "filter-value-list": "[ <filter-function> | <url> ]+",
+      "filter-function": "<blur()> | <brightness()> | <contrast()> | <drop-shadow()> | <grayscale()> | <hue-rotate()> | <invert()> | <opacity()> | <sepia()> | <saturate()>",
+      "blur()": "blur( <length>? )",
+      "brightness()": "brightness( [ <number> |  <percentage> ]? )",
+      "contrast()": "contrast( [ <number> |  <percentage> ]? )",
+      "drop-shadow()": "drop-shadow( [ <color>? && <length>{2,3} ] )",
+      "grayscale()": "grayscale( [ <number> |  <percentage> ]? )",
+      "hue-rotate()": "hue-rotate( [ <angle> | <zero> ]? )",
+      "invert()": "invert( [ <number> |  <percentage> ]? )",
+      "opacity()": "opacity( [ <number> |  <percentage> ]? )",
+      "saturate()": "saturate( [ <number> |  <percentage> ]? )",
+      "sepia()": "sepia( [ <number> |  <percentage> ]? )"
+    }
+  },
   "properties": {
     "-webkit-appearance": {
       "logical-alias-for": [
@@ -8,6 +106,7 @@
     },
     "accent-color": {
       "animation-type": "by-computed-value",
+      "grammar": "auto | <color>",
       "inherited": true,
       "initial": "auto",
       "valid-types": [
@@ -19,6 +118,7 @@
     },
     "align-content": {
       "animation-type": "discrete",
+      "grammar": "flex-start | flex-end | center | space-between | space-around | stretch",
       "inherited": false,
       "initial": "normal",
       "valid-types": [
@@ -27,6 +127,7 @@
     },
     "align-items": {
       "animation-type": "discrete",
+      "grammar": "flex-start | flex-end | center | baseline | stretch",
       "inherited": false,
       "initial": "normal",
       "valid-types": [
@@ -35,6 +136,7 @@
     },
     "align-self": {
       "animation-type": "discrete",
+      "grammar": "auto | flex-start | flex-end | center | baseline | stretch",
       "inherited": false,
       "initial": "auto",
       "valid-types": [
@@ -43,6 +145,7 @@
     },
     "animation": {
       "affects-layout": true,
+      "grammar": "<single-animation>#",
       "inherited": false,
       "initial": "none 0s ease 1 normal running 0s none",
       "longhands": [
@@ -59,6 +162,7 @@
     "animation-delay": {
       "affects-layout": true,
       "animation-type": "none",
+      "grammar": "<time>#",
       "inherited": false,
       "initial": "0s",
       "valid-types": [
@@ -68,6 +172,7 @@
     "animation-direction": {
       "affects-layout": false,
       "animation-type": "none",
+      "grammar": "<single-animation-direction>#",
       "inherited": false,
       "initial": "normal",
       "valid-identifiers": [
@@ -80,6 +185,7 @@
     "animation-duration": {
       "affects-layout": true,
       "animation-type": "none",
+      "grammar": "<time [0s,∞]>#",
       "inherited": false,
       "initial": "auto",
       "valid-types": [
@@ -92,6 +198,7 @@
     "animation-fill-mode": {
       "affects-layout": true,
       "animation-type": "none",
+      "grammar": "<single-animation-fill-mode>#",
       "inherited": false,
       "initial": "none",
       "valid-identifiers": [
@@ -104,6 +211,7 @@
     "animation-iteration-count": {
       "affects-layout": true,
       "animation-type": "none",
+      "grammar": "<single-animation-iteration-count>#",
       "inherited": false,
       "initial": "1",
       "valid-types": [
@@ -116,6 +224,7 @@
     "animation-name": {
       "affects-layout": true,
       "animation-type": "none",
+      "grammar": "[ none | <keyframes-name> ]#",
       "inherited": false,
       "initial": "none",
       "valid-types": [
@@ -129,6 +238,7 @@
     "animation-play-state": {
       "affects-layout": false,
       "animation-type": "none",
+      "grammar": "<single-animation-play-state>#",
       "inherited": false,
       "initial": "running",
       "valid-identifiers": [
@@ -139,6 +249,7 @@
     "animation-timing-function": {
       "affects-layout": true,
       "animation-type": "none",
+      "grammar": "<easing-function>#",
       "inherited": false,
       "initial": "ease",
       "valid-types": [
@@ -147,6 +258,7 @@
     },
     "appearance": {
       "animation-type": "discrete",
+      "grammar": "none | auto | <compat-auto> | <compat-special>",
       "inherited": false,
       "initial": "auto",
       "valid-types": [
@@ -156,6 +268,7 @@
     "aspect-ratio": {
       "affects-layout": true,
       "animation-type": "by-computed-value",
+      "grammar": "auto || <ratio>",
       "inherited": false,
       "initial": "auto",
       "valid-types": [
@@ -169,6 +282,7 @@
       "affects-layout": false,
       "affects-stacking-context": true,
       "animation-type": "custom",
+      "grammar": "none | <filter-value-list>",
       "inherited": false,
       "initial": "none",
       "__comment": "FIXME: List `filter-value-list` as a valid-type once it's generically supported.",

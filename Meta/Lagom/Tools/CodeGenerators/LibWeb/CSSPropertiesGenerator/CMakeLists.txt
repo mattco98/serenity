@@ -1,4 +1,6 @@
 set(SOURCES
+    GrammarContext.cpp
+    GrammarParser.cpp
     main.cpp)
 
 lagom_tool(CSSPropertiesGenerator LIBS LibMain)

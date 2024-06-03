@@ -72,6 +72,12 @@ public:
         m_index -= count;
     }
 
+    constexpr void seek(size_t index)
+    {
+        VERIFY(index <= m_input.length());
+        m_index = index;
+    }
+
     constexpr char consume()
     {
         VERIFY(!is_eof());
