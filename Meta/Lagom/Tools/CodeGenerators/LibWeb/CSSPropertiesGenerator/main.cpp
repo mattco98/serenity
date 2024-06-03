@@ -6,8 +6,8 @@
  */
 
 #include "GeneratorUtil.h"
-#include "GrammarParser.h"
 #include "GrammarContext.h"
+#include "GrammarGenerator.h"
 #include <AK/CharacterTypes.h>
 #include <AK/GenericShorthands.h>
 #include <AK/SourceGenerator.h>
@@ -61,6 +61,8 @@ ErrorOr<int> serenity_main(Main::Arguments arguments)
     auto generated_implementation_file = TRY(Core::File::open(generated_implementation_path, Core::File::OpenMode::Write));
 
     auto grammar_context = GrammarContext::create(json.as_object());
+    generate_grammar_header_file(*generated_header_file, grammar_context);
+    generate_grammar_implementation_file(*generated_header_file, grammar_context);
 
     TRY(generate_header_file(properties, *generated_header_file));
     TRY(generate_implementation_file(properties, *generated_implementation_file));
