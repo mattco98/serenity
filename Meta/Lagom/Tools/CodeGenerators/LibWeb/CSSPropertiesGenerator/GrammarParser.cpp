@@ -283,14 +283,14 @@ GrammarParser::ErrorOr<RefPtr<GrammarNode>> GrammarParser::parse_primary_node()
     switch (m_lexer.consume()) {
     case ',':
         dbgln_if(CSS_GRAMMAR_DEBUG, "[parse_primary_node] parsed ','");
-        return adopt_ref(*new LiteralNode(","sv));
+        return adopt_ref(*new LiteralNode { ","sv, LiteralNode::IsKeyword::No });
     case '/':
         dbgln_if(CSS_GRAMMAR_DEBUG, "[parse_primary_node] parsed '/'");
-        return adopt_ref(*new LiteralNode("/"sv));
+        return adopt_ref(*new LiteralNode { "/"sv, LiteralNode::IsKeyword::No });
     case '\'': {
         auto literal = m_lexer.consume_until([](auto ch) { return ch == '\''; });
         dbgln_if(CSS_GRAMMAR_DEBUG, "[parse_primary_node] parsed '{}'", literal);
-        return adopt_ref(*new LiteralNode(literal));
+        return adopt_ref(*new LiteralNode { literal, LiteralNode::IsKeyword::No });
     }
     default:
         m_lexer.retreat();
@@ -321,7 +321,7 @@ GrammarParser::ErrorOr<RefPtr<GrammarNode>> GrammarParser::parse_primary_node()
     }
 
     dbgln_if(CSS_GRAMMAR_DEBUG, "[parse_primary_node] keyword = {}", *ident);
-    return adopt_ref(*new KeywordNode(ident.release_value()));
+    return adopt_ref(*new LiteralNode { ident.release_value(), LiteralNode::IsKeyword::Yes});
 }
 
 GrammarParser::ErrorOr<RefPtr<GrammarNode>> GrammarParser::parse_multiplier(NonnullRefPtr<GrammarNode> target)

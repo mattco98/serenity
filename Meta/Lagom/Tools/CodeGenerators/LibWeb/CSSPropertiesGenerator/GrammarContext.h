@@ -18,6 +18,20 @@ public:
     NonnullRefPtr<GrammarNode> find_terminal(ByteString const& type);
     NonnullRefPtr<GrammarNode> find_property(ByteString const& property);
 
+    template<typename F>
+    void for_each_type(F&& f)
+    {
+        for (auto const& [key, value] : m_types)
+            f(key, value);
+    }
+
+    template<typename F>
+    void for_each_property(F&& f)
+    {
+        for (auto const& [key, value] : m_property_nodes)
+            f(key, value);
+    }
+
 private:
     GrammarContext(JsonObject const* css_properties)
         : m_css_properties(css_properties)

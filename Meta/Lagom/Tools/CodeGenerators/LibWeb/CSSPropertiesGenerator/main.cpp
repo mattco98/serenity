@@ -60,12 +60,13 @@ ErrorOr<int> serenity_main(Main::Arguments arguments)
     auto generated_header_file = TRY(Core::File::open(generated_header_path, Core::File::OpenMode::Write));
     auto generated_implementation_file = TRY(Core::File::open(generated_implementation_path, Core::File::OpenMode::Write));
 
-    auto grammar_context = GrammarContext::create(json.as_object());
-    generate_grammar_header_file(*generated_header_file, grammar_context);
-    generate_grammar_implementation_file(*generated_header_file, grammar_context);
 
     TRY(generate_header_file(properties, *generated_header_file));
     TRY(generate_implementation_file(properties, *generated_implementation_file));
+
+    auto grammar_context = GrammarContext::create(json.as_object());
+    generate_grammar_header_file(*generated_header_file, grammar_context);
+    generate_grammar_implementation_file(*generated_header_file, grammar_context);
 
     return 0;
 }

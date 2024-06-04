@@ -19,38 +19,29 @@ public:
     virtual ByteString to_string() const = 0;
 };
 
-class KeywordNode : public GrammarNode {
-public:
-    explicit KeywordNode(ByteString const& keyword)
-        : m_keyword(keyword)
-    {
-    }
-
-    virtual ~KeywordNode() override = default;
-
-    ByteString const& keyword() const { return m_keyword; }
-
-    virtual ByteString to_string() const override { return m_keyword; }
-
-private:
-    ByteString m_keyword;
-};
-
 class LiteralNode : public GrammarNode {
 public:
-    explicit LiteralNode(ByteString literal)
+    enum class IsKeyword {
+        Yes,
+        No,
+    };
+
+    LiteralNode(ByteString literal, IsKeyword is_keyword)
         : m_literal(move(literal))
+        , m_is_keyword(is_keyword)
     {
     }
 
     virtual ~LiteralNode() override = default;
 
     ByteString const& literal() const { return m_literal; }
+    IsKeyword is_keyword() const { return m_is_keyword; }
 
     virtual ByteString to_string() const override;
 
 private:
     ByteString m_literal;
+    IsKeyword m_is_keyword;
 };
 
 class NonTerminalNode;
@@ -84,6 +75,8 @@ struct PropertyReference {
     RefPtr<GrammarNode> node {};
 };
 
+// <foo-bar-baz> -> CSS::Parse::FooBarBaz
+// <angle> -> CSS::Parse::Angle
 struct TerminalReference {
     ByteString name;
     Optional<RangeRestrictions> range_restrictions;
