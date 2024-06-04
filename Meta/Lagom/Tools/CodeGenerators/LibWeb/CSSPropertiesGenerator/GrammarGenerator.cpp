@@ -6,23 +6,14 @@
 
 #include "GrammarGenerator.h"
 
-/*
-foo: <a> | <b> <c> | <d>
-*/
-
-struct ParsedCSSFoo {
-public:
-    
-
-private:
-};
-
 void generate_grammar_header_file(Core::File& file, GrammarContext& context)
 {
-
+    (void)file;
+    (void)context;
 }
 
 void generate_grammar_implementation_file(Core::File& file, GrammarContext& context)
 {
-
+    (void)file;
+    (void)context;
 }

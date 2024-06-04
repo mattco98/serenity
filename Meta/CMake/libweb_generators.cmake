@@ -39,10 +39,10 @@ function (generate_css_implementation)
     invoke_generator(
         "PropertyID.cpp"
         Lagom::CSSPropertiesGenerator
-        "${LIBWEB_INPUT_FOLDER}/CSS/Properties.json"
+        "${LIBWEB_INPUT_FOLDER}/CSS/Properties.json5"
         "CSS/PropertyID.h"
         "CSS/PropertyID.cpp"
-        arguments -j "${LIBWEB_INPUT_FOLDER}/CSS/Properties.json"
+        arguments -j "${LIBWEB_INPUT_FOLDER}/CSS/Properties.json5"
     )
 
     invoke_generator(

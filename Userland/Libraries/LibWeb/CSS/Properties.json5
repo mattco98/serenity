@@ -1,50 +1,53 @@
 {
   "grammar": {
-    "non-numeric-base-types": [
-      "custom-ident",
-      "dashed-ident",
-      "hex-color",
-      "named-color",
-      "string",
-      "url"
-    ],
-    "numeric-base-types": [
-      "angle",
-      "frequency",
-      "integer",
-      "length",
-      "number",
-      "percentage",
-      "resolution",
-      "time"
-    ],
+    // Builtin types are defined in prose, typically in the CSS Values and Units specification
+    "builtin-types": {
+      // Builtin types that can have a range limit, e.g., <number [0,∞]>
+      "numeric": [
+        "angle",
+        "frequency",
+        "integer",
+        "length",
+        "number",
+        "percentage",
+        "resolution",
+        "time",
+      ],
+      // Builtin types that cannot have a range limit
+      "non-numeric": [
+        "custom-ident",
+        "dashed-ident",
+        "hex-color",
+        "named-color",
+        "string",
+        "url",
+      ],
+    },
+    // Types defined by the specifications using the value definition syntax
     "derived-types": {
-      "compat-auto": "searchfield | textarea | checkbox | radio | menulist | listbox | meter | progress-bar | button",
-      "compat-special": "textfield | menulist-button",
-      
+      // Color non-terminals
       "alpha-value": "<number> | <percentage>",
       "color": {
         "correct-value": "<color-base> | currentColor | <system-color> | <device-cmyk()>  | <light-dark()>",
         "supported-value": "<color-base> | currentColor"
       },
-      "color-base": {
-        "correct-value": "<hex-color> | <color-function> | <named-color> | <color-mix()> | transparent",
-        "supported-value": "<hex-color> | <color-function> | <named-color> | <color-mix()> | transparent"
-      },
+      "color-base": "<hex-color> | <color-function> | <named-color> | <color-mix()> | transparent",
       "color-function": "<rgb()> | <rgba()> | <hsl()> | <hsla()> | <hwb()> | <lab()> | <lch()> | <oklab()> | <oklch()> | <color()>",
-      "rgb()": "[ <legacy-rgb-syntax> | <modern-rgb-syntax> ]",
-      "rgba()": "[ <legacy-rgba-syntax> | <modern-rgba-syntax> ]",
       "legacy-rgb-syntax": "rgb( <percentage>#{3} , <alpha-value>? ) | rgb( <number>#{3} , <alpha-value>? )",
       "legacy-rgba-syntax": "rgba( <percentage>#{3} , <alpha-value>? ) | rgba( <number>#{3} , <alpha-value>? )",
       "modern-rgb-syntax": "rgb( [ <number> | <percentage> | none]{3} [ / [<alpha-value> | none] ]?  )",
       "modern-rgba-syntax": "rgba( [ <number> | <percentage> | none]{3} [ / [<alpha-value> | none] ]?  )",
-      "hsl()": "[ <legacy-hsl-syntax> | <modern-hsl-syntax> ]",
-      "hsla()": "[ <legacy-hsla-syntax> | <modern-hsla-syntax> ]",
       "modern-hsl-syntax": "hsl( [<hue> | none] [<percentage> | <number> | none] [<percentage> | <number> | none] [ / [<alpha-value> | none] ]? )",
       "modern-hsla-syntax": "hsla( [<hue> | none] [<percentage> | <number> | none] [<percentage> | <number> | none] [ / [<alpha-value> | none] ]? )",
       "legacy-hsl-syntax": "hsl( <hue>, <percentage>, <percentage>, <alpha-value>? )",
       "legacy-hsla-syntax": "hsla( <hue>, <percentage>, <percentage>, <alpha-value>? )",
       "hue": "<number> | <angle>",
+
+      // Color functions
+      "rgb()": "[ <legacy-rgb-syntax> | <modern-rgb-syntax> ]",
+      "rgba()": "[ <legacy-rgba-syntax> | <modern-rgba-syntax> ]",
+      "hsl()": "[ <legacy-hsl-syntax> | <modern-hsl-syntax> ]",
+      "hsla()": "[ <legacy-hsla-syntax> | <modern-hsla-syntax> ]",
       "hwb()": "hwb( [<hue> | none] [<percentage> | <number> | none] [<percentage> | <number> | none] [ / [<alpha-value> | none] ]? )",
       "lab()": "lab( [<percentage> | <number> | none] [ <percentage> | <number> | none] [ <percentage> | <number> | none] [ / [<alpha-value> | none] ]? )",
       "lch()": "lch( [<percentage> | <number> | none] [ <percentage> | <number> | none] [ <hue> | none] [ / [<alpha-value> | none] ]? )",
@@ -52,6 +55,8 @@
       "oklch()": "oklch( [ <percentage> | <number> | none] [ <percentage> | <number> | none] [ <hue> | none] [ / [<alpha-value> | none] ]? )",
       "color()": "color( <colorspace-params> [ / [ <alpha-value> | none ] ]? )",
       "color-mix()": "color-mix( <color-interpolation-method> , [ <color> && <percentage [0,100]>? ]#{2})",
+
+      // Color spaces
       "color-space": "<rectangular-color-space> | <polar-color-space> | <custom-color-space>",
       "polar-color-space": "hsl | hwb | lch | oklch",
       "custom-color-space": "<dashed-ident>",
@@ -68,12 +73,14 @@
         "supported-value": "accentcolor"
       },
 
+      // Easings
       "easing-function": "linear | <cubic-bezier-easing-function> | <step-easing-function>",
       "cubic-bezier-easing-function": "ease | ease-in | ease-out | ease-in-out | cubic-bezier(<number [0,1]>, <number>, <number [0,1]>, <number>)",
       "step-easing-function": "step-start | step-end | <steps()>",
       "steps()": "steps(<integer>[, <step-position> ]?)",
       "step-position": "jump-start | jump-end | jump-none | jump-both | start | end",
 
+      // Animations
       "single-animation": "<time [0s,∞]> || <easing-function> || <time> || <single-animation-iteration-count> || <single-animation-direction> || <single-animation-fill-mode> || <single-animation-play-state> || [ none | <keyframes-name> ]",
       "single-animation-iteration-count": "infinite | <number [0,∞]>",
       "single-animation-direction": "normal | reverse | alternate | alternate-reverse",
@@ -81,8 +88,7 @@
       "single-animation-play-state": "running | paused",
       "keyframes-name": "<custom-ident> | <string>",
 
-      "ratio": "<number [0,∞]> [ / <number [0,∞]> ]?",
-
+      // Filters
       "filter-value-list": "[ <filter-function> | <url> ]+",
       "filter-function": "<blur()> | <brightness()> | <contrast()> | <drop-shadow()> | <grayscale()> | <hue-rotate()> | <invert()> | <opacity()> | <sepia()> | <saturate()>",
       "blur()": "blur( <length>? )",
@@ -94,7 +100,12 @@
       "invert()": "invert( [ <number> |  <percentage> ]? )",
       "opacity()": "opacity( [ <number> |  <percentage> ]? )",
       "saturate()": "saturate( [ <number> |  <percentage> ]? )",
-      "sepia()": "sepia( [ <number> |  <percentage> ]? )"
+      "sepia()": "sepia( [ <number> |  <percentage> ]? )",
+
+      // Misc
+      "compat-auto": "searchfield | textarea | checkbox | radio | menulist | listbox | meter | progress-bar | button",
+      "compat-special": "textfield | menulist-button",
+      "ratio": "<number [0,∞]> [ / <number [0,∞]> ]?",
     }
   },
   "properties": {

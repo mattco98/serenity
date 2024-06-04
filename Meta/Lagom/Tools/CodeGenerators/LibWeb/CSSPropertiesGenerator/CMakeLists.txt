@@ -1,5 +1,6 @@
 set(SOURCES
     GrammarContext.cpp
+    GrammarGenerator.cpp
     GrammarParser.cpp
     main.cpp)
 

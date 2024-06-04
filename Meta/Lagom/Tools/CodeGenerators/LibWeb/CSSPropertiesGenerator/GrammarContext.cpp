@@ -21,17 +21,17 @@ GrammarContext GrammarContext::create(JsonObject const& css_properties)
 
     GrammarContext context { &css_properties };
 
-    grammar_object.get_array("non-numeric-base-types"sv).value().for_each([&](auto const& value) {
-        VERIFY(value.is_string());
-        auto name = value.as_string();
-        auto type = adopt_ref(*new NonTerminalNode { NonTerminalNode::Base { name, NonTerminalNode::IsNumeric::No }});
-        context.m_types.set(name, type);
-    });
-
-    grammar_object.get_array("numeric-base-types"sv).value().for_each([&](auto const& value) {
+    auto builtin_types = grammar_object.get_object("builtin-types"sv).value();
+    builtin_types.get_array("numeric"sv).value().for_each([&](auto const& value) {
         VERIFY(value.is_string());
         auto name = value.as_string();
         auto type = adopt_ref(*new NonTerminalNode { NonTerminalNode::Base { name, NonTerminalNode::IsNumeric::Yes }});
+        context.m_types.set(name, type);
+    });
+    builtin_types.get_array("non-numeric"sv).value().for_each([&](auto const& value) {
+        VERIFY(value.is_string());
+        auto name = value.as_string();
+        auto type = adopt_ref(*new NonTerminalNode { NonTerminalNode::Base { name, NonTerminalNode::IsNumeric::No }});
         context.m_types.set(name, type);
     });
 

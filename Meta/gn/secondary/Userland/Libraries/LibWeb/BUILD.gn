@@ -170,7 +170,7 @@ compiled_action("generate_css_media_feature_id") {
 
 compiled_action("generate_css_property_id") {
   tool = "//Meta/Lagom/Tools/CodeGenerators/LibWeb:GenerateCSSPropertyID"
-  inputs = [ "CSS/Properties.json" ]
+  inputs = [ "CSS/Properties.json5" ]
   outputs = [
     "$target_gen_dir/CSS/PropertyID.h",
     "$target_gen_dir/CSS/PropertyID.cpp",

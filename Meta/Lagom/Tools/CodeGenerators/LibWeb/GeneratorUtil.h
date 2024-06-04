@@ -12,6 +12,7 @@
 #include <AK/Vector.h>
 #include <LibCore/File.h>
 #include <ctype.h>
+#include <AK/JsonParser.h>
 
 String title_casify(StringView dashy_name)
 {
@@ -62,5 +63,7 @@ ErrorOr<JsonValue> read_entire_file_as_json(StringView filename)
     auto json_size = TRY(file->size());
     auto json_data = TRY(ByteBuffer::create_uninitialized(json_size));
     TRY(file->read_until_filled(json_data.bytes()));
-    return JsonValue::from_string(json_data);
+    if (filename.ends_with(".json5"sv))
+        return Json5Parser(json_data).parse();
+    return JsonParser(json_data).parse();
 }
