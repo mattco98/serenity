@@ -11,6 +11,9 @@
 
 namespace AK {
 
+namespace Detail {
+
+template<bool IsJson5>
 class JsonParser : private GenericLexer {
 public:
     explicit JsonParser(StringView input)
@@ -31,10 +34,21 @@ private:
     ErrorOr<JsonValue> parse_false();
     ErrorOr<JsonValue> parse_true();
     ErrorOr<JsonValue> parse_null();
+
+    void skip_whitespace();
 };
+
+}
+
+using JsonParser = Detail::JsonParser<false>;
+
+// FIXME: This is not a fully compliant JSON5 parser, but it is close enough to use for convenience
+//        features like comments and trailing commas
+using Json5Parser = Detail::JsonParser<true>;
 
 }
 
 #if USING_AK_GLOBALLY
 using AK::JsonParser;
+using AK::Json5Parser;
 #endif

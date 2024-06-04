@@ -11,7 +11,7 @@
 #include <AK/JsonParser.h>
 #include <math.h>
 
-namespace AK {
+namespace AK::Detail {
 
 constexpr bool is_space(int ch)
 {
@@ -31,10 +31,20 @@ constexpr bool is_space(int ch)
 //                             │                       │
 //                             ╰─── u[0-9A-Za-z]{4}  ──╯
 //
-ErrorOr<ByteString> JsonParser::consume_and_unescape_string()
+template<bool IsJson5>
+ErrorOr<ByteString> JsonParser<IsJson5>::consume_and_unescape_string()
 {
-    if (!consume_specific('"'))
-        return Error::from_string_literal("JsonParser: Expected '\"'");
+    auto delimiter = '"';
+    if constexpr (IsJson5) {
+        auto ch = peek();
+        if (!consume_specific('"') && !consume_specific('\''))
+            return Error::from_string_literal("JsonParser: Expected '\"'");
+        delimiter = ch;
+    } else {
+        if (!consume_specific('"'))
+            return Error::from_string_literal("JsonParser: Expected '\"'");
+    }
+
     StringBuilder final_sb;
 
     for (;;) {
@@ -57,7 +67,7 @@ ErrorOr<ByteString> JsonParser::consume_and_unescape_string()
             //       There are two-character escape sequence representations of some characters.
             if (is_ascii_c0_control(ch))
                 return Error::from_string_literal("JsonParser: ASCII control sequence encountered");
-            if (ch == '"' || ch == '\\')
+            if (ch == delimiter || ch == '\\')
                 break;
             ++literal_characters;
         }
@@ -67,7 +77,7 @@ ErrorOr<ByteString> JsonParser::consume_and_unescape_string()
         // so we now only have to handle those two cases
         char ch = peek();
 
-        if (ch == '"') {
+        if (ch == delimiter) {
             consume();
             break;
         }
@@ -78,6 +88,7 @@ ErrorOr<ByteString> JsonParser::consume_and_unescape_string()
         case '\0':
             return Error::from_string_literal("JsonParser: EOF while parsing String");
         case '"':
+        case '\'':
         case '\\':
         case '/':
             final_sb.append(consume());
@@ -123,6 +134,13 @@ ErrorOr<ByteString> JsonParser::consume_and_unescape_string()
             break;
         }
         default:
+            if constexpr (IsJson5) {
+                if (peek() == '\n') {
+                    final_sb.append("\\n"sv);
+                    continue;
+                }
+            }
+
             dbgln("JsonParser: Invalid escaped character '{}' ({:#x}) ", peek(), peek());
             return Error::from_string_literal("JsonParser: Invalid escaped character");
         }
@@ -131,70 +149,82 @@ ErrorOr<ByteString> JsonParser::consume_and_unescape_string()
     return final_sb.to_byte_string();
 }
 
-ErrorOr<JsonValue> JsonParser::parse_object()
+template<bool IsJson5>
+ErrorOr<JsonValue> JsonParser<IsJson5>::parse_object()
 {
     JsonObject object;
     if (!consume_specific('{'))
         return Error::from_string_literal("JsonParser: Expected '{'");
     for (;;) {
-        ignore_while(is_space);
+        skip_whitespace();
         if (peek() == '}')
             break;
-        ignore_while(is_space);
+        skip_whitespace();
+        // FIXME: This can be a plain identifier in JSON5 mode
         auto name = TRY(consume_and_unescape_string());
-        ignore_while(is_space);
+        skip_whitespace();
         if (!consume_specific(':'))
             return Error::from_string_literal("JsonParser: Expected ':'");
-        ignore_while(is_space);
+        skip_whitespace();
         auto value = TRY(parse_helper());
         object.set(name, move(value));
-        ignore_while(is_space);
+        skip_whitespace();
         if (peek() == '}')
             break;
         if (!consume_specific(','))
             return Error::from_string_literal("JsonParser: Expected ','");
-        ignore_while(is_space);
-        if (peek() == '}')
-            return Error::from_string_literal("JsonParser: Unexpected '}'");
+        skip_whitespace();
+        if (peek() == '}') {
+            if constexpr (!IsJson5)
+                return Error::from_string_literal("JsonParser: Unexpected '}'");
+            break;
+        }
     }
     if (!consume_specific('}'))
         return Error::from_string_literal("JsonParser: Expected '}'");
     return JsonValue { move(object) };
 }
 
-ErrorOr<JsonValue> JsonParser::parse_array()
+template<bool IsJson5>
+ErrorOr<JsonValue> JsonParser<IsJson5>::parse_array()
 {
     JsonArray array;
     if (!consume_specific('['))
         return Error::from_string_literal("JsonParser: Expected '['");
     for (;;) {
-        ignore_while(is_space);
+        skip_whitespace();
         if (peek() == ']')
             break;
         auto element = TRY(parse_helper());
         TRY(array.append(move(element)));
-        ignore_while(is_space);
+        skip_whitespace();
         if (peek() == ']')
             break;
         if (!consume_specific(','))
             return Error::from_string_literal("JsonParser: Expected ','");
-        ignore_while(is_space);
-        if (peek() == ']')
-            return Error::from_string_literal("JsonParser: Unexpected ']'");
+        skip_whitespace();
+        if (peek() == ']') {
+            if constexpr (!IsJson5)
+                return Error::from_string_literal("JsonParser: Unexpected ']'");
+            break;
+        }
     }
-    ignore_while(is_space);
+    skip_whitespace();
     if (!consume_specific(']'))
         return Error::from_string_literal("JsonParser: Expected ']'");
     return JsonValue { move(array) };
 }
 
-ErrorOr<JsonValue> JsonParser::parse_string()
+template<bool IsJson5>
+ErrorOr<JsonValue> JsonParser<IsJson5>::parse_string()
 {
     auto string = TRY(consume_and_unescape_string());
     return JsonValue(move(string));
 }
 
-ErrorOr<JsonValue> JsonParser::parse_number()
+// FIXME: Lots of missing JSON5 features here
+template<bool IsJson5>
+ErrorOr<JsonValue> JsonParser<IsJson5>::parse_number()
 {
     Vector<char, 32> number_buffer;
 
@@ -296,36 +326,44 @@ ErrorOr<JsonValue> JsonParser::parse_number()
     return fallback_to_double_parse();
 }
 
-ErrorOr<JsonValue> JsonParser::parse_true()
+template<bool IsJson5>
+ErrorOr<JsonValue> JsonParser<IsJson5>::parse_true()
 {
     if (!consume_specific("true"sv))
         return Error::from_string_literal("JsonParser: Expected 'true'");
     return JsonValue(true);
 }
 
-ErrorOr<JsonValue> JsonParser::parse_false()
+template<bool IsJson5>
+ErrorOr<JsonValue> JsonParser<IsJson5>::parse_false()
 {
     if (!consume_specific("false"sv))
         return Error::from_string_literal("JsonParser: Expected 'false'");
     return JsonValue(false);
 }
 
-ErrorOr<JsonValue> JsonParser::parse_null()
+template<bool IsJson5>
+ErrorOr<JsonValue> JsonParser<IsJson5>::parse_null()
 {
     if (!consume_specific("null"sv))
         return Error::from_string_literal("JsonParser: Expected 'null'");
     return JsonValue {};
 }
 
-ErrorOr<JsonValue> JsonParser::parse_helper()
+template<bool IsJson5>
+ErrorOr<JsonValue> JsonParser<IsJson5>::parse_helper()
 {
-    ignore_while(is_space);
+    skip_whitespace();
     auto type_hint = peek();
     switch (type_hint) {
     case '{':
         return parse_object();
     case '[':
         return parse_array();
+    case '\'':
+        if constexpr (IsJson5)
+            return parse_string();
+        break;
     case '"':
         return parse_string();
     case '-':
@@ -351,13 +389,33 @@ ErrorOr<JsonValue> JsonParser::parse_helper()
     return Error::from_string_literal("JsonParser: Unexpected character");
 }
 
-ErrorOr<JsonValue> JsonParser::parse()
+template<bool IsJson5>
+ErrorOr<JsonValue> JsonParser<IsJson5>::parse()
 {
     auto result = TRY(parse_helper());
-    ignore_while(is_space);
+    skip_whitespace();
     if (!is_eof())
         return Error::from_string_literal("JsonParser: Didn't consume all input");
     return result;
 }
+
+template<bool IsJson5>
+void JsonParser<IsJson5>::skip_whitespace()
+{
+    ignore_while(is_space);
+
+    if constexpr (IsJson5) {
+        if (consume_specific("//"sv)) {
+            ignore_until([](auto ch) { return ch == '\n' || ch == '\r'; });
+            ignore_while(is_space);
+        } else if (consume_specific("/*"sv)) {
+            ignore_until("*/");
+            ignore_while(is_space);
+        }
+    }
+}
+
+template class JsonParser<true>;
+template class JsonParser<false>;
 
 }
