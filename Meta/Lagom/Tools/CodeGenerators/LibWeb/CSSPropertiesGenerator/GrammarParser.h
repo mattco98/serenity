@@ -118,7 +118,7 @@ class CombinatorNode : public GrammarNode {
 public:
     // Ordered by operator precedence
     enum class Kind {
-        Group,       // [ a b ]
+        Group,         // [ a b ]
         Juxtaposition, // a b
         Both,          // a && b
         OneOrMore,     // a || b
@@ -183,6 +183,8 @@ public:
     }
 
     virtual ~MultiplierNode() override = default;
+
+    auto target() const { return m_target; }
 
     virtual void link(GrammarContext&) override;
 

@@ -70,7 +70,7 @@
       "xyz-space": "xyz | xyz-d50 | xyz-d65",
       "system-color": {
         "correct-value": "TODO: Fill in the rest of the colors",
-        "supported-value": "accentcolor"
+        "supported-value": "AccentColor | AccentColorText"
       },
 
       // Easings

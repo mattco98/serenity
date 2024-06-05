@@ -201,6 +201,16 @@ GrammarParser::ErrorOr<RefPtr<GrammarNode>> GrammarParser::parse_node(Optional<C
             return node;
         }
         dbgln_if(CSS_GRAMMAR_DEBUG, "[parse_node] rhs of suffix = {}", rhs->to_string());
+
+        if (auto const* rhs_combinator = dynamic_cast<CombinatorNode*>(rhs.ptr())) {
+            if (rhs_combinator->kind() == *suffix) {
+                // Combine into one combinator
+                auto nodes = Vector { node };
+                nodes.extend(rhs_combinator->nodes());
+                return adopt_ref(*new CombinatorNode { *suffix, move(nodes) });
+            }
+        }
+
         return adopt_ref(*new CombinatorNode { *suffix, { node, *rhs } });
     }
 
